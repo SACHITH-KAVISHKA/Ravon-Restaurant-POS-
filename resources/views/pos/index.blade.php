@@ -394,6 +394,53 @@
     </div>
 </div>
 
+<!-- Notification Modal -->
+<div id="notificationModal" class="hidden fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center">
+    <div class="bg-gray-800 rounded-xl p-6 max-w-sm w-full mx-4 shadow-2xl border border-gray-700 transform transition-all scale-100">
+        <div class="text-center">
+            <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-blue-900/50 mb-4">
+                <svg class="h-6 w-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+            </div>
+            <h3 class="text-lg leading-6 font-bold text-white mb-2" id="notificationTitle">Notification</h3>
+            <div class="mt-2">
+                <p class="text-sm text-gray-300" id="notificationMessage">Message goes here</p>
+            </div>
+            <div class="mt-5">
+                <button onclick="closeNotification()" class="w-full inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:text-sm transition">
+                    OK
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Confirmation Modal -->
+<div id="confirmationModal" class="hidden fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center">
+    <div class="bg-gray-800 rounded-xl p-6 max-w-sm w-full mx-4 shadow-2xl border border-gray-700 transform transition-all scale-100">
+        <div class="text-center">
+            <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-yellow-900/50 mb-4">
+                <svg class="h-6 w-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                </svg>
+            </div>
+            <h3 class="text-lg leading-6 font-bold text-white mb-2" id="confirmationTitle">Confirm Action</h3>
+            <div class="mt-2">
+                <p class="text-sm text-gray-300" id="confirmationMessage">Are you sure?</p>
+            </div>
+            <div class="mt-5 flex justify-center space-x-3">
+                <button onclick="closeConfirmation()" class="inline-flex justify-center rounded-lg border border-gray-600 shadow-sm px-4 py-2 bg-gray-700 text-base font-medium text-gray-300 hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 sm:text-sm transition">
+                    Cancel
+                </button>
+                <button id="confirmBtn" class="inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:text-sm transition">
+                    Confirm
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 let billItems = [];
 let currentOrderType = 'dine-in';
@@ -484,11 +531,11 @@ function calculateTotals() {
 
 // Clear bill
 function clearBill() {
-    if (confirm('Are you sure you want to clear all items?')) {
+    showConfirmation('Are you sure you want to clear all items?', 'Clear Bill', () => {
         billItems = [];
         renderBill();
         calculateTotals();
-    }
+    });
 }
 
 // Open modals
@@ -620,7 +667,7 @@ function closeModal(modalId) {
 // Checkout
 function checkout() {
     if (billItems.length === 0) {
-        alert('Please add items to the bill first');
+        showNotification('Please add items to the bill first', 'Empty Bill');
         return;
     }
     
@@ -636,7 +683,7 @@ async function processPayment() {
     const total = parseFloat(document.getElementById('total').textContent);
     
     if (amountPaid < total) {
-        alert('Amount paid is less than total amount');
+        showNotification('Amount paid is less than total amount', 'Payment Error');
         return;
     }
     
@@ -662,21 +709,21 @@ async function processPayment() {
         const result = await response.json();
         
         if (result.success) {
-            alert('Order processed successfully!');
+            showNotification('Order processed successfully!', 'Success');
             billItems = [];
             renderBill();
             calculateTotals();
             closeModal('checkoutModal');
             
             // Optionally print receipt
-            if (confirm('Do you want to print the receipt?')) {
+            showConfirmation('Do you want to print the receipt?', 'Print Receipt', () => {
                 window.open('/pos/receipt/' + result.order.id, '_blank');
-            }
+            });
         } else {
-            alert('Error: ' + result.message);
+            showNotification('Error: ' + result.message, 'Processing Error');
         }
     } catch (error) {
-        alert('Error processing payment: ' + error.message);
+        showNotification('Error processing payment: ' + error.message, 'System Error');
     }
 }
 
@@ -744,16 +791,78 @@ function scrollDown() {
 }
 
 // Placeholder functions
-function showModifiersModal() { alert('Modifiers feature coming soon'); }
-function voidItem() { alert('Select an item to void'); }
-function cancelOrder() { if(confirm('Cancel order?')) clearBill(); }
-function splitOrder() { alert('Split order feature coming soon'); }
-function mergeOrder() { alert('Merge order feature coming soon'); }
-function transferTable() { alert('Table transfer feature coming soon'); }
-function printCopy() { alert('Print feature coming soon'); }
-function openOrderCheckModal() { alert('Open checks feature coming soon'); }
-function lockScreen() { if(confirm('Lock screen?')) window.location.href = '{{ route("dashboard") }}'; }
-function switchTab(tab) { alert('Switching to ' + tab); }
+function showModifiersModal() { showNotification('Modifiers feature coming soon', 'Feature Unavailable'); }
+function voidItem() { showNotification('Select an item to void', 'Void Item'); }
+function cancelOrder() { 
+    showConfirmation('Are you sure you want to cancel the entire order?', 'Cancel Order', () => {
+        // Clear items
+        billItems = [];
+        renderBill();
+        calculateTotals();
+        
+        // Reset state
+        currentOrderType = null;
+        selectedTableId = null;
+        
+        // Reset UI
+        const display = document.getElementById('orderTypeDisplay');
+        if (display) display.textContent = 'Select Order Type';
+        
+        // Hide menu and show initial message
+        document.getElementById('menuSelectionContainer').classList.remove('flex');
+        document.getElementById('menuSelectionContainer').classList.add('hidden');
+        
+        const msg = document.getElementById('initialStateMessage');
+        if (msg) msg.classList.remove('hidden');
+        
+        // Hide portion selection if open
+        cancelPortionSelection();
+    });
+}
+function splitOrder() { showNotification('Split order feature coming soon', 'Feature Unavailable'); }
+function mergeOrder() { showNotification('Merge order feature coming soon', 'Feature Unavailable'); }
+function transferTable() { showNotification('Table transfer feature coming soon', 'Feature Unavailable'); }
+function printCopy() { showNotification('Print feature coming soon', 'Feature Unavailable'); }
+function openOrderCheckModal() { showNotification('Open checks feature coming soon', 'Feature Unavailable'); }
+function lockScreen() { 
+    showConfirmation('Are you sure you want to lock the screen?', 'Lock Screen', () => {
+        window.location.href = '{{ route("dashboard") }}';
+    });
+}
+function switchTab(tab) { showNotification('Switching to ' + tab); }
+
+// Notification Helper Functions
+function showNotification(message, title = 'Notification') {
+    document.getElementById('notificationMessage').textContent = message;
+    document.getElementById('notificationTitle').textContent = title;
+    document.getElementById('notificationModal').classList.remove('hidden');
+}
+
+function closeNotification() {
+    document.getElementById('notificationModal').classList.add('hidden');
+}
+
+// Confirmation Helper Functions
+let confirmCallback = null;
+
+function showConfirmation(message, title, callback) {
+    document.getElementById('confirmationMessage').textContent = message;
+    document.getElementById('confirmationTitle').textContent = title;
+    confirmCallback = callback;
+    document.getElementById('confirmationModal').classList.remove('hidden');
+}
+
+function closeConfirmation() {
+    document.getElementById('confirmationModal').classList.add('hidden');
+    confirmCallback = null;
+}
+
+document.getElementById('confirmBtn').addEventListener('click', () => {
+    if (confirmCallback) {
+        confirmCallback();
+    }
+    closeConfirmation();
+});
 
 // Live Clock
 function updateClock() {
@@ -767,10 +876,6 @@ function updateClock() {
         minute: '2-digit',
         hour12: true
     };
-    
-    // Format: Monday, November 24, 2025 - 04:09 AM
-    const dateStr = now.toLocaleDateString('en-US', options);
-    // toLocaleDateString might not give the exact format with the dash, so we construct it manually to be safe and precise
     
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
