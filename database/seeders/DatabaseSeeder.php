@@ -16,6 +16,7 @@ class DatabaseSeeder extends Seeder
             FloorAndTableSeeder::class,
             KitchenStationSeeder::class,
             MenuSeeder::class,
+            ItemModifiersSeeder::class,
         ]);
     }
 }
