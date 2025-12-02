@@ -324,7 +324,7 @@
                 </div>
             </button>
 
-            <button class="w-full h-14 flex items-stretch shadow-sm group mb-2" onclick="printCopy()">
+            <button class="w-full h-14 flex items-stretch shadow-sm group mb-2" onclick="openClosedOrdersModal()">
                 <div class="bg-white text-rose-400 p-3 rounded-l-lg flex items-center justify-center w-14">
                     <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
@@ -374,43 +374,145 @@
 
         <!-- Close Order Payment Modal -->
         <div id="closeOrderModal" class="hidden fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center">
-            <div class="bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4">
+            <div class="bg-gray-800 rounded-xl shadow-2xl max-w-4xl w-full mx-4" style="max-height: 90vh; overflow-y: auto;">
+                <!-- Header -->
+                <div class="flex justify-between items-center p-6 border-b border-gray-700 bg-gradient-to-r from-blue-600 to-blue-700">
+                    <div class="flex items-center space-x-3">
+                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                        <h2 class="text-2xl font-bold text-white">Payment Processing</h2>
+                    </div>
+                    <button onclick="closeModal('closeOrderModal')" class="text-white hover:text-gray-200 transition">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="p-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Left Side - Payment Controls -->
+                    <div class="space-y-4">
+                        <!-- Payment Type Selection -->
+                        <div>
+                            <label class="block text-sm font-bold text-gray-300 mb-3">SELECT PAYMENT TYPE</label>
+                            <div class="grid grid-cols-2 gap-3">
+                                <button onclick="selectPaymentType('cash')" id="paymentTypeCash" class="payment-type-btn bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-lg transition border-2 border-transparent">
+                                    CASH
+                                </button>
+                                <button onclick="selectPaymentType('card')" id="paymentTypeCard" class="payment-type-btn bg-gray-700 hover:bg-gray-600 text-white font-bold py-4 rounded-lg transition border-2 border-transparent">
+                                    CARD
+                                </button>
+                                <button onclick="selectPaymentType('card_cash')" id="paymentTypeCardCash" class="payment-type-btn bg-gray-700 hover:bg-gray-600 text-white font-bold py-4 rounded-lg transition border-2 border-transparent">
+                                    CARD & CASH
+                                </button>
+                                <button onclick="selectPaymentType('credit')" id="paymentTypeCredit" class="payment-type-btn bg-gray-700 hover:bg-gray-600 text-white font-bold py-4 rounded-lg transition border-2 border-transparent">
+                                    CREDIT
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Number Pad -->
+                        <div class="bg-gray-700 p-4 rounded-lg">
+                            <div class="grid grid-cols-3 gap-2">
+                                <button onclick="appendNumber('7')" class="numberpad-btn bg-gray-600 hover:bg-gray-500 text-white font-bold text-xl py-4 rounded-lg transition">7</button>
+                                <button onclick="appendNumber('8')" class="numberpad-btn bg-gray-600 hover:bg-gray-500 text-white font-bold text-xl py-4 rounded-lg transition">8</button>
+                                <button onclick="appendNumber('9')" class="numberpad-btn bg-gray-600 hover:bg-gray-500 text-white font-bold text-xl py-4 rounded-lg transition">9</button>
+
+                                <button onclick="appendNumber('4')" class="numberpad-btn bg-gray-600 hover:bg-gray-500 text-white font-bold text-xl py-4 rounded-lg transition">4</button>
+                                <button onclick="appendNumber('5')" class="numberpad-btn bg-gray-600 hover:bg-gray-500 text-white font-bold text-xl py-4 rounded-lg transition">5</button>
+                                <button onclick="appendNumber('6')" class="numberpad-btn bg-gray-600 hover:bg-gray-500 text-white font-bold text-xl py-4 rounded-lg transition">6</button>
+
+                                <button onclick="appendNumber('1')" class="numberpad-btn bg-gray-600 hover:bg-gray-500 text-white font-bold text-xl py-4 rounded-lg transition">1</button>
+                                <button onclick="appendNumber('2')" class="numberpad-btn bg-gray-600 hover:bg-gray-500 text-white font-bold text-xl py-4 rounded-lg transition">2</button>
+                                <button onclick="appendNumber('3')" class="numberpad-btn bg-gray-600 hover:bg-gray-500 text-white font-bold text-xl py-4 rounded-lg transition">3</button>
+
+                                <button onclick="appendNumber('0')" class="numberpad-btn bg-gray-600 hover:bg-gray-500 text-white font-bold text-xl py-4 rounded-lg transition">0</button>
+                                <button onclick="appendNumber('.')" class="numberpad-btn bg-gray-600 hover:bg-gray-500 text-white font-bold text-xl py-4 rounded-lg transition">.</button>
+                                <button onclick="backspaceNumber()" class="numberpad-btn bg-yellow-500 hover:bg-yellow-600 text-white font-bold text-xl py-4 rounded-lg transition">
+                                    <svg class="w-6 h-6 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 12l6.414 6.414a2 2 0 001.414.586H19a2 2 0 002-2V7a2 2 0 00-2-2h-8.172a2 2 0 00-1.414.586L3 12z" />
+                                    </svg>
+                                </button>
+
+                                <button onclick="clearNumber()" class="numberpad-btn bg-red-600 hover:bg-red-700 text-white font-bold text-xl py-4 rounded-lg transition col-span-3">C</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Side - Payment Summary -->
+                    <div class="space-y-4">
+                        <div class="bg-gray-700 rounded-lg p-4 space-y-3">
+                            <!-- Sub Total -->
+                            <div class="flex justify-between items-center text-gray-300">
+                                <span class="font-semibold">Sub Total</span>
+                                <span class="font-bold" id="paymentSubtotal">0.00</span>
+                            </div>
+
+                            <!-- Total -->
+                            <div class="flex justify-between items-center py-2 border-t border-gray-600">
+                                <span class="font-bold text-blue-400 text-lg">Total ——→</span>
+                                <span class="font-bold text-blue-400 text-2xl" id="paymentTotal">0.00</span>
+                            </div>
+
+                            <!-- Card Amount -->
+                            <div class="flex justify-between items-center text-gray-300" id="cardAmountRow" style="display: none;">
+                                <span>Card</span>
+                                <span id="paymentCardAmount">0.00</span>
+                            </div>
+
+                            <!-- Cash Amount Input -->
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-2">Cash Amount</label>
+                                <input type="text" id="paymentCashInput" readonly class="w-full px-4 py-3 bg-yellow-50 text-gray-900 rounded-lg font-bold text-xl text-right border-2 border-yellow-400 focus:outline-none" value="0.00">
+                            </div>
+
+                            <!-- Balance -->
+                            <div class="flex justify-between items-center py-2 border-t border-gray-600" id="balanceRow">
+                                <span class="font-bold text-green-400">Balance ——→</span>
+                                <span class="font-bold text-green-400 text-xl" id="paymentBalance">0.00</span>
+                            </div>
+
+                            <!-- Credit -->
+                            <div class="flex justify-between items-center bg-red-50 rounded p-2" id="creditRow" style="display: none;">
+                                <span class="font-bold text-red-600">Credit ——→</span>
+                                <span class="font-bold text-red-600 text-xl" id="paymentCredit">0.00</span>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="flex gap-3">
+                            <button onclick="closeModal('closeOrderModal')" class="flex-1 px-6 py-3 bg-gray-600 hover:bg-gray-500 text-white rounded-lg font-bold transition flex items-center justify-center space-x-2">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                                </svg>
+                                <span>Back</span>
+                            </button>
+                            <button onclick="completePayment()" class="flex-1 px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold transition flex items-center justify-center space-x-2">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                                </svg>
+                                <span>Print Receipt</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Closed Orders Modal -->
+        <div id="closedOrdersModal" class="hidden fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center">
+            <div class="bg-gray-800 rounded-xl p-6 max-w-4xl w-full mx-4" style="max-height: 90vh; overflow-y: auto;">
                 <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-2xl font-bold text-white">Close Order</h2>
-                    <button onclick="closeModal('closeOrderModal')" class="text-gray-400 hover:text-white">
+                    <h2 class="text-2xl font-bold text-white">Closed Orders / Bills</h2>
+                    <button onclick="closeModal('closedOrdersModal')" class="text-gray-400 hover:text-white">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>
                 </div>
-                <div class="space-y-4">
-                    <div class="text-center py-4 bg-gray-700 rounded-lg">
-                        <div class="text-sm text-gray-400">Total Amount</div>
-                        <div class="text-3xl font-bold text-white">Rs. <span id="closeOrderTotal">0.00</span></div>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-400 mb-2">Payment Method</label>
-                        <select id="closeOrderPaymentMethod" class="w-full px-4 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:border-blue-500">
-                            <option value="cash">Cash</option>
-                            <option value="card">Card</option>
-                            <option value="credit">Credit</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-400 mb-2">Amount Paid</label>
-                        <input type="number" id="closeOrderAmountPaid" class="w-full px-4 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:border-blue-500" step="0.01">
-                    </div>
-
-                    <div class="flex justify-between text-white">
-                        <span>Change:</span>
-                        <span class="font-bold" id="closeOrderChange">0.00</span>
-                    </div>
-
-                    <button onclick="completePayment()" class="w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-semibold">
-                        Complete Payment
-                    </button>
+                <div id="closedOrdersContainer" class="space-y-3 max-h-96 overflow-y-auto">
+                    <!-- Closed orders will be loaded dynamically -->
                 </div>
             </div>
         </div>
@@ -718,16 +820,32 @@
                 }
 
                 try {
+                    // Merge duplicate items before sending
+                    const mergedItems = {};
+                    billItems.forEach(item => {
+                        const key = item.item_id + '_' + item.name;
+                        if (mergedItems[key]) {
+                            // Item exists, add quantities
+                            mergedItems[key].quantity += item.quantity;
+                        } else {
+                            // New item, add to merged list
+                            mergedItems[key] = {
+                                item_id: item.item_id,
+                                name: item.name,
+                                price: item.price,
+                                quantity: item.quantity
+                            };
+                        }
+                    });
+
+                    // Convert merged items object to array
+                    const itemsToSend = Object.values(mergedItems);
+
                     const orderData = {
                         order_id: currentOrderId,
                         order_type: currentOrderType,
                         table_id: selectedTableId,
-                        items: billItems.map(item => ({
-                            item_id: item.item_id,
-                            name: item.name,
-                            price: item.price,
-                            quantity: item.quantity
-                        }))
+                        items: itemsToSend
                     };
 
                     console.log('Sending order data:', orderData);
@@ -873,27 +991,60 @@
 
                     if (result.success) {
                         closeModal('openChecksModal');
+
+                        // Set order details
                         currentOrderId = orderId;
                         currentOrderType = result.order.order_type;
                         selectedTableId = result.order.table_id;
 
+                        // Update display
                         const display = document.getElementById('orderTypeDisplay');
                         if (result.order.table_number) {
                             display.textContent = 'Table: ' + result.order.table_number;
                         } else {
-                            display.textContent = result.order.order_type;
+                            // Format order type for display
+                            const orderTypeLabels = {
+                                'takeaway': 'Take Away',
+                                'delivery': 'Delivery',
+                                'uber_eats': 'Uber Eats',
+                                'pickme': 'PickMe Food',
+                                'dine_in': 'Dine In'
+                            };
+                            display.textContent = orderTypeLabels[result.order.order_type] || result.order.order_type;
                         }
 
-                        billItems = result.order.items;
+                        // Load items - merge duplicates if any exist in database
+                        const mergedItems = {};
+                        result.order.items.forEach(item => {
+                            const key = item.item_id + '_' + item.name;
+                            if (mergedItems[key]) {
+                                // Duplicate found - merge quantities
+                                mergedItems[key].quantity += parseInt(item.quantity);
+                            } else {
+                                // New item
+                                mergedItems[key] = {
+                                    item_id: item.item_id,
+                                    name: item.name,
+                                    price: parseFloat(item.price),
+                                    quantity: parseInt(item.quantity),
+                                    modifiers: item.modifiers || []
+                                };
+                            }
+                        });
+
+                        // Convert to array
+                        billItems = Object.values(mergedItems);
+
                         renderBill();
                         calculateTotals();
 
+                        // Show menu section
                         document.getElementById('menuSelectionContainer').classList.remove('hidden');
                         document.getElementById('menuSelectionContainer').classList.add('flex');
                         const msg = document.getElementById('initialStateMessage');
                         if (msg) msg.classList.add('hidden');
 
-                        showNotification('Order loaded. You can add more items.', 'Order Loaded');
+                        showNotification('Order #' + result.order.order_number + ' loaded. You can add more items or close the order.', 'Order Loaded');
                     }
                 } catch (error) {
                     showNotification('Error loading order: ' + error.message, 'Error');
@@ -1270,5 +1421,214 @@
             // Update immediately and then every second
             updateClock();
             setInterval(updateClock, 1000);
+
+            // Payment Modal Variables
+            let selectedPaymentType = 'cash';
+            let cashInputValue = '0';
+
+            // Show Close Order Modal
+            window.showCloseOrderModal = function() {
+                if (!currentOrderId) {
+                    showNotification('No active order to close', 'No Order');
+                    return;
+                }
+                selectedPaymentType = 'cash';
+                cashInputValue = '0';
+                const total = parseFloat(document.getElementById('total').textContent);
+                document.getElementById('paymentSubtotal').textContent = total.toFixed(2);
+                document.getElementById('paymentTotal').textContent = total.toFixed(2);
+                document.getElementById('paymentCashInput').value = '0.00';
+                selectPaymentType('cash');
+                updatePaymentCalculations();
+                document.getElementById('closeOrderModal').classList.remove('hidden');
+            };
+
+            // Select Payment Type
+            window.selectPaymentType = function(type) {
+                selectedPaymentType = type;
+                document.querySelectorAll('.payment-type-btn').forEach(btn => {
+                    btn.classList.remove('bg-blue-600');
+                    btn.classList.add('bg-gray-700');
+                });
+                const btnMap = {
+                    'cash': 'paymentTypeCash',
+                    'card': 'paymentTypeCard',
+                    'card_cash': 'paymentTypeCardCash',
+                    'credit': 'paymentTypeCredit'
+                };
+                const selectedBtn = document.getElementById(btnMap[type]);
+                if (selectedBtn) {
+                    selectedBtn.classList.remove('bg-gray-700');
+                    selectedBtn.classList.add('bg-blue-600');
+                }
+                cashInputValue = '0';
+                document.getElementById('paymentCashInput').value = '0.00';
+                updatePaymentCalculations();
+            };
+
+            // Number Pad
+            window.appendNumber = function(num) {
+                if (cashInputValue === '0' && num !== '.') cashInputValue = num;
+                else if (num === '.' && cashInputValue.includes('.')) return;
+                else cashInputValue += num;
+                document.getElementById('paymentCashInput').value = parseFloat(cashInputValue || 0).toFixed(2);
+                updatePaymentCalculations();
+            };
+
+            window.backspaceNumber = function() {
+                cashInputValue = cashInputValue.length > 1 ? cashInputValue.slice(0, -1) : '0';
+                document.getElementById('paymentCashInput').value = parseFloat(cashInputValue || 0).toFixed(2);
+                updatePaymentCalculations();
+            };
+
+            window.clearNumber = function() {
+                cashInputValue = '0';
+                document.getElementById('paymentCashInput').value = '0.00';
+                updatePaymentCalculations();
+            };
+
+            // Update Calculations
+            function updatePaymentCalculations() {
+                const total = parseFloat(document.getElementById('paymentTotal').textContent);
+                const cashAmount = parseFloat(cashInputValue) || 0;
+                let balance = 0,
+                    credit = 0;
+
+                if (selectedPaymentType === 'cash') {
+                    balance = cashAmount - total;
+                    if (balance < 0) {
+                        credit = Math.abs(balance);
+                        balance = 0;
+                    }
+                } else if (selectedPaymentType === 'credit') {
+                    credit = total;
+                }
+
+                document.getElementById('paymentBalance').textContent = balance.toFixed(2);
+                document.getElementById('paymentCredit').textContent = credit.toFixed(2);
+                document.getElementById('creditRow').style.display = credit > 0 ? 'flex' : 'none';
+                document.getElementById('balanceRow').style.display = credit > 0 ? 'none' : 'flex';
+            }
+
+            // Complete Payment
+            window.completePayment = async function() {
+                const total = parseFloat(document.getElementById('paymentTotal').textContent);
+                const cashAmount = parseFloat(cashInputValue) || 0;
+
+                if (selectedPaymentType === 'cash' && cashAmount < total) {
+                    showNotification('Insufficient cash amount', 'Payment Error');
+                    return;
+                }
+
+                if (!currentOrderId) {
+                    showNotification('No active order', 'Error');
+                    return;
+                }
+
+                try {
+                    const response = await fetch('{{ route("pos.payment") }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify({
+                            order_id: currentOrderId,
+                            payment_method: selectedPaymentType,
+                            amount_paid: selectedPaymentType === 'card' ? total : cashAmount
+                        })
+                    });
+
+                    const result = await response.json();
+                    if (result.success) {
+                        showNotification('Payment completed!', 'Success');
+                        billItems = [];
+                        currentOrderId = null;
+                        currentOrderType = null;
+                        selectedTableId = null;
+                        renderBill();
+                        calculateTotals();
+                        closeModal('closeOrderModal');
+                        document.getElementById('orderTypeDisplay').textContent = 'Select Order Type';
+                        document.getElementById('menuSelectionContainer').classList.replace('flex', 'hidden');
+                        document.getElementById('initialStateMessage')?.classList.remove('hidden');
+
+                        // Open Closed Orders modal after successful payment
+                        setTimeout(() => openClosedOrdersModal(), 500);
+                    } else {
+                        showNotification('Error: ' + (result.message || 'Unknown error'), 'Payment Error');
+                    }
+                } catch (error) {
+                    showNotification('Error: ' + error.message, 'System Error');
+                }
+            };
+
+            // Open Closed Orders Modal
+            window.openClosedOrdersModal = async function() {
+                try {
+                    const response = await fetch('{{ route("pos.closedOrders") }}');
+                    const result = await response.json();
+
+                    if (result.success) {
+                        const container = document.getElementById('closedOrdersContainer');
+
+                        if (result.orders.length === 0) {
+                            container.innerHTML = `
+                                <div class="text-center text-gray-500 py-8">
+                                    <p>No closed orders</p>
+                                </div>
+                            `;
+                        } else {
+                            container.innerHTML = result.orders.map(order => `
+                                <div class="bg-gray-700 rounded-lg p-4 mb-2 flex justify-between items-center hover:bg-gray-650 transition">
+                                    <div>
+                                        <div class="text-white font-semibold">${order.order_number}</div>
+                                        <div class="text-sm text-gray-400">
+                                            Table: ${order.table_number} | ${order.items_count} items | ${order.payment_method.toUpperCase()}
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-4">
+                                        <div class="text-right">
+                                            <div class="text-white font-bold">Rs. ${parseFloat(order.total_amount).toFixed(2)}</div>
+                                            <div class="text-xs text-gray-400">${order.completed_at}</div>
+                                        </div>
+                                        <button onclick="printReceipt(${order.id})" 
+                                                class="bg-rose-500 hover:bg-rose-600 text-white p-2 rounded-lg transition shadow-sm"
+                                                title="Print Receipt">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            `).join('');
+                        }
+
+                        document.getElementById('closedOrdersModal').classList.remove('hidden');
+                    }
+                } catch (error) {
+                    showNotification('Error loading closed orders: ' + error.message, 'Error');
+                }
+            };
+
+            // Print Receipt (Hidden Iframe)
+            window.printReceipt = function(orderId) {
+                const url = '{{ url("/pos/receipt") }}/' + orderId;
+
+                // Create invisible iframe
+                const iframe = document.createElement('iframe');
+                iframe.style.position = 'absolute';
+                iframe.style.width = '0px';
+                iframe.style.height = '0px';
+                iframe.style.border = 'none';
+                iframe.src = url;
+
+                document.body.appendChild(iframe);
+
+                // Remove iframe after a delay
+                setTimeout(() => {
+                    document.body.removeChild(iframe);
+                }, 10000);
+            };
         </script>
         @endsection

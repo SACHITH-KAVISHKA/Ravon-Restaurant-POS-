@@ -17,6 +17,7 @@ class Order extends Model
         'table_id',
         'order_type',
         'status',
+        'is_paid',
         'waiter_id',
         'customer_name',
         'customer_phone',
@@ -208,10 +209,10 @@ class Order extends Model
     public function calculateTotal(): void
     {
         $this->subtotal = $this->orderItems->sum('subtotal');
-        $this->total_amount = $this->subtotal 
-            - $this->discount_amount 
-            + $this->service_charge 
-            + $this->tax_amount 
+        $this->total_amount = $this->subtotal
+            - $this->discount_amount
+            + $this->service_charge
+            + $this->tax_amount
             + $this->delivery_fee;
         $this->save();
     }

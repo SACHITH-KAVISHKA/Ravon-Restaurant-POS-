@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <title>Receipt - {{ $order->order_number }}</title>
     <style>
@@ -8,6 +9,7 @@
             padding: 0;
             box-sizing: border-box;
         }
+
         body {
             font-family: 'Courier New', monospace;
             font-size: 12px;
@@ -16,52 +18,63 @@
             max-width: 300px;
             margin: 0 auto;
         }
+
         .header {
             text-align: center;
             margin-bottom: 20px;
             border-bottom: 2px dashed #000;
             padding-bottom: 10px;
         }
+
         .header h1 {
             font-size: 20px;
             margin-bottom: 5px;
         }
+
         .info {
             margin-bottom: 15px;
             border-bottom: 1px dashed #000;
             padding-bottom: 10px;
         }
+
         .info-row {
             display: flex;
             justify-content: space-between;
             margin-bottom: 3px;
         }
+
         .items {
             margin-bottom: 15px;
             border-bottom: 1px dashed #000;
             padding-bottom: 10px;
         }
+
         .item {
             margin-bottom: 8px;
         }
+
         .item-header {
             display: flex;
             justify-content: space-between;
             font-weight: bold;
         }
+
         .item-details {
             font-size: 10px;
             color: #666;
             margin-left: 10px;
         }
+
         .totals {
             margin-bottom: 15px;
         }
+
         .total-row {
             display: flex;
             justify-content: space-between;
             margin-bottom: 3px;
         }
+
         .total-row.grand {
             font-weight: bold;
             font-size: 14px;
@@ -69,26 +82,31 @@
             padding-top: 5px;
             margin-top: 5px;
         }
+
         .payment {
             margin-bottom: 15px;
             border-bottom: 1px dashed #000;
             padding-bottom: 10px;
         }
+
         .footer {
             text-align: center;
             font-size: 10px;
             margin-top: 20px;
         }
+
         @media print {
             body {
                 padding: 0;
             }
+
             .no-print {
                 display: none;
             }
         }
     </style>
 </head>
+
 <body>
     <div class="header">
         <h1>RAVON RESTAURANT</h1>
@@ -113,7 +131,7 @@
         </div>
         <div class="info-row">
             <span>Cashier:</span>
-            <span>{{ $order->waiter->name }}</span>
+            <span>{{ $order->waiter ? $order->waiter->name : 'N/A' }}</span>
         </div>
         @if($order->customer_name)
         <div class="info-row">
@@ -124,7 +142,7 @@
     </div>
 
     <div class="items">
-        @foreach($order->items as $item)
+        @foreach($order->orderItems as $item)
         <div class="item">
             <div class="item-header">
                 <span>{{ $item->quantity }} x {{ $item->item->name }}</span>
@@ -134,11 +152,11 @@
                 @ Rs. {{ number_format($item->unit_price, 2) }} each
             </div>
             @if($item->modifiers->count() > 0)
-                @foreach($item->modifiers as $modifier)
-                <div class="item-details">
-                    + {{ $modifier->modifier_name }} (Rs. {{ number_format($modifier->modifier_price, 2) }})
-                </div>
-                @endforeach
+            @foreach($item->modifiers as $modifier)
+            <div class="item-details">
+                + {{ $modifier->modifier ? $modifier->modifier->name : 'Modifier' }} (Rs. {{ number_format($modifier->price_adjustment, 2) }})
+            </div>
+            @endforeach
             @endif
             @if($item->special_instructions)
             <div class="item-details">
@@ -209,8 +227,11 @@
     </div>
 
     <script>
-        // Auto print on load (optional)
-        // window.onload = function() { window.print(); }
+        // Auto print on load
+        window.onload = function() {
+            window.print();
+        }
     </script>
 </body>
+
 </html>

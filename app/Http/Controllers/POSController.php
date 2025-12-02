@@ -101,6 +101,38 @@ class POSController extends Controller
     }
 
     /**
+     * Get closed/completed orders (paid orders)
+     */
+    public function getClosedOrders()
+    {
+        $closedOrders = Order::with(['table', 'orderItems.item', 'payment'])
+            ->where(function ($q) {
+                $q->where('status', 'completed')
+                    ->orWhere('is_paid', true);
+            })
+            ->orderBy('completed_at', 'desc')
+            ->limit(50) // Last 50 closed orders
+            ->get()
+            ->map(function ($order) {
+                return [
+                    'id' => $order->id,
+                    'order_number' => $order->order_number,
+                    'table_number' => $order->table ? $order->table->table_number : 'N/A',
+                    'order_type' => $order->order_type,
+                    'total_amount' => $order->total_amount,
+                    'completed_at' => $order->completed_at ? $order->completed_at->format('M d, h:i A') : 'N/A',
+                    'items_count' => $order->orderItems->count(),
+                    'payment_method' => $order->payment ? $order->payment->payment_method : 'N/A',
+                ];
+            });
+
+        return response()->json([
+            'success' => true,
+            'orders' => $closedOrders
+        ]);
+    }
+
+    /**
      * Get order details for editing
      */
     public function getOrder($orderId)
@@ -179,57 +211,99 @@ class POSController extends Controller
                     ]);
                 }
 
-                // Add all items
-                $newItems = $validated['items'];
+                // Process all items as new
+                $itemsToProcess = [];
+                foreach ($validated['items'] as $itemData) {
+                    $itemsToProcess[] = ['data' => $itemData, 'is_new' => true];
+                }
             } else {
                 // Update existing order
                 $order = Order::findOrFail($validated['order_id']);
 
-                // Get existing item IDs
-                $existingItemIds = $order->orderItems->pluck('item_id')->toArray();
-                $newItemIds = array_column($validated['items'], 'item_id');
-
-                // Find only newly added items
-                $newItems = array_filter($validated['items'], function ($item) use ($existingItemIds) {
-                    return !in_array($item['item_id'], $existingItemIds);
+                // Get existing order items indexed by item_id + display name
+                $existingItems = $order->orderItems->keyBy(function ($item) {
+                    return $item->item_id . '_' . ($item->item_display_name ?? $item->item->name);
                 });
+
+                $itemsToProcess = [];
+
+                // Process each item from the request
+                foreach ($validated['items'] as $itemData) {
+                    $key = $itemData['item_id'] . '_' . $itemData['name'];
+
+                    if ($existingItems->has($key)) {
+                        // Item exists - update it
+                        $existingItem = $existingItems->get($key);
+                        $requestedQty = $itemData['quantity'];
+                        $currentQty = $existingItem->quantity;
+
+                        if ($requestedQty != $currentQty) {
+                            // Update the existing order item
+                            $existingItem->update([
+                                'quantity' => $requestedQty,
+                                'subtotal' => $itemData['price'] * $requestedQty
+                            ]);
+
+                            // If increased, send difference to KOT
+                            if ($requestedQty > $currentQty) {
+                                $itemsToProcess[] = [
+                                    'data' => array_merge($itemData, ['quantity' => $requestedQty - $currentQty]),
+                                    'is_new' => false,
+                                    'order_item_id' => $existingItem->id
+                                ];
+                            }
+                        }
+                        // If quantity same or decreased, no KOT needed
+                    } else {
+                        // Completely new item - will create new order_item
+                        $itemsToProcess[] = ['data' => $itemData, 'is_new' => true];
+                    }
+                }
 
                 // Update placed_at timestamp
                 $order->update(['placed_at' => now()]);
             }
 
-            // Add items to order
-            $subtotal = $order->subtotal ?? 0;
-            $kotItems = []; // For KOT printing
+            // Process items and generate KOT
+            $kotItems = [];
 
-            foreach ($newItems as $itemData) {
+            foreach ($itemsToProcess as $processItem) {
+                $itemData = $processItem['data'];
                 $item = Item::findOrFail($itemData['item_id']);
 
-                $orderItem = OrderItem::create([
-                    'order_id' => $order->id,
-                    'item_id' => $item->id,
-                    'quantity' => $itemData['quantity'],
-                    'unit_price' => $itemData['price'],
-                    'subtotal' => $itemData['price'] * $itemData['quantity'],
-                ]);
+                if ($processItem['is_new']) {
+                    // Create new order item
+                    $orderItem = OrderItem::create([
+                        'order_id' => $order->id,
+                        'item_id' => $item->id,
+                        'item_display_name' => $itemData['name'] ?? $item->name,
+                        'quantity' => $itemData['quantity'],
+                        'unit_price' => $itemData['price'],
+                        'subtotal' => $itemData['price'] * $itemData['quantity'],
+                    ]);
+                } else {
+                    // Updated item - use existing order_item
+                    $orderItem = OrderItem::find($processItem['order_item_id']);
+                }
 
-                $subtotal += $orderItem->subtotal;
-
-                // Track for KOT
+                // Add to KOT
                 $kotItems[] = [
                     'item' => $item,
                     'order_item' => $orderItem,
-                    'quantity' => $itemData['quantity'],
+                    'quantity' => $itemData['quantity'], // Quantity for KOT
                 ];
             }
 
-            // Update order totals
+            // Recalculate order totals from all order items
+            $order->refresh();
+            $subtotalFromAllItems = $order->orderItems->sum('subtotal');
+
             $order->update([
-                'subtotal' => $subtotal,
-                'total_amount' => $subtotal,
+                'subtotal' => $subtotalFromAllItems,
+                'total_amount' => $subtotalFromAllItems,
             ]);
 
-            // Generate KOT/BOT for new items
+            // Generate KOT/BOT for new/updated items
             if (!empty($kotItems)) {
                 $this->generateKOT($order, $kotItems);
             }
@@ -335,7 +409,7 @@ class POSController extends Controller
     {
         $validated = $request->validate([
             'order_id' => 'required|exists:orders,id',
-            'payment_method' => 'required|in:cash,card,credit',
+            'payment_method' => 'required|in:cash,card,credit,card_cash,mixed',
             'amount_paid' => 'required|numeric|min:0',
         ]);
 
@@ -353,22 +427,37 @@ class POSController extends Controller
 
             $totalAmount = $order->total_amount;
 
-            if ($validated['amount_paid'] < $totalAmount) {
+            // For credit payment, allow any amount
+            if ($validated['payment_method'] !== 'credit' && $validated['amount_paid'] < $totalAmount) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Amount paid is less than total amount'
                 ], 400);
             }
 
+            // Map payment methods
+            $paymentMethodMap = [
+                'cash' => 'cash',
+                'card' => 'card',
+                'credit' => 'cash', // Credit is still cash-based
+                'card_cash' => 'mixed',
+                'mixed' => 'mixed'
+            ];
+
+            // Generate unique payment number
+            $paymentNumber = 'PAY-' . date('Ymd') . '-' . str_pad($order->id, 5, '0', STR_PAD_LEFT);
+
             // Create payment
             $payment = Payment::create([
                 'order_id' => $order->id,
-                'amount' => $totalAmount,
-                'payment_method' => $validated['payment_method'],
-                'amount_paid' => $validated['amount_paid'],
+                'payment_number' => $paymentNumber,
+                'total_amount' => $totalAmount,
+                'paid_amount' => $validated['amount_paid'],
                 'change_amount' => max(0, $validated['amount_paid'] - $totalAmount),
-                'cashier_id' => Auth::id(),
+                'payment_method' => $paymentMethodMap[$validated['payment_method']],
                 'payment_status' => 'completed',
+                'processed_by' => Auth::id(),
+                'processed_at' => now(),
             ]);
 
             // Update order
@@ -381,10 +470,12 @@ class POSController extends Controller
             // Free up table if dine-in
             if ($order->table_id) {
                 $table = Table::find($order->table_id);
-                $table->update([
-                    'status' => 'available',
-                    'current_order_id' => null,
-                ]);
+                if ($table) {
+                    $table->update([
+                        'status' => 'available',
+                        'current_order_id' => null,
+                    ]);
+                }
             }
 
             DB::commit();
@@ -409,7 +500,7 @@ class POSController extends Controller
      */
     public function printReceipt($orderId)
     {
-        $order = Order::with(['orderItems.item', 'table', 'waiter', 'payment'])
+        $order = Order::with(['orderItems.item', 'orderItems.modifiers.modifier', 'table', 'waiter', 'payment'])
             ->findOrFail($orderId);
 
         return view('pos.receipt', compact('order'));

@@ -99,6 +99,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/item/{id}', [App\Http\Controllers\POSController::class, 'getItem'])->name('getItem');
         Route::get('/tables', [App\Http\Controllers\POSController::class, 'getAvailableTables'])->name('tables');
         Route::get('/open-checks', [App\Http\Controllers\POSController::class, 'getOpenChecks'])->name('openChecks');
+        Route::get('/closed-orders', [App\Http\Controllers\POSController::class, 'getClosedOrders'])->name('closedOrders');
         Route::get('/order/{orderId}', [App\Http\Controllers\POSController::class, 'getOrder'])->name('getOrder');
         Route::post('/place-order', [App\Http\Controllers\POSController::class, 'placeOrder'])->name('placeOrder');
         Route::post('/payment', [App\Http\Controllers\POSController::class, 'processPayment'])->name('payment');
