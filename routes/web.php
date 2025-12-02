@@ -6,8 +6,6 @@ use App\Http\Controllers\TableController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\MenuController;
 use App\Http\Controllers\PaymentController;
-use App\Http\Controllers\KitchenController;
-use App\Http\Controllers\ReportController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -23,10 +21,10 @@ Route::post('/logout', [App\Http\Controllers\Auth\LoginController::class, 'logou
 
 // Protected routes
 Route::middleware(['auth'])->group(function () {
-    
+
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-    
+
     // Tables
     Route::get('/tables', [TableController::class, 'index'])->name('tables.index');
     Route::get('/tables/{table}', [TableController::class, 'show'])->name('tables.show');
@@ -34,7 +32,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/tables/merge', [TableController::class, 'merge'])->name('tables.merge');
     Route::post('/tables/{table}/split', [TableController::class, 'split'])->name('tables.split');
     Route::post('/tables/{table}/transfer', [TableController::class, 'transfer'])->name('tables.transfer');
-    
+
     // Orders
     Route::post('/orders', [OrderController::class, 'store'])->name('orders.store');
     Route::put('/orders/{order}', [OrderController::class, 'update'])->name('orders.update');
@@ -42,7 +40,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/orders/{order}/items', [OrderController::class, 'addItem'])->name('orders.addItem');
     Route::post('/orders/{order}/discount', [OrderController::class, 'applyDiscount'])->name('orders.discount');
     Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');
-    
+
     // Menu Management (Admin only)
     Route::middleware(['role:admin'])->prefix('menu')->name('menu.')->group(function () {
         Route::get('/', [MenuController::class, 'index'])->name('index');
@@ -53,15 +51,20 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/items/{item}/edit', [MenuController::class, 'editItem'])->name('items.edit');
         Route::put('/items/{item}', [MenuController::class, 'updateItem'])->name('items.update');
         Route::delete('/items/{item}', [MenuController::class, 'destroyItem'])->name('items.destroy');
+
+        // Modifier routes
+        Route::post('/items/{item}/modifiers', [MenuController::class, 'storeModifier'])->name('modifiers.store');
+        Route::put('/modifiers/{modifier}', [MenuController::class, 'updateModifier'])->name('modifiers.update');
+        Route::delete('/modifiers/{modifier}', [MenuController::class, 'destroyModifier'])->name('modifiers.destroy');
     });
-    
-    // Kitchen Display (Kitchen staff)
+
+    // Kitchen Display (Kitchen staff) - Placeholder routes
     Route::middleware(['role:kitchen|admin'])->prefix('kitchen')->name('kitchen.')->group(function () {
-        Route::get('/', [KitchenController::class, 'index'])->name('index');
-        Route::post('/kot/{kot}/status', [KitchenController::class, 'updateStatus'])->name('kot.status');
-        Route::post('/kot/{kot}/reprint', [KitchenController::class, 'reprint'])->name('kot.reprint');
+        Route::get('/', function () {
+            return view('dashboard');
+        })->name('index');
     });
-    
+
     // Payments (Cashier)
     Route::middleware(['role:cashier|admin'])->prefix('payments')->name('payments.')->group(function () {
         Route::get('/', [PaymentController::class, 'index'])->name('index');
@@ -70,21 +73,35 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/refund/{payment}', [PaymentController::class, 'refund'])->name('refund');
         Route::get('/daily-summary', [PaymentController::class, 'dailySummary'])->name('daily-summary');
     });
-    
-    // Reports (Admin & Cashier)
+
+    // Reports (Admin & Cashier) - Placeholder routes
     Route::middleware(['role:admin|cashier'])->prefix('reports')->name('reports.')->group(function () {
-        Route::get('/', [ReportController::class, 'index'])->name('index');
-        Route::get('/daily-sales', [ReportController::class, 'dailySales'])->name('daily-sales');
-        Route::get('/item-sales', [ReportController::class, 'itemSales'])->name('item-sales');
-        Route::get('/staff-performance', [ReportController::class, 'staff-performance'])->name('staff-performance');
-        Route::get('/export', [ReportController::class, 'export'])->name('export');
+        Route::get('/', function () {
+            return view('dashboard');
+        })->name('index');
+        Route::get('/daily-sales', function () {
+            return view('dashboard');
+        })->name('daily-sales');
+        Route::get('/item-sales', function () {
+            return view('dashboard');
+        })->name('item-sales');
+        Route::get('/staff-performance', function () {
+            return view('dashboard');
+        })->name('staff-performance');
+        Route::get('/export', function () {
+            return redirect()->route('dashboard');
+        })->name('export');
     });
-    
+
     // POS (Cashier & Admin)
     Route::middleware(['role:cashier|admin'])->prefix('pos')->name('pos.')->group(function () {
         Route::get('/', [App\Http\Controllers\POSController::class, 'index'])->name('index');
         Route::get('/item/{id}', [App\Http\Controllers\POSController::class, 'getItem'])->name('getItem');
-        Route::post('/process', [App\Http\Controllers\POSController::class, 'processOrder'])->name('process');
+        Route::get('/tables', [App\Http\Controllers\POSController::class, 'getAvailableTables'])->name('tables');
+        Route::get('/open-checks', [App\Http\Controllers\POSController::class, 'getOpenChecks'])->name('openChecks');
+        Route::get('/order/{orderId}', [App\Http\Controllers\POSController::class, 'getOrder'])->name('getOrder');
+        Route::post('/place-order', [App\Http\Controllers\POSController::class, 'placeOrder'])->name('placeOrder');
+        Route::post('/payment', [App\Http\Controllers\POSController::class, 'processPayment'])->name('payment');
         Route::get('/receipt/{orderId}', [App\Http\Controllers\POSController::class, 'printReceipt'])->name('receipt');
     });
 });

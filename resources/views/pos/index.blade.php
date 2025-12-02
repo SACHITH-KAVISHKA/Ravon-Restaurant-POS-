@@ -153,34 +153,13 @@
                         <div class="grid grid-cols-4 gap-3" id="itemsGrid">
                             @foreach($categories as $category)
                             @foreach($category->availableItems as $item)
-                            <button class="p-3 bg-gray-700 text-white rounded-lg hover:bg-blue-600 transition border border-gray-600 hover:border-blue-500 text-left"
+                            <button class="p-5 bg-gray-700 text-white rounded-lg hover:bg-blue-600 transition border border-gray-600 hover:border-blue-500 text-center flex items-center justify-center h-full"
                                 onclick="selectItem({{ $item->id }}, '{{ $item->name }}', {{ $item->price }}, {{ json_encode($item->modifiers) }})"
                                 data-category="{{ $category->id }}">
-                                <div class="font-semibold text-sm">{{ $item->name }}
-                                    @if($item->modifiers->count() > 0)
-                                    <span class="ml-1 px-1.5 py-0.5 bg-blue-500 text-white text-xs rounded">{{ $item->modifiers->count() }} sizes</span>
-                                    @endif
-                                </div>
-                                <div class="text-xs text-gray-400 mt-1">Rs. {{ number_format($item->price, 2) }}</div>
+                                <div class="font-semibold text-lg">{{ $item->name }}</div>
                             </button>
                             @endforeach
                             @endforeach
-                        </div>
-
-
-
-                        <!-- Scroll Arrows -->
-                        <div class="flex justify-center gap-4 mt-4 mb-4">
-                            <button class="p-3 bg-gray-700 text-white rounded-full hover:bg-gray-600 transition" onclick="scrollUp()">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
-                                </svg>
-                            </button>
-                            <button class="p-3 bg-gray-700 text-white rounded-full hover:bg-gray-600 transition" onclick="scrollDown()">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                                </svg>
-                            </button>
                         </div>
                     </div>
 
@@ -279,6 +258,17 @@
                 </div>
             </button>
 
+            <button class="w-full h-14 flex items-stretch shadow-sm group mb-2" onclick="showCloseOrderModal()">
+                <div class="bg-white text-yellow-500 p-3 rounded-l-lg flex items-center justify-center w-14">
+                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+                <div class="bg-yellow-400 text-white flex-1 flex items-center justify-center font-bold text-base rounded-r-lg group-hover:bg-yellow-500 transition">
+                    Close Order
+                </div>
+            </button>
+
             <button class="w-full h-14 flex items-stretch shadow-sm group mb-2" onclick="clearBill()">
                 <div class="bg-white text-red-400 p-3 rounded-l-lg flex items-center justify-center w-14">
                     <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -359,18 +349,73 @@
                         </svg>
                     </button>
                 </div>
-                <div class="grid grid-cols-5 gap-4">
-                    @foreach($tables as $table)
-                    <button onclick="selectTable('{{ $table->table_number }}', {{ $table->id }})"
-                        class="p-4 {{ $table->status === 'occupied' ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700' }} text-white rounded-lg transition font-semibold">
-                        {{ $table->table_number }}
-                    </button>
-                    @endforeach
+                <div class="grid grid-cols-5 gap-4" id="tableGrid">
+                    <!-- Tables will be loaded dynamically -->
                 </div>
             </div>
         </div>
 
-        <!-- Checkout Modal -->
+        <!-- Open Checks Modal -->
+        <div id="openChecksModal" class="hidden fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center">
+            <div class="bg-gray-800 rounded-xl p-6 max-w-4xl w-full mx-4">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold text-white">Open Checks</h2>
+                    <button onclick="closeModal('openChecksModal')" class="text-gray-400 hover:text-white">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div id="openChecksContainer" class="space-y-3 max-h-96 overflow-y-auto">
+                    <!-- Open orders will be loaded dynamically -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Close Order Payment Modal -->
+        <div id="closeOrderModal" class="hidden fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center">
+            <div class="bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold text-white">Close Order</h2>
+                    <button onclick="closeModal('closeOrderModal')" class="text-gray-400 hover:text-white">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="space-y-4">
+                    <div class="text-center py-4 bg-gray-700 rounded-lg">
+                        <div class="text-sm text-gray-400">Total Amount</div>
+                        <div class="text-3xl font-bold text-white">Rs. <span id="closeOrderTotal">0.00</span></div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-400 mb-2">Payment Method</label>
+                        <select id="closeOrderPaymentMethod" class="w-full px-4 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:border-blue-500">
+                            <option value="cash">Cash</option>
+                            <option value="card">Card</option>
+                            <option value="credit">Credit</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-400 mb-2">Amount Paid</label>
+                        <input type="number" id="closeOrderAmountPaid" class="w-full px-4 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:border-blue-500" step="0.01">
+                    </div>
+
+                    <div class="flex justify-between text-white">
+                        <span>Change:</span>
+                        <span class="font-bold" id="closeOrderChange">0.00</span>
+                    </div>
+
+                    <button onclick="completePayment()" class="w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-semibold">
+                        Complete Payment
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Checkout Modal (OLD - Keep for compatibility) -->
         <div id="checkoutModal" class="hidden fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center">
             <div class="bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4">
                 <div class="flex justify-between items-center mb-4">
@@ -460,15 +505,16 @@
                 </div>
             </div>
         </div>
-
         <script>
+            // Global variables
             let billItems = [];
-            let currentOrderType = 'dine-in';
+            let currentOrderType = null;
             let selectedTableId = null;
+            let currentOrderId = null; // Track current order for updates
 
             // Add item to bill
             function addItemToBill(itemId, itemName, itemPrice) {
-                const existingItem = billItems.find(item => item.item_id === itemId);
+                const existingItem = billItems.find(item => item.item_id === itemId && item.name === itemName);
 
                 if (existingItem) {
                     existingItem.quantity++;
@@ -492,36 +538,36 @@
 
                 if (billItems.length === 0) {
                     billItemsDiv.innerHTML = `
-            <div class="text-center text-gray-500 py-8">
-                <svg class="w-16 h-16 mx-auto mb-2 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
-                </svg>
-                <p>No items added</p>
-            </div>
-        `;
+                        <div class="text-center text-gray-500 py-8">
+                            <svg class="w-16 h-16 mx-auto mb-2 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+                            </svg>
+                            <p>No items added</p>
+                        </div>
+                    `;
                     return;
                 }
 
                 billItemsDiv.innerHTML = billItems.map((item, index) => `
-        <div class="bg-gray-700 rounded-lg p-3 border border-gray-600">
-            <div class="grid grid-cols-3 gap-2 text-sm">
-                <div class="col-span-2">
-                    <div class="font-semibold text-white">${index + 1}. ${item.name}</div>
-                    <div class="text-xs text-gray-400">Rs. ${item.price.toFixed(2)} each</div>
-                </div>
-                <div class="text-center">
-                    <div class="flex items-center justify-center space-x-2">
-                        <button onclick="decrementQuantity(${index})" class="w-6 h-6 bg-red-600 text-white rounded hover:bg-red-700">-</button>
-                        <span class="text-white font-semibold">${item.quantity}</span>
-                        <button onclick="incrementQuantity(${index})" class="w-6 h-6 bg-green-600 text-white rounded hover:bg-green-700">+</button>
+                    <div class="bg-gray-700 rounded-lg p-3 border border-gray-600">
+                        <div class="grid grid-cols-3 gap-2 text-sm">
+                            <div class="col-span-2">
+                                <div class="font-semibold text-white">${index + 1}. ${item.name}</div>
+                                <div class="text-xs text-gray-400">Rs. ${item.price.toFixed(2)} each</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="flex items-center justify-center space-x-2">
+                                    <button onclick="decrementQuantity(${index})" class="w-6 h-6 bg-red-600 text-white rounded hover:bg-red-700">-</button>
+                                    <span class="text-white font-semibold">${item.quantity}</span>
+                                    <button onclick="incrementQuantity(${index})" class="w-6 h-6 bg-green-600 text-white rounded hover:bg-green-700">+</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-right mt-2 text-white font-semibold">
+                            Rs. ${(item.price * item.quantity).toFixed(2)}
+                        </div>
                     </div>
-                </div>
-            </div>
-            <div class="text-right mt-2 text-white font-semibold">
-                Rs. ${(item.price * item.quantity).toFixed(2)}
-            </div>
-        </div>
-    `).join('');
+                `).join('');
             }
 
             // Increment/Decrement quantity
@@ -544,7 +590,6 @@
             // Calculate totals
             function calculateTotals() {
                 const subtotal = billItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-
                 document.getElementById('subtotal').textContent = subtotal.toFixed(2);
                 document.getElementById('total').textContent = subtotal.toFixed(2);
             }
@@ -558,21 +603,14 @@
                 });
             }
 
-            // Open modals
-            function openTableOrderModal() {
-                currentOrderType = 'dine-in';
-                document.getElementById('tableModal').classList.remove('hidden');
-            }
-
             // Set Order Type Helper
             function setOrderType(type, label) {
                 currentOrderType = type;
                 selectedTableId = null;
+                currentOrderId = null;
                 const display = document.getElementById('orderTypeDisplay');
                 if (display) display.textContent = label;
 
-                // Show menu
-                // Show menu
                 document.getElementById('menuSelectionContainer').classList.remove('hidden');
                 document.getElementById('menuSelectionContainer').classList.add('flex');
                 const msg = document.getElementById('initialStateMessage');
@@ -581,29 +619,20 @@
 
             // Select Item (Check for Sub-items/Portions)
             function selectItem(itemId, itemName, itemPrice, modifiers) {
-                // Filter for size/portion modifiers including beverages (ml, liter)
-                // This supports both food portions (small, large, regular) and beverage sizes (ml, liter)
                 const portionModifiers = modifiers.filter(m => {
                     const name = m.name.toLowerCase();
                     const type = (m.type || '').toLowerCase();
 
-                    return type === 'size' ||
-                        type === 'portion' ||
-                        name.includes('large') ||
-                        name.includes('small') ||
-                        name.includes('regular') ||
-                        name.includes('ml') ||
-                        name.includes('liter') ||
-                        name.includes(' l');
+                    return type === 'size' || type === 'portion' ||
+                        name.includes('large') || name.includes('small') || name.includes('regular') ||
+                        name.includes('ml') || name.includes('liter') || name.includes(' l');
                 });
 
                 if (portionModifiers.length > 0) {
-                    // Item has portions - show them
                     showPortionSelection(itemId, itemName, itemPrice, portionModifiers);
                 } else {
-                    // Item has no portions - add directly to bill and clear the portion box
                     addItemToBill(itemId, itemName, itemPrice);
-                    clearPortionSelection(); // Clear the box to show empty state
+                    clearPortionSelection();
                 }
             }
 
@@ -611,23 +640,13 @@
                 const optionsDiv = document.getElementById('portionOptions');
                 const closeBtn = document.getElementById('closePortionBtn');
 
-                // Build the portion options HTML
                 optionsDiv.innerHTML = portions.map(p => `
-        <button class="p-3 bg-blue-700 text-white rounded-lg hover:bg-blue-600 transition font-semibold"
-                onclick="addPortionToBill(${itemId}, '${itemName}', ${basePrice}, ${p.id}, '${p.name}', ${p.price_adjustment})">
-            ${p.name} (+Rs. ${p.price_adjustment})
-        </button>
-    `).join('');
+                    <button class="p-3 bg-blue-700 text-white rounded-lg hover:bg-blue-600 transition font-semibold"
+                            onclick="addPortionToBill(${itemId}, '${itemName}', ${p.price_adjustment}, '${p.name}')">
+                        ${p.name}
+                    </button>
+                `).join('');
 
-                // Add option for base item (Regular/No Modifier)
-                optionsDiv.innerHTML += `
-        <button class="p-3 bg-gray-600 text-white rounded-lg hover:bg-gray-500 transition font-semibold"
-                onclick="addItemToBill(${itemId}, '${itemName}', ${basePrice}); clearPortionSelection();">
-            Base / Regular
-        </button>
-    `;
-
-                // Show the close button
                 closeBtn.classList.remove('hidden');
             }
 
@@ -638,20 +657,13 @@
             function clearPortionSelection() {
                 const optionsDiv = document.getElementById('portionOptions');
                 const closeBtn = document.getElementById('closePortionBtn');
-
-                // Reset to empty/clean state (no message, just blank)
                 optionsDiv.innerHTML = '';
-
-                // Hide the close button
                 closeBtn.classList.add('hidden');
             }
 
-            function addPortionToBill(itemId, itemName, basePrice, modifierId, modifierName, priceAdjustment) {
-                const finalPrice = basePrice + priceAdjustment;
-                const fullName = `${itemName} (${modifierName})`;
-
-                // Add to bill with modifier tracking
-                const existingItem = billItems.find(item => item.item_id === itemId && item.modifiers.some(m => m.id === modifierId));
+            function addPortionToBill(itemId, itemName, portionPrice, portionName) {
+                const fullName = `${itemName} (${portionName})`;
+                const existingItem = billItems.find(item => item.item_id === itemId && item.name === fullName);
 
                 if (existingItem) {
                     existingItem.quantity++;
@@ -659,40 +671,33 @@
                     billItems.push({
                         item_id: itemId,
                         name: fullName,
-                        price: finalPrice,
+                        price: portionPrice,
                         quantity: 1,
-                        modifiers: [{
-                            id: modifierId,
-                            name: modifierName,
-                            price: priceAdjustment
-                        }]
+                        modifiers: []
                     });
                 }
 
                 renderBill();
                 calculateTotals();
-                cancelPortionSelection();
+                clearPortionSelection();
             }
 
             function openTakeAwayModal() {
-                setOrderType('take-away', 'Take Away');
+                setOrderType('takeaway', 'Take Away');
             }
-
-
 
             function selectTable(tableNumber, tableId) {
                 selectedTableId = tableId;
-                currentOrderType = 'dine-in';
+                currentOrderType = 'dine_in';
+                currentOrderId = null;
                 const display = document.getElementById('orderTypeDisplay');
                 if (display) display.textContent = 'Table: ' + tableNumber;
 
-                // Show menu
                 document.getElementById('menuSelectionContainer').classList.remove('hidden');
                 document.getElementById('menuSelectionContainer').classList.add('flex');
                 const msg = document.getElementById('initialStateMessage');
                 if (msg) msg.classList.add('hidden');
 
-                // Close the modal explicitly
                 document.getElementById('tableModal').classList.add('hidden');
             }
 
@@ -700,40 +705,34 @@
                 document.getElementById(modalId).classList.add('hidden');
             }
 
-            // Checkout
-            function checkout() {
+            // Checkout - Place Order
+            async function checkout() {
                 if (billItems.length === 0) {
                     showNotification('Please add items to the bill first', 'Empty Bill');
                     return;
                 }
 
-                const total = document.getElementById('total').textContent;
-                document.getElementById('checkoutTotal').textContent = total;
-                document.getElementById('checkoutModal').classList.remove('hidden');
-            }
-
-            // Process payment
-            async function processPayment() {
-                const paymentMethod = document.getElementById('paymentMethod').value;
-                const amountPaid = parseFloat(document.getElementById('amountPaid').value) || 0;
-                const total = parseFloat(document.getElementById('total').textContent);
-
-                if (amountPaid < total) {
-                    showNotification('Amount paid is less than total amount', 'Payment Error');
+                if (!currentOrderType) {
+                    showNotification('Please select an order type first', 'Order Type Required');
                     return;
                 }
 
-                const orderData = {
-                    order_type: currentOrderType,
-                    table_id: selectedTableId,
-                    items: billItems,
-                    payment_method: paymentMethod,
-                    amount_paid: amountPaid,
-                    _token: '{{ csrf_token() }}'
-                };
-
                 try {
-                    const response = await fetch('{{ route("pos.process") }}', {
+                    const orderData = {
+                        order_id: currentOrderId,
+                        order_type: currentOrderType,
+                        table_id: selectedTableId,
+                        items: billItems.map(item => ({
+                            item_id: item.item_id,
+                            name: item.name,
+                            price: item.price,
+                            quantity: item.quantity
+                        }))
+                    };
+
+                    console.log('Sending order data:', orderData);
+
+                    const response = await fetch('{{ route("pos.placeOrder") }}', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -742,34 +741,285 @@
                         body: JSON.stringify(orderData)
                     });
 
+                    console.log('Response status:', response.status);
+                    const responseText = await response.text();
+                    console.log('Response text:', responseText);
+
+                    let result;
+                    try {
+                        result = JSON.parse(responseText);
+                    } catch (e) {
+                        console.error('Failed to parse JSON:', e);
+                        console.error('Response was:', responseText.substring(0, 500));
+                        showNotification('Server error. Check console for details.', 'Error');
+                        return;
+                    }
+
+                    if (result.success) {
+                        showNotification(result.message + ' (KOT/BOT sent to kitchen/bar)', 'Success');
+
+                        // Clear the POS for next order
+                        billItems = [];
+                        currentOrderId = null;
+                        currentOrderType = null;
+                        selectedTableId = null;
+
+                        // Reset UI
+                        renderBill();
+                        calculateTotals();
+
+                        const display = document.getElementById('orderTypeDisplay');
+                        if (display) display.textContent = 'Select Order Type';
+
+                        // Hide menu and show initial message
+                        document.getElementById('menuSelectionContainer').classList.remove('flex');
+                        document.getElementById('menuSelectionContainer').classList.add('hidden');
+
+                        const msg = document.getElementById('initialStateMessage');
+                        if (msg) msg.classList.remove('hidden');
+
+                        // Hide portion selection if open
+                        cancelPortionSelection();
+                    } else {
+                        showNotification('Error: ' + (result.message || 'Unknown error'), 'Order Error');
+                    }
+                } catch (error) {
+                    console.error('Checkout error:', error);
+                    showNotification('Error placing order: ' + error.message, 'System Error');
+                }
+            }
+
+            // Open Table Selection Modal
+            async function openTableOrderModal() {
+                try {
+                    const response = await fetch('{{ route("pos.tables") }}');
                     const result = await response.json();
 
                     if (result.success) {
-                        showNotification('Order processed successfully!', 'Success');
-                        billItems = [];
+                        const tableGrid = document.getElementById('tableGrid');
+                        tableGrid.innerHTML = result.tables.map(table => {
+                            let bgColor = 'bg-green-600 hover:bg-green-700';
+                            let clickable = true;
+
+                            if (!table.is_available) {
+                                bgColor = 'bg-red-600 cursor-not-allowed opacity-60';
+                                clickable = false;
+                            }
+
+                            return `
+                                <button 
+                                    ${clickable ? `onclick="selectTable('${table.table_number}', ${table.id})"` : 'disabled'}
+                                    class="p-4 ${bgColor} text-white rounded-lg transition font-semibold">
+                                    ${table.table_number}
+                                    ${!table.is_available ? '<br><span class="text-xs">(Reserved)</span>' : ''}
+                                </button>
+                            `;
+                        }).join('');
+
+                        document.getElementById('tableModal').classList.remove('hidden');
+                    }
+                } catch (error) {
+                    showNotification('Error loading tables: ' + error.message, 'Error');
+                }
+            }
+
+            // Open Open Checks Modal
+            async function openOrderCheckModal() {
+                try {
+                    const response = await fetch('{{ route("pos.openChecks") }}');
+                    const result = await response.json();
+
+                    if (result.success) {
+                        const container = document.getElementById('openChecksContainer');
+
+                        if (result.orders.length === 0) {
+                            container.innerHTML = `
+                                <div class="text-center text-gray-500 py-8">
+                                    <p>No open checks</p>
+                                </div>
+                            `;
+                        } else {
+                            container.innerHTML = result.orders.map(order => `
+                                <div class="bg-gray-700 rounded-lg p-4 hover:bg-gray-600 cursor-pointer transition"
+                                     onclick="loadOrder(${order.id})">
+                                    <div class="flex justify-between items-center">
+                                        <div>
+                                            <div class="text-white font-semibold">${order.order_number}</div>
+                                            <div class="text-sm text-gray-400">
+                                                Table: ${order.table_number} | ${order.items_count} items
+                                            </div>
+                                        </div>
+                                        <div class="text-right">
+                                            <div class="text-white font-bold">Rs. ${parseFloat(order.total_amount).toFixed(2)}</div>
+                                            <div class="text-xs text-gray-400">${order.created_at}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('');
+                        }
+
+                        document.getElementById('openChecksModal').classList.remove('hidden');
+                    }
+                } catch (error) {
+                    showNotification('Error loading open checks: ' + error.message, 'Error');
+                }
+            }
+
+            // Load existing order
+            async function loadOrder(orderId) {
+                try {
+                    const response = await fetch(`{{ url('/pos/order') }}/${orderId}`);
+                    const result = await response.json();
+
+                    if (result.success) {
+                        closeModal('openChecksModal');
+                        currentOrderId = orderId;
+                        currentOrderType = result.order.order_type;
+                        selectedTableId = result.order.table_id;
+
+                        const display = document.getElementById('orderTypeDisplay');
+                        if (result.order.table_number) {
+                            display.textContent = 'Table: ' + result.order.table_number;
+                        } else {
+                            display.textContent = result.order.order_type;
+                        }
+
+                        billItems = result.order.items;
                         renderBill();
                         calculateTotals();
-                        closeModal('checkoutModal');
 
-                        // Optionally print receipt
+                        document.getElementById('menuSelectionContainer').classList.remove('hidden');
+                        document.getElementById('menuSelectionContainer').classList.add('flex');
+                        const msg = document.getElementById('initialStateMessage');
+                        if (msg) msg.classList.add('hidden');
+
+                        showNotification('Order loaded. You can add more items.', 'Order Loaded');
+                    }
+                } catch (error) {
+                    showNotification('Error loading order: ' + error.message, 'Error');
+                }
+            }
+
+            // Show Close Order Modal
+            function showCloseOrderModal() {
+                if (!currentOrderId) {
+                    showNotification('No active order to close', 'No Order');
+                    return;
+                }
+
+                const total = document.getElementById('total').textContent;
+                document.getElementById('closeOrderTotal').textContent = total;
+                document.getElementById('closeOrderModal').classList.remove('hidden');
+            }
+
+            // Calculate change for close order
+            document.getElementById('closeOrderAmountPaid')?.addEventListener('input', function() {
+                const amountPaid = parseFloat(this.value) || 0;
+                const total = parseFloat(document.getElementById('total').textContent);
+                const change = Math.max(0, amountPaid - total);
+                document.getElementById('closeOrderChange').textContent = change.toFixed(2);
+            });
+
+            // Complete Payment
+            async function completePayment() {
+                const paymentMethod = document.getElementById('closeOrderPaymentMethod').value;
+                const amountPaid = parseFloat(document.getElementById('closeOrderAmountPaid').value) || 0;
+                const total = parseFloat(document.getElementById('total').textContent);
+
+                if (amountPaid < total) {
+                    showNotification('Amount paid is less than total amount', 'Payment Error');
+                    return;
+                }
+
+                if (!currentOrderId) {
+                    showNotification('No active order to close', 'Error');
+                    return;
+                }
+
+                try {
+                    const response = await fetch('{{ route("pos.payment") }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify({
+                            order_id: currentOrderId,
+                            payment_method: paymentMethod,
+                            amount_paid: amountPaid
+                        })
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        showNotification('Payment completed successfully!', 'Success');
+
+                        billItems = [];
+                        currentOrderId = null;
+                        currentOrderType = null;
+                        selectedTableId = null;
+
+                        renderBill();
+                        calculateTotals();
+                        closeModal('closeOrderModal');
+
+                        const display = document.getElementById('orderTypeDisplay');
+                        if (display) display.textContent = 'Select Order Type';
+
+                        document.getElementById('menuSelectionContainer').classList.remove('flex');
+                        document.getElementById('menuSelectionContainer').classList.add('hidden');
+                        const msg = document.getElementById('initialStateMessage');
+                        if (msg) msg.classList.remove('hidden');
+
                         showConfirmation('Do you want to print the receipt?', 'Print Receipt', () => {
                             window.open('/pos/receipt/' + result.order.id, '_blank');
                         });
                     } else {
-                        showNotification('Error: ' + result.message, 'Processing Error');
+                        showNotification('Error: ' + result.message, 'Payment Error');
                     }
                 } catch (error) {
                     showNotification('Error processing payment: ' + error.message, 'System Error');
                 }
             }
 
-            // Calculate change
-            document.getElementById('amountPaid')?.addEventListener('input', function() {
-                const amountPaid = parseFloat(this.value) || 0;
-                const total = parseFloat(document.getElementById('total').textContent);
-                const change = Math.max(0, amountPaid - total);
-                document.getElementById('changeAmount').textContent = change.toFixed(2);
-            });
+            function cancelOrder() {
+                showConfirmation('Are you sure you want to cancel the entire order?', 'Cancel Order', () => {
+                    billItems = [];
+                    renderBill();
+                    calculateTotals();
+
+                    currentOrderType = null;
+                    selectedTableId = null;
+
+                    const display = document.getElementById('orderTypeDisplay');
+                    if (display) display.textContent = 'Select Order Type';
+
+                    document.getElementById('menuSelectionContainer').classList.remove('flex');
+                    document.getElementById('menuSelectionContainer').classList.add('hidden');
+
+                    const msg = document.getElementById('initialStateMessage');
+                    if (msg) msg.classList.remove('hidden');
+
+                    cancelPortionSelection();
+                });
+            }
+
+            function splitOrder() {
+                showNotification('Split order feature coming soon', 'Feature Unavailable');
+            }
+
+            function mergeOrder() {
+                showNotification('Merge order feature coming soon', 'Feature Unavailable');
+            }
+
+            function transferTable() {
+                showNotification('Table transfer feature coming soon', 'Feature Unavailable');
+            }
+
+            function printCopy() {
+                showNotification('Print feature coming soon', 'Feature Unavailable');
+            }
 
             // Filter by category
             function filterByCategory(categoryId) {
@@ -884,8 +1134,60 @@
                 showNotification('Print feature coming soon', 'Feature Unavailable');
             }
 
-            function openOrderCheckModal() {
-                showNotification('Open checks feature coming soon', 'Feature Unavailable');
+
+            // Filter by category
+            function filterByCategory(categoryId) {
+                const items = document.querySelectorAll('#itemsGrid button');
+                items.forEach(item => {
+                    if (item.dataset.category == categoryId) {
+                        item.classList.remove('hidden');
+                    } else {
+                        item.classList.add('hidden');
+                    }
+                });
+
+                // Update tabs
+                document.querySelectorAll('.category-tab').forEach(tab => {
+                    if (tab.dataset.id == categoryId) {
+                        tab.classList.remove('text-gray-400');
+                        tab.classList.add('bg-blue-600', 'text-white');
+                    } else {
+                        tab.classList.add('text-gray-400');
+                        tab.classList.remove('bg-blue-600', 'text-white');
+                    }
+                });
+            }
+
+            // Initialize with first category
+            document.addEventListener('DOMContentLoaded', () => {
+                const firstTab = document.querySelector('.category-tab');
+                if (firstTab) {
+                    filterByCategory(firstTab.dataset.id);
+                }
+            });
+
+            // Search items
+            document.getElementById('searchItems')?.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                const items = document.querySelectorAll('#itemsGrid button');
+
+                items.forEach(item => {
+                    const itemName = item.textContent.toLowerCase();
+                    if (itemName.includes(searchTerm)) {
+                        item.classList.remove('hidden');
+                    } else {
+                        item.classList.add('hidden');
+                    }
+                });
+            });
+
+            // Placeholder functions for future features
+            function showModifiersModal() {
+                showNotification('Modifiers feature coming soon', 'Feature Unavailable');
+            }
+
+            function voidItem() {
+                showNotification('Select an item to void', 'Void Item');
             }
 
             function lockScreen() {
@@ -894,9 +1196,6 @@
                 });
             }
 
-            function switchTab(tab) {
-                showNotification('Switching to ' + tab);
-            }
 
             // Notification Helper Functions
             function showNotification(message, title = 'Notification') {
