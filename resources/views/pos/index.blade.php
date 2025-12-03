@@ -216,17 +216,6 @@
                 </div>
             </button>
 
-
-
-            <button class="w-full h-14 flex items-stretch shadow-sm group mb-2" onclick="setOrderType('uber-eats', 'Uber Eats')">
-                <div class="bg-white text-gray-800 p-3 rounded-l-lg flex items-center justify-center w-14">
-                    <span class="font-bold text-sm">Uber</span>
-                </div>
-                <div class="bg-gray-200 text-gray-800 flex-1 flex items-center justify-center font-bold text-base rounded-r-lg group-hover:bg-gray-300 transition">
-                    Uber Eats
-                </div>
-            </button>
-
             <button class="w-full h-14 flex items-stretch shadow-sm group mb-2" onclick="setOrderType('pickme', 'PickMe Food')">
                 <div class="bg-white text-pink-500 p-3 rounded-l-lg flex items-center justify-center w-14">
                     <span class="font-bold text-sm">Pick</span>
@@ -1006,7 +995,6 @@
                             const orderTypeLabels = {
                                 'takeaway': 'Take Away',
                                 'delivery': 'Delivery',
-                                'uber_eats': 'Uber Eats',
                                 'pickme': 'PickMe Food',
                                 'dine_in': 'Dine In'
                             };
