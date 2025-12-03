@@ -23,6 +23,15 @@ class MenuController extends Controller
     }
 
     /**
+     * Display category management page.
+     */
+    public function indexCategories()
+    {
+        $categories = Category::withCount('items')->orderBy('display_order')->get();
+        return view('menu.categories.index', compact('categories'));
+    }
+
+    /**
      * Show form to create a new category.
      */
     public function createCategory()
@@ -45,7 +54,37 @@ class MenuController extends Controller
 
         Category::create($validated);
 
-        return redirect()->route('menu.index')->with('success', 'Category created successfully!');
+        return redirect()->route('menu.categories.index')->with('success', 'Category created successfully!');
+    }
+
+    /**
+     * Update a category.
+     */
+    public function updateCategory(Request $request, Category $category)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'display_order' => 'nullable|integer',
+        ]);
+
+        $validated['slug'] = Str::slug($validated['name']);
+        $category->update($validated);
+
+        return redirect()->route('menu.categories.index')->with('success', 'Category updated successfully!');
+    }
+
+    /**
+     * Delete a category.
+     */
+    public function destroyCategory(Category $category)
+    {
+        if ($category->items()->count() > 0) {
+            return redirect()->route('menu.categories.index')->with('error', 'Cannot delete category with existing items!');
+        }
+
+        $category->delete();
+        return redirect()->route('menu.categories.index')->with('success', 'Category deleted successfully!');
     }
 
     /**

@@ -2,7 +2,6 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\TableController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\MenuController;
 use App\Http\Controllers\PaymentController;
@@ -25,14 +24,6 @@ Route::middleware(['auth'])->group(function () {
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    // Tables
-    Route::get('/tables', [TableController::class, 'index'])->name('tables.index');
-    Route::get('/tables/{table}', [TableController::class, 'show'])->name('tables.show');
-    Route::post('/tables/{table}/select', [TableController::class, 'select'])->name('tables.select');
-    Route::post('/tables/merge', [TableController::class, 'merge'])->name('tables.merge');
-    Route::post('/tables/{table}/split', [TableController::class, 'split'])->name('tables.split');
-    Route::post('/tables/{table}/transfer', [TableController::class, 'transfer'])->name('tables.transfer');
-
     // Orders
     Route::post('/orders', [OrderController::class, 'store'])->name('orders.store');
     Route::put('/orders/{order}', [OrderController::class, 'update'])->name('orders.update');
@@ -44,8 +35,14 @@ Route::middleware(['auth'])->group(function () {
     // Menu Management (Admin only)
     Route::middleware(['role:admin'])->prefix('menu')->name('menu.')->group(function () {
         Route::get('/', [MenuController::class, 'index'])->name('index');
-        Route::get('/categories/create', [MenuController::class, 'createCategory'])->name('categories.create');
+
+        // Category routes
+        Route::get('/categories', [MenuController::class, 'indexCategories'])->name('categories.index');
         Route::post('/categories', [MenuController::class, 'storeCategory'])->name('categories.store');
+        Route::put('/categories/{category}', [MenuController::class, 'updateCategory'])->name('categories.update');
+        Route::delete('/categories/{category}', [MenuController::class, 'destroyCategory'])->name('categories.destroy');
+
+        // Item routes
         Route::get('/items/create', [MenuController::class, 'createItem'])->name('items.create');
         Route::post('/items', [MenuController::class, 'storeItem'])->name('items.store');
         Route::get('/items/{item}/edit', [MenuController::class, 'editItem'])->name('items.edit');
@@ -93,8 +90,8 @@ Route::middleware(['auth'])->group(function () {
         })->name('export');
     });
 
-    // POS (Cashier & Admin)
-    Route::middleware(['role:cashier|admin'])->prefix('pos')->name('pos.')->group(function () {
+    // POS (Cashier only)
+    Route::middleware(['role:cashier'])->prefix('pos')->name('pos.')->group(function () {
         Route::get('/', [App\Http\Controllers\POSController::class, 'index'])->name('index');
         Route::get('/item/{id}', [App\Http\Controllers\POSController::class, 'getItem'])->name('getItem');
         Route::get('/tables', [App\Http\Controllers\POSController::class, 'getAvailableTables'])->name('tables');

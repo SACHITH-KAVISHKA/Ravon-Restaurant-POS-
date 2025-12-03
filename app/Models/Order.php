@@ -21,6 +21,7 @@ class Order extends Model
         'waiter_id',
         'customer_name',
         'customer_phone',
+        'pickme_ref_number',
         'guest_count',
         'subtotal',
         'discount_amount',

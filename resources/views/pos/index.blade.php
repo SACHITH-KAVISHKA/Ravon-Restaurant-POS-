@@ -216,7 +216,7 @@
                 </div>
             </button>
 
-            <button class="w-full h-14 flex items-stretch shadow-sm group mb-2" onclick="setOrderType('pickme', 'PickMe Food')">
+            <button class="w-full h-14 flex items-stretch shadow-sm group mb-2" onclick="openPickMeRefModal()">
                 <div class="bg-white text-pink-500 p-3 rounded-l-lg flex items-center justify-center w-14">
                     <span class="font-bold text-sm">Pick</span>
                 </div>
@@ -340,6 +340,46 @@
                 </div>
                 <div class="grid grid-cols-5 gap-4" id="tableGrid">
                     <!-- Tables will be loaded dynamically -->
+                </div>
+            </div>
+        </div>
+
+        <!-- PickMe Reference Number Modal -->
+        <div id="pickMeRefModal" class="hidden fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center">
+            <div class="bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold text-white">PickMe Food Order</h2>
+                    <button onclick="closeModal('pickMeRefModal')" class="text-gray-400 hover:text-white">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-300 mb-2">
+                            <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+                            </svg>
+                            Reference Number *
+                        </label>
+                        <input
+                            type="text"
+                            id="pickMeRefNumber"
+                            placeholder="Enter PickMe reference number"
+                            class="w-full px-4 py-3 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:border-pink-500 text-lg font-semibold"
+                            autocomplete="off"
+                            onkeypress="if(event.key === 'Enter') confirmPickMeRef()">
+                    </div>
+
+                    <button
+                        onclick="confirmPickMeRef()"
+                        class="w-full px-4 py-3 bg-pink-500 text-white rounded-lg hover:bg-pink-600 transition font-bold text-lg flex items-center justify-center space-x-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span>Continue to Order</span>
+                    </button>
                 </div>
             </div>
         </div>
@@ -602,6 +642,7 @@
             let currentOrderType = null;
             let selectedTableId = null;
             let currentOrderId = null; // Track current order for updates
+            let pickMeRefNumber = null; // Store PickMe reference number
 
             // Add item to bill
             function addItemToBill(itemId, itemName, itemPrice) {
@@ -689,6 +730,7 @@
             function clearBill() {
                 showConfirmation('Are you sure you want to clear all items?', 'Clear Bill', () => {
                     billItems = [];
+                    pickMeRefNumber = null; // Reset PickMe reference number
                     renderBill();
                     calculateTotals();
                 });
@@ -777,6 +819,34 @@
                 setOrderType('takeaway', 'Take Away');
             }
 
+            // PickMe Food Modal Functions
+            function openPickMeRefModal() {
+                document.getElementById('pickMeRefModal').classList.remove('hidden');
+                document.getElementById('pickMeRefNumber').value = '';
+                // Focus on input field
+                setTimeout(() => {
+                    document.getElementById('pickMeRefNumber').focus();
+                }, 100);
+            }
+
+            function confirmPickMeRef() {
+                const refNumber = document.getElementById('pickMeRefNumber').value.trim();
+
+                if (!refNumber) {
+                    showNotification('Please enter a reference number', 'Reference Required');
+                    return;
+                }
+
+                // Store the reference number
+                pickMeRefNumber = refNumber;
+
+                // Close modal
+                closeModal('pickMeRefModal');
+
+                // Set order type and show menu
+                setOrderType('pickme', 'PickMe Food - Ref: ' + refNumber);
+            }
+
             function selectTable(tableNumber, tableId) {
                 selectedTableId = tableId;
                 currentOrderType = 'dine_in';
@@ -834,7 +904,8 @@
                         order_id: currentOrderId,
                         order_type: currentOrderType,
                         table_id: selectedTableId,
-                        items: itemsToSend
+                        items: itemsToSend,
+                        pickme_ref_number: pickMeRefNumber // Include PickMe reference if available
                     };
 
                     console.log('Sending order data:', orderData);

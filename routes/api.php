@@ -3,7 +3,6 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\TableController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\MenuController;
 use App\Http\Controllers\Api\KOTController;
@@ -26,23 +25,12 @@ Route::post('/auth/login', [AuthController::class, 'login']);
 
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
-    
+
     // Authentication
     Route::prefix('auth')->group(function () {
         Route::post('/logout', [AuthController::class, 'logout']);
         Route::get('/user', [AuthController::class, 'user']);
         Route::post('/revoke-all', [AuthController::class, 'revokeAll']);
-    });
-
-    // Tables
-    Route::prefix('tables')->group(function () {
-        Route::get('/', [TableController::class, 'index']);
-        Route::get('/statistics', [TableController::class, 'statistics']);
-        Route::get('/{table}', [TableController::class, 'show']);
-        Route::patch('/{table}/status', [TableController::class, 'updateStatus']);
-        Route::post('/merge', [TableController::class, 'merge']);
-        Route::post('/{table}/split', [TableController::class, 'split']);
-        Route::post('/{table}/transfer', [TableController::class, 'transfer']);
     });
 
     // Orders
@@ -62,17 +50,17 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/categories', [MenuController::class, 'categories']);
         Route::get('/items', [MenuController::class, 'items']);
         Route::get('/items/{item}', [MenuController::class, 'show']);
-        
+
         // Admin only routes
         Route::middleware('permission:create-menu')->group(function () {
             Route::post('/categories', [MenuController::class, 'storeCategory']);
             Route::post('/items', [MenuController::class, 'storeItem']);
         });
-        
+
         Route::middleware('permission:edit-menu')->group(function () {
             Route::patch('/items/{item}', [MenuController::class, 'updateItem']);
         });
-        
+
         Route::middleware('permission:delete-menu')->group(function () {
             Route::delete('/items/{item}', [MenuController::class, 'destroyItem']);
         });
@@ -98,7 +86,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/{payment}', [PaymentController::class, 'show']);
         Route::get('/bill/{order}', [PaymentController::class, 'getBill']);
         Route::post('/bill/{order}/print', [PaymentController::class, 'printBill']);
-        
+
         Route::middleware('permission:refund-payments')->group(function () {
             Route::post('/{payment}/refund', [PaymentController::class, 'refund']);
         });
@@ -113,7 +101,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/table-turnover', [ReportController::class, 'tableTurnover']);
         Route::get('/peak-hours', [ReportController::class, 'peakHours']);
         Route::get('/monthly-summary', [ReportController::class, 'monthlySummary']);
-        
+
         Route::middleware('permission:export-reports')->group(function () {
             Route::get('/export', [ReportController::class, 'export']);
         });
