@@ -102,4 +102,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/payment', [App\Http\Controllers\POSController::class, 'processPayment'])->name('payment');
         Route::get('/receipt/{orderId}', [App\Http\Controllers\POSController::class, 'printReceipt'])->name('receipt');
     });
+
+    // QZ Tray Signature Route (for thermal printing)
+    Route::post('/qz/sign', [App\Http\Controllers\QZTrayController::class, 'signQzRequest'])->name('qz.sign');
 });

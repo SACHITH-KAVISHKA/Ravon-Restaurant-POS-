@@ -491,9 +491,27 @@
                             </div>
 
                             <!-- Cash Amount Input -->
-                            <div>
+                            <div id="cashInputGroup">
                                 <label class="block text-sm text-gray-400 mb-2">Cash Amount</label>
-                                <input type="text" id="paymentCashInput" readonly class="w-full px-4 py-3 bg-yellow-50 text-gray-900 rounded-lg font-bold text-xl text-right border-2 border-yellow-400 focus:outline-none" value="0.00">
+                                <input type="text"
+                                    id="paymentCashInput"
+                                    onclick="setActivePaymentInput('cash')"
+                                    oninput="handlePaymentInputChange('cash')"
+                                    onkeypress="return validatePaymentInput(event)"
+                                    class="w-full px-4 py-3 bg-yellow-50 text-gray-900 rounded-lg font-bold text-xl text-right border-2 border-yellow-400 focus:outline-none focus:border-yellow-500"
+                                    placeholder="0.00">
+                            </div>
+
+                            <!-- Card Amount Input -->
+                            <div id="cardInputGroup" class="mt-3" style="display: none;">
+                                <label class="block text-sm text-gray-400 mb-2">Card Amount</label>
+                                <input type="text"
+                                    id="paymentCardInput"
+                                    onclick="setActivePaymentInput('card')"
+                                    oninput="handlePaymentInputChange('card')"
+                                    onkeypress="return validatePaymentInput(event)"
+                                    class="w-full px-4 py-3 bg-blue-50 text-gray-900 rounded-lg font-bold text-xl text-right border-2 border-blue-400 focus:outline-none focus:border-blue-500"
+                                    placeholder="0.00">
                             </div>
 
                             <!-- Balance -->
@@ -636,6 +654,12 @@
                 </div>
             </div>
         </div>
+
+        {{-- QZ Tray for Thermal Printing --}}
+        <script src="https://cdn.jsdelivr.net/npm/qz-tray@2.2/qz-tray.js"></script>
+        {{-- jsPDF for PDF generation --}}
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
         <script>
             // Global variables
             let billItems = [];
@@ -643,6 +667,1014 @@
             let selectedTableId = null;
             let currentOrderId = null; // Track current order for updates
             let pickMeRefNumber = null; // Store PickMe reference number
+
+            // Track items that have already been sent to kitchen/bar
+            let printedItems = []; // Stores items that have been printed with their quantities
+
+            // Payment Modal Variables
+            let selectedPaymentMethod = null;
+            let paymentCashAmount = 0;
+            let paymentCardAmount = 0;
+            let activePaymentInput = 'cash'; // 'cash' or 'card'
+
+            // Show Close Order Modal (Payment Modal)
+            function showCloseOrderModal() {
+                console.log('===== SHOW CLOSE ORDER MODAL =====');
+                console.log('Bill Items:', billItems);
+                console.log('Bill Items Length:', billItems.length);
+
+                if (billItems.length === 0) {
+                    alert('Please add items to bill before payment');
+                    console.log('❌ No items in bill - aborting');
+                    return;
+                }
+
+                console.log('✓ Items in bill, proceeding...');
+
+                // Reset payment state
+                selectedPaymentMethod = null;
+                paymentCashAmount = 0;
+                paymentCardAmount = 0;
+                activePaymentInput = 'cash';
+
+                console.log('Reset payment variables');
+
+                // Reset UI
+                const cashInput = document.getElementById('paymentCashInput');
+                const cardInput = document.getElementById('paymentCardInput');
+                const cashGroup = document.getElementById('cashInputGroup');
+                const cardGroup = document.getElementById('cardInputGroup');
+                const cardRow = document.getElementById('cardAmountRow');
+
+                console.log('Elements found:');
+                console.log('  - cashInput:', cashInput);
+                console.log('  - cardInput:', cardInput);
+                console.log('  - cashGroup:', cashGroup);
+                console.log('  - cardGroup:', cardGroup);
+                console.log('  - cardRow:', cardRow);
+
+
+                if (cashInput) cashInput.value = '';
+                if (cardInput) cardInput.value = '';
+                if (cashGroup) cashGroup.style.display = 'block';
+                if (cardGroup) cardGroup.style.display = 'none';
+                if (cardRow) cardRow.style.display = 'none';
+
+                console.log('Reset input values and visibility');
+
+                // Reset payment type buttons
+                const buttons = document.querySelectorAll('.payment-type-btn');
+                console.log('Found', buttons.length, 'payment type buttons');
+
+                buttons.forEach(btn => {
+                    btn.classList.remove('bg-blue-600', 'border-blue-500');
+                    btn.classList.add('bg-gray-700');
+                });
+
+                console.log('Reset button styles');
+
+                // Update totals
+                updatePaymentTotals();
+                console.log('Updated payment totals');
+
+                // Show modal
+                const modal = document.getElementById('closeOrderModal');
+                console.log('Modal element:', modal);
+
+                if (modal) {
+                    modal.classList.remove('hidden');
+                    console.log('✓ Modal shown');
+                } else {
+                    console.error('❌ Modal element not found!');
+                }
+
+                // Auto-select CASH
+                console.log('Auto-selecting CASH in 100ms...');
+                setTimeout(() => {
+                    console.log('Executing auto-select CASH');
+                    selectPaymentType('cash');
+                }, 100);
+
+                console.log('===== END SHOW CLOSE ORDER MODAL =====');
+            }
+
+            // Select Payment Type
+            function selectPaymentType(type) {
+                selectedPaymentMethod = type;
+                console.log('===== SELECTING PAYMENT TYPE =====');
+                console.log('Type:', type);
+
+                // Reset all buttons
+                document.querySelectorAll('.payment-type-btn').forEach(btn => {
+                    btn.classList.remove('bg-blue-600', 'border-blue-500');
+                    btn.classList.add('bg-gray-700');
+                });
+
+                // Highlight selected button - fix ID mapping
+                let btnId;
+                if (type === 'cash') {
+                    btnId = 'paymentTypeCash';
+                } else if (type === 'card') {
+                    btnId = 'paymentTypeCard';
+                } else if (type === 'card_cash') {
+                    btnId = 'paymentTypeCardCash';
+                } else if (type === 'credit') {
+                    btnId = 'paymentTypeCredit';
+                }
+
+                const button = document.getElementById(btnId);
+                if (button) {
+                    button.classList.remove('bg-gray-700');
+                    button.classList.add('bg-blue-600', 'border-blue-500');
+                    console.log('Button highlighted:', btnId);
+                } else {
+                    console.error('Button not found:', btnId);
+                }
+
+                // Reset amounts
+                paymentCashAmount = 0;
+                paymentCardAmount = 0;
+                document.getElementById('paymentCashInput').value = '';
+                document.getElementById('paymentCardInput').value = '';
+
+                // Reset border styles
+                document.getElementById('paymentCashInput').style.borderColor = '#FBBF24';
+                document.getElementById('paymentCashInput').style.borderWidth = '2px';
+                document.getElementById('paymentCardInput').style.borderColor = '#60A5FA';
+                document.getElementById('paymentCardInput').style.borderWidth = '2px';
+
+                // Get input elements
+                const cashInputGroup = document.getElementById('cashInputGroup');
+                const cardInputGroup = document.getElementById('cardInputGroup');
+                const cardAmountRow = document.getElementById('cardAmountRow');
+
+                console.log('Cash Input Group:', cashInputGroup);
+                console.log('Card Input Group:', cardInputGroup);
+                console.log('Card Amount Row:', cardAmountRow);
+
+                // EXPLICITLY show/hide based on payment method
+                if (type === 'cash') {
+                    // CASH: Show only cash input
+                    cashInputGroup.style.display = 'block';
+                    cardInputGroup.style.display = 'none';
+                    if (cardAmountRow) cardAmountRow.style.display = 'none';
+                    activePaymentInput = 'cash';
+                    console.log('✓ CASH mode: Cash input shown, Card input hidden');
+
+                } else if (type === 'card') {
+                    // CARD: Show only card input, auto-fill with total
+                    cashInputGroup.style.display = 'none';
+                    cardInputGroup.style.display = 'block';
+
+                    if (cardAmountRow) {
+                        cardAmountRow.style.display = 'flex';
+                    }
+                    activePaymentInput = 'card';
+
+                    // Auto-fill card amount with total (EDITABLE)
+                    const total = calculateTotal();
+                    paymentCardAmount = total;
+                    document.getElementById('paymentCardInput').value = total.toFixed(2);
+                    console.log('✓ CARD mode: Card input shown with auto-fill:', total);
+
+                } else if (type === 'card_cash') {
+                    // CARD & CASH: Show BOTH inputs
+                    console.log('>>> CARD & CASH: Showing BOTH fields <<<');
+
+                    // Show BOTH inputs with display block
+                    cashInputGroup.style.display = 'block';
+                    cardInputGroup.style.display = 'block';
+
+                    // Also show card amount row in summary
+                    if (cardAmountRow) {
+                        cardAmountRow.style.display = 'flex';
+                    }
+
+                    // Highlight selected button
+                    document.getElementById("paymentTypeCardCash").classList.add("bg-blue-600");
+
+                    activePaymentInput = 'cash';
+
+                    // Highlight cash input as active (thicker blue border)
+                    document.getElementById('paymentCashInput').style.borderColor = '#3B82F6';
+                    document.getElementById('paymentCashInput').style.borderWidth = '3px';
+
+                    console.log('✓ CARD & CASH mode: BOTH inputs shown');
+                    console.log('  - Cash Input Display:', cashInputGroup.style.display);
+                    console.log('  - Card Input Display:', cardInputGroup.style.display);
+
+                } else if (type === 'credit') {
+                    // CREDIT: Hide all inputs
+                    cashInputGroup.style.display = 'none';
+                    cardInputGroup.style.display = 'none';
+                    if (cardAmountRow) cardAmountRow.style.display = 'none';
+                    console.log('✓ CREDIT mode: All inputs hidden');
+                }
+
+                console.log('Final states:');
+                console.log('  Cash Group display:', cashInputGroup.style.display);
+                console.log('  Card Group display:', cardInputGroup.style.display);
+                console.log('===== END PAYMENT TYPE SELECTION =====');
+
+                updatePaymentTotals();
+            }
+
+            // Set Active Payment Input (for CARD & CASH mode)
+            function setActivePaymentInput(inputType) {
+                if (selectedPaymentMethod !== 'card_cash') return;
+
+                activePaymentInput = inputType;
+
+                const cashInput = document.getElementById('paymentCashInput');
+                const cardInput = document.getElementById('paymentCardInput');
+
+                // Visual feedback
+                if (inputType === 'cash') {
+                    cashInput.style.borderColor = '#3B82F6';
+                    cashInput.style.borderWidth = '3px';
+                    cardInput.style.borderColor = '#60A5FA';
+                    cardInput.style.borderWidth = '2px';
+                } else {
+                    cardInput.style.borderColor = '#3B82F6';
+                    cardInput.style.borderWidth = '3px';
+                    cashInput.style.borderColor = '#FDE047';
+                    cashInput.style.borderWidth = '2px';
+                }
+            }
+
+            // Append Number (Number Pad)
+            function appendNumber(value) {
+                if (!selectedPaymentMethod) return;
+
+                let input;
+                if (selectedPaymentMethod === 'cash') {
+                    input = document.getElementById('paymentCashInput');
+                } else if (selectedPaymentMethod === 'card') {
+                    input = document.getElementById('paymentCardInput');
+                } else if (selectedPaymentMethod === 'card_cash') {
+                    input = activePaymentInput === 'cash' ?
+                        document.getElementById('paymentCashInput') :
+                        document.getElementById('paymentCardInput');
+                } else if (selectedPaymentMethod === 'credit') {
+                    return;
+                }
+
+                if (!input) return;
+
+                const currentValue = input.value || '0.00';
+
+                if (value === '.') {
+                    if (!currentValue.includes('.')) {
+                        input.value = currentValue + value;
+                    }
+                } else {
+                    if (currentValue === '0.00' || currentValue === '0') {
+                        input.value = value;
+                    } else {
+                        input.value = currentValue + value;
+                    }
+                }
+
+                // Update amounts
+                if (selectedPaymentMethod === 'cash' || (selectedPaymentMethod === 'card_cash' && activePaymentInput === 'cash')) {
+                    paymentCashAmount = parseFloat(input.value) || 0;
+                }
+                if (selectedPaymentMethod === 'card' || (selectedPaymentMethod === 'card_cash' && activePaymentInput === 'card')) {
+                    paymentCardAmount = parseFloat(input.value) || 0;
+                }
+
+                updatePaymentTotals();
+            }
+
+            // Backspace Number
+            function backspaceNumber() {
+                if (!selectedPaymentMethod) return;
+
+                let input;
+                if (selectedPaymentMethod === 'cash') {
+                    input = document.getElementById('paymentCashInput');
+                } else if (selectedPaymentMethod === 'card') {
+                    input = document.getElementById('paymentCardInput');
+                } else if (selectedPaymentMethod === 'card_cash') {
+                    input = activePaymentInput === 'cash' ?
+                        document.getElementById('paymentCashInput') :
+                        document.getElementById('paymentCardInput');
+                } else {
+                    return;
+                }
+
+                if (!input) return;
+
+                const currentValue = input.value;
+                if (currentValue.length > 0) {
+                    input.value = currentValue.slice(0, -1);
+                    if (input.value === '') {
+                        input.value = '0';
+                    }
+                }
+
+                // Update amounts
+                if (selectedPaymentMethod === 'cash' || (selectedPaymentMethod === 'card_cash' && activePaymentInput === 'cash')) {
+                    paymentCashAmount = parseFloat(input.value) || 0;
+                }
+                if (selectedPaymentMethod === 'card' || (selectedPaymentMethod === 'card_cash' && activePaymentInput === 'card')) {
+                    paymentCardAmount = parseFloat(input.value) || 0;
+                }
+
+                updatePaymentTotals();
+            }
+
+            // Clear Number
+            function clearNumber() {
+                if (!selectedPaymentMethod) return;
+
+                if (selectedPaymentMethod === 'cash') {
+                    document.getElementById('paymentCashInput').value = '0.00';
+                    paymentCashAmount = 0;
+                } else if (selectedPaymentMethod === 'card') {
+                    document.getElementById('paymentCardInput').value = '0.00';
+                    paymentCardAmount = 0;
+                } else if (selectedPaymentMethod === 'card_cash') {
+                    if (activePaymentInput === 'cash') {
+                        document.getElementById('paymentCashInput').value = '0.00';
+                        paymentCashAmount = 0;
+                    } else {
+                        document.getElementById('paymentCardInput').value = '0.00';
+                        paymentCardAmount = 0;
+                    }
+                }
+
+                updatePaymentTotals();
+            }
+
+            // Update Payment Totals
+            function updatePaymentTotals() {
+                const total = calculateTotal();
+
+                console.log('=== UPDATE PAYMENT TOTALS ===');
+                console.log('Total:', total);
+                console.log('Selected Method:', selectedPaymentMethod);
+                console.log('Cash Amount:', paymentCashAmount);
+                console.log('Card Amount:', paymentCardAmount);
+
+                document.getElementById('paymentSubtotal').textContent = total.toFixed(2);
+                document.getElementById('paymentTotal').textContent = total.toFixed(2);
+
+                let balance = 0;
+                let credit = 0;
+
+                if (selectedPaymentMethod === 'cash') {
+                    document.getElementById('paymentCardAmount').textContent = '0.00';
+
+                    if (paymentCashAmount < total) {
+                        credit = total - paymentCashAmount;
+                    } else {
+                        balance = paymentCashAmount - total;
+                    }
+                } else if (selectedPaymentMethod === 'card') {
+                    document.getElementById('paymentCardAmount').textContent = paymentCardAmount.toFixed(2);
+
+                    if (paymentCardAmount < total) {
+                        credit = total - paymentCardAmount;
+                    } else if (paymentCardAmount > total) {
+                        balance = paymentCardAmount - total;
+                    }
+                } else if (selectedPaymentMethod === 'card_cash') {
+                    document.getElementById('paymentCardAmount').textContent = paymentCardAmount.toFixed(2);
+
+                    const totalPaid = paymentCashAmount + paymentCardAmount;
+                    console.log('Total Paid (Cash + Card):', totalPaid);
+
+                    if (totalPaid < total) {
+                        credit = total - totalPaid;
+                    } else {
+                        balance = totalPaid - total;
+                    }
+                } else if (selectedPaymentMethod === 'credit') {
+                    document.getElementById('paymentCardAmount').textContent = '0.00';
+                    credit = total;
+                }
+
+                console.log('Balance:', balance);
+                console.log('Credit:', credit);
+
+                document.getElementById('paymentBalance').textContent = balance.toFixed(2);
+                document.getElementById('paymentCredit').textContent = credit.toFixed(2);
+
+                // Show/hide credit row
+                document.getElementById('creditRow').style.display = credit > 0 ? 'flex' : 'none';
+
+                console.log('=== END UPDATE ===');
+            }
+
+            // Calculate Total
+            function calculateTotal() {
+                return billItems.reduce((sum, item) => {
+                    return sum + (parseFloat(item.price) * parseInt(item.quantity));
+                }, 0);
+            }
+
+            // Validate Payment Input (only allow numbers and one decimal point)
+            function validatePaymentInput(event) {
+                const charCode = event.which || event.keyCode;
+                const charStr = String.fromCharCode(charCode);
+                const currentValue = event.target.value;
+
+                // Allow backspace, delete, tab, escape, enter
+                if ([8, 9, 27, 13].indexOf(charCode) !== -1) {
+                    return true;
+                }
+
+                // Allow decimal point only if there isn't one already
+                if (charStr === '.' || charStr === ',') {
+                    if (currentValue.indexOf('.') !== -1) {
+                        event.preventDefault();
+                        return false;
+                    }
+                    return true;
+                }
+
+                // Only allow numbers
+                if (charStr < '0' || charStr > '9') {
+                    event.preventDefault();
+                    return false;
+                }
+
+                return true;
+            }
+
+            // Handle Payment Input Change (when typing with keyboard)
+            function handlePaymentInputChange(inputType) {
+                console.log('Payment input changed:', inputType);
+
+                if (inputType === 'cash') {
+                    const input = document.getElementById('paymentCashInput');
+                    // Clean value - remove any non-numeric except decimal
+                    let cleanValue = input.value.replace(/[^\d.]/g, '');
+                    const numValue = parseFloat(cleanValue) || 0;
+                    paymentCashAmount = numValue;
+                    console.log('Cash:', input.value, '→', numValue);
+
+                    // Set as active input in CARD & CASH mode
+                    if (selectedPaymentMethod === 'card_cash') {
+                        activePaymentInput = 'cash';
+                        setActivePaymentInput('cash');
+                    }
+                } else if (inputType === 'card') {
+                    const input = document.getElementById('paymentCardInput');
+                    // Clean value - remove any non-numeric except decimal
+                    let cleanValue = input.value.replace(/[^\d.]/g, '');
+                    const numValue = parseFloat(cleanValue) || 0;
+                    paymentCardAmount = numValue;
+                    console.log('Card:', input.value, '→', numValue);
+
+                    // Set as active input in CARD & CASH mode
+                    if (selectedPaymentMethod === 'card_cash') {
+                        activePaymentInput = 'card';
+                        setActivePaymentInput('card');
+                    }
+                }
+
+                updatePaymentTotals();
+            }
+
+
+            // --- QZ TRAY SECURITY CONFIGURATION (START) ---
+            // DISABLED FOR DEVELOPMENT - QZ Tray will run in insecure mode
+            // For production, you need proper RSA certificates
+
+
+            // 1. Set Certificate Promise
+            qz.security.setCertificatePromise(function(resolve, reject) {
+                resolve(`-----BEGIN CERTIFICATE-----
+                    MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDRdCXbmmwaImdT
+                    O0dvBZgpr1BA2Mvts7s/s0GYgRk96Zt4A9h4GX74aKBssMF9pZhJ+UOcL6t3aHXK
+                    qXfja+8QxOlNkBHBklBItGg20wgWNlSET+RzT994Q6jTqtOmpBLSUcRkON4Ti8aE
+                    lmY2MXu4SLLVX6dn1OI/rsnD7/RPAsaOniDOjQhX0TdZiG5CCI4FXwJjmiW9cvk2
+                    w/M+TcVwHz399Rr14uwCd4J6+pIbOl8lubpnHrAXjoowS/pVMk0VNuhkFonbqGnq
+                    E06DfVJF92RL3z5Ue2C2Kn0R50+EScUbPgXEwzLMtCRyOTBg/1K/7vLlzYCtpqq3
+                    zy2naPctAgMBAAECggEAMWnkG9FQnN8RNBKcNUOgn8VkzqWgaEbdkKJcD0t8kxT5
+                    u5uqIhQcqZQr0PPhm5dEMk+wk2gqLGZBcqBYN1RJq6P7vIbLT0nH5gRaVGEj9xpT
+                    ycCY+hPGsFyKQv6mGljl5ZA8qR+YPJdUgfq9XMEHGQvXbW8TqFiNP0lQGBl7nTQQ
+                    9J8cCLvKGZCJhvqLH9QzQfmWXwKLxLDrCpJGNfLt8eHEhfqPHvQN5NBPmTCQqPGt
+                    qQQx6TQHHFsPyWyGh5j4jLQcYKpF4fXDvI6DcQNhxLGTnPQvQWCvFPtF7Qxqh3kR
+                    JqKWfQGLtYF9gQKBgQD3NPXgFqJp0tPvVJxB4VF7qQxQGxZKfPmWXbJxQzQKBgQD
+                    YJxLGfPHqm8cpJ7r3QJp4fJKLGPJNDXbWqQxQQKBgQDSt0lMfKfPqJx4tP5JK9xR
+                    J7L8KQv6m8TqF0lQG4fX3kRJqKW9QGLtYF9gQKBgQD3NPXgFqJp0tPvVJxB4VF7
+                    qQxQGxZKfPmWXbJxQzQKBgQDYJxLGfPHqm8cpJ7r3QJp4fJKLGPJNDXbWqQxQQ==
+                -----END CERTIFICATE-----`);
+            });
+
+            // 2. Set Signature Promise - Retrieve Signature from the Server
+            qz.security.setSignaturePromise(function(toSign) {
+                return function(resolve, reject) {
+                    // CSRF Token
+                    var tokenMeta = document.querySelector('meta[name="csrf-token"]');
+                    var token = tokenMeta ? tokenMeta.content : "";
+
+                    fetch('/qz/sign', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': token
+                            },
+                            body: JSON.stringify({
+                                data: toSign
+                            })
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.signature) {
+                                resolve(data.signature);
+                            } else {
+                                console.error("Signature Error:", data);
+                                reject(data.error || "No signature returned");
+                            }
+                        })
+                        .catch(err => {
+                            console.error("Signing Failed:", err);
+                            reject(err);
+                        });
+                };
+            });
+
+
+            console.log('QZ Tray: Running in INSECURE mode (no certificate validation)');
+
+            /**
+             * Use QZ Tray to print a PDF to a thermal printer
+             * @param {string} pdfBase64 - Base64 encoded PDF string
+             * @param {string|null} printerName - Printer name or null for default printer
+             * @param {string} jobType - Print job type description (KOT/BOT)
+             * @param {boolean} showErrorOnFail - Whether to show error alert on failure
+             */
+            async function printPDFwithQZ(pdfBase64, printerName = null, jobType = "POS Print", showErrorOnFail = true) {
+                try {
+                    // 1. Connect to QZ Tray websocket
+                    if (!qz.websocket.isActive()) {
+                        await qz.websocket.connect();
+                        console.log('QZ Tray connected successfully');
+                    }
+
+                    // 2. Select printer
+                    let printer = printerName;
+                    if (!printer) {
+                        printer = await qz.printers.getDefault();
+                        if (!printer) {
+                            throw new Error("Cannot find a default printer.");
+                        }
+                    }
+
+                    // 3. Prepare the print configuration
+                    const config = qz.configs.create(printer);
+
+                    // 4. Printing data preparation
+                    const data = [{
+                        type: 'pdf',
+                        format: 'base64',
+                        data: pdfBase64
+                    }];
+
+                    // 5. Print the document
+                    await qz.print(config, data);
+
+                    console.log(`${jobType} sent to printer: ${printer}`);
+                    return true;
+
+                } catch (err) {
+                    console.error('QZ Tray Error:', err);
+                    if (showErrorOnFail) {
+                        let errorMessage = 'Printing failed. Is QZ Tray running?\\n\\n' + err.message;
+                        if (err.message && err.message.includes('default printer')) {
+                            errorMessage = 'Printing failed. A default printer cannot be found. Please set it in the OS.';
+                        } else if (err.message && err.message.includes('Failed to get signature')) {
+                            errorMessage = 'Printing failed. Server signature error. Check the backend.';
+                        }
+                        alert(errorMessage);
+                    } else {
+                        console.warn("Silent Print Failed (Ignored): " + err.message);
+                    }
+                    throw err;
+                }
+            }
+            // --- END QZ TRAY CONFIGURATION ---
+
+            /**
+             * Generate and Print KOT (Kitchen Order Ticket)
+             * @param {Array} foodItems - Array of food items to print
+             * @param {Object} orderInfo - Order information (order_number, table_number, etc.)
+             */
+            async function printKOT(foodItems, orderInfo) {
+                if (!foodItems || foodItems.length === 0) {
+                    console.log('No food items to print on KOT');
+                    return;
+                }
+
+                try {
+                    const {
+                        jsPDF
+                    } = window.jspdf;
+                    const pdf = new jsPDF({
+                        orientation: 'portrait',
+                        unit: 'mm',
+                        format: [80, 297]
+                    });
+
+                    let yPosition = 10;
+                    const pageWidth = 80;
+                    const leftMargin = 5;
+                    const rightMargin = 5;
+
+                    // Header
+                    pdf.setFont('courier', 'bold');
+                    pdf.setFontSize(18);
+                    pdf.text('KITCHEN ORDER TICKET', pageWidth / 2, yPosition, {
+                        align: 'center'
+                    });
+                    yPosition += 8;
+
+                    pdf.setFontSize(14);
+                    pdf.text('(KOT)', pageWidth / 2, yPosition, {
+                        align: 'center'
+                    });
+                    yPosition += 10;
+
+                    // Restaurant Info
+                    pdf.setFontSize(11);
+                    pdf.text('Ravon Restaurant', pageWidth / 2, yPosition, {
+                        align: 'center'
+                    });
+                    yPosition += 10;
+
+                    // Separator
+                    pdf.setLineWidth(0.5);
+                    pdf.line(leftMargin, yPosition, pageWidth - rightMargin, yPosition);
+                    yPosition += 6;
+
+                    // Order Information
+                    pdf.setFontSize(11);
+                    pdf.setFont('courier', 'bold');
+                    pdf.text('KOT NO:', leftMargin, yPosition);
+                    pdf.text(String(orderInfo.order_number || 'N/A'), pageWidth - rightMargin, yPosition, {
+                        align: 'right'
+                    });
+                    yPosition += 6;
+
+                    if (orderInfo.table_number) {
+                        pdf.text('TABLE:', leftMargin, yPosition);
+                        pdf.text(String(orderInfo.table_number), pageWidth - rightMargin, yPosition, {
+                            align: 'right'
+                        });
+                        yPosition += 6;
+                    }
+
+                    pdf.text('WAITER:', leftMargin, yPosition);
+                    pdf.text(orderInfo.user_name || '{{ Auth::user()->name }}', pageWidth - rightMargin, yPosition, {
+                        align: 'right'
+                    });
+                    yPosition += 6;
+
+                    pdf.text('DATE:', leftMargin, yPosition);
+                    pdf.text(new Date().toLocaleDateString('en-GB'), pageWidth - rightMargin, yPosition, {
+                        align: 'right'
+                    });
+                    yPosition += 6;
+
+                    pdf.text('TIME:', leftMargin, yPosition);
+                    pdf.text(new Date().toLocaleTimeString('en-GB', {
+                        hour12: false
+                    }), pageWidth - rightMargin, yPosition, {
+                        align: 'right'
+                    });
+                    yPosition += 10;
+
+                    // Items Header
+                    pdf.setLineWidth(0.5);
+                    pdf.line(leftMargin, yPosition, pageWidth - rightMargin, yPosition);
+                    yPosition += 8;
+
+                    pdf.setFont('courier', 'bold');
+                    pdf.setFontSize(14);
+                    pdf.text('FOOD ITEMS', pageWidth / 2, yPosition, {
+                        align: 'center'
+                    });
+                    yPosition += 8;
+
+                    pdf.setLineWidth(0.5);
+                    pdf.line(leftMargin, yPosition, pageWidth - rightMargin, yPosition);
+                    yPosition += 8;
+
+                    // Print Items
+                    foodItems.forEach((item, index) => {
+                        pdf.setFont('courier', 'bold');
+                        pdf.setFontSize(13);
+
+                        let itemName = item.name || item.item_name;
+                        if (itemName.length > 22) {
+                            itemName = itemName.substring(0, 19) + '...';
+                        }
+
+                        pdf.text(itemName, leftMargin, yPosition);
+                        yPosition += 6;
+
+                        // Quantity
+                        pdf.setFontSize(14);
+                        pdf.text(`x ${item.quantity}`, leftMargin + 2, yPosition);
+                        yPosition += 8;
+
+                        // Add spacing between items
+                        if (index < foodItems.length - 1) {
+                            pdf.setLineDashPattern([0.5, 0.5], 0);
+                            pdf.setLineWidth(0.2);
+                            pdf.line(leftMargin, yPosition, pageWidth - rightMargin, yPosition);
+                            pdf.setLineDashPattern([], 0);
+                            yPosition += 4;
+                        }
+                    });
+
+                    // Footer
+                    yPosition += 4;
+                    pdf.setLineWidth(0.5);
+                    pdf.line(leftMargin, yPosition, pageWidth - rightMargin, yPosition);
+                    yPosition += 8;
+
+                    pdf.setFont('courier', 'bold');
+                    pdf.setFontSize(16);
+                    pdf.text('PREPARE IMMEDIATELY', pageWidth / 2, yPosition, {
+                        align: 'center'
+                    });
+                    yPosition += 10;
+
+                    pdf.setFontSize(10);
+                    pdf.text('Thank you!', pageWidth / 2, yPosition, {
+                        align: 'center'
+                    });
+
+                    // Generate Base64 and Print
+                    const pdfBase64 = pdf.output('datauristring').split(',')[1];
+                    const kotPrinterName = "printer01";
+                    await printPDFwithQZ(pdfBase64, kotPrinterName, "KOT", false);
+                    console.log('KOT sent to printer successfully');
+
+                } catch (error) {
+                    console.error('KOT Generation Error:', error);
+                }
+            }
+
+            /**
+             * Generate and Print BOT (Bar Order Ticket)
+             * @param {Array} beverageItems - Array of beverage items to print
+             * @param {Object} orderInfo - Order information
+             */
+            async function printBOT(beverageItems, orderInfo) {
+                if (!beverageItems || beverageItems.length === 0) {
+                    console.log('No beverage items to print on BOT');
+                    return;
+                }
+
+                try {
+                    const {
+                        jsPDF
+                    } = window.jspdf;
+                    const pdf = new jsPDF({
+                        orientation: 'portrait',
+                        unit: 'mm',
+                        format: [80, 297]
+                    });
+
+                    let yPosition = 10;
+                    const pageWidth = 80;
+                    const leftMargin = 5;
+                    const rightMargin = 5;
+
+                    // Header
+                    pdf.setFont('courier', 'bold');
+                    pdf.setFontSize(18);
+                    pdf.text('BAR ORDER TICKET', pageWidth / 2, yPosition, {
+                        align: 'center'
+                    });
+                    yPosition += 8;
+
+                    pdf.setFontSize(14);
+                    pdf.text('(BOT)', pageWidth / 2, yPosition, {
+                        align: 'center'
+                    });
+                    yPosition += 10;
+
+                    // Restaurant Info
+                    pdf.setFontSize(11);
+                    pdf.text('Ravon Restaurant', pageWidth / 2, yPosition, {
+                        align: 'center'
+                    });
+                    yPosition += 10;
+
+                    // Separator
+                    pdf.setLineWidth(0.5);
+                    pdf.line(leftMargin, yPosition, pageWidth - rightMargin, yPosition);
+                    yPosition += 6;
+
+                    // Order Information
+                    pdf.setFontSize(11);
+                    pdf.setFont('courier', 'bold');
+                    pdf.text('BOT NO:', leftMargin, yPosition);
+                    pdf.text(String(orderInfo.order_number || 'N/A'), pageWidth - rightMargin, yPosition, {
+                        align: 'right'
+                    });
+                    yPosition += 6;
+
+                    if (orderInfo.table_number) {
+                        pdf.text('TABLE:', leftMargin, yPosition);
+                        pdf.text(String(orderInfo.table_number), pageWidth - rightMargin, yPosition, {
+                            align: 'right'
+                        });
+                        yPosition += 6;
+                    }
+
+                    pdf.text('WAITER:', leftMargin, yPosition);
+                    pdf.text(orderInfo.user_name || '{{ Auth::user()->name }}', pageWidth - rightMargin, yPosition, {
+                        align: 'right'
+                    });
+                    yPosition += 6;
+
+                    pdf.text('DATE:', leftMargin, yPosition);
+                    pdf.text(new Date().toLocaleDateString('en-GB'), pageWidth - rightMargin, yPosition, {
+                        align: 'right'
+                    });
+                    yPosition += 6;
+
+                    pdf.text('TIME:', leftMargin, yPosition);
+                    pdf.text(new Date().toLocaleTimeString('en-GB', {
+                        hour12: false
+                    }), pageWidth - rightMargin, yPosition, {
+                        align: 'right'
+                    });
+                    yPosition += 10;
+
+                    // Items Header
+                    pdf.setLineWidth(0.5);
+                    pdf.line(leftMargin, yPosition, pageWidth - rightMargin, yPosition);
+                    yPosition += 8;
+
+                    pdf.setFont('courier', 'bold');
+                    pdf.setFontSize(14);
+                    pdf.text('BEVERAGE ITEMS', pageWidth / 2, yPosition, {
+                        align: 'center'
+                    });
+                    yPosition += 8;
+
+                    pdf.setLineWidth(0.5);
+                    pdf.line(leftMargin, yPosition, pageWidth - rightMargin, yPosition);
+                    yPosition += 8;
+
+                    // Print Items
+                    beverageItems.forEach((item, index) => {
+                        pdf.setFont('courier', 'bold');
+                        pdf.setFontSize(13);
+
+                        let itemName = item.name || item.item_name;
+                        if (itemName.length > 22) {
+                            itemName = itemName.substring(0, 19) + '...';
+                        }
+
+                        pdf.text(itemName, leftMargin, yPosition);
+                        yPosition += 6;
+
+                        // Quantity
+                        pdf.setFontSize(14);
+                        pdf.text(`x ${item.quantity}`, leftMargin + 2, yPosition);
+                        yPosition += 8;
+
+                        // Add spacing between items
+                        if (index < beverageItems.length - 1) {
+                            pdf.setLineDashPattern([0.5, 0.5], 0);
+                            pdf.setLineWidth(0.2);
+                            pdf.line(leftMargin, yPosition, pageWidth - rightMargin, yPosition);
+                            pdf.setLineDashPattern([], 0);
+                            yPosition += 4;
+                        }
+                    });
+
+                    // Footer
+                    yPosition += 4;
+                    pdf.setLineWidth(0.5);
+                    pdf.line(leftMargin, yPosition, pageWidth - rightMargin, yPosition);
+                    yPosition += 8;
+
+                    pdf.setFont('courier', 'bold');
+                    pdf.setFontSize(16);
+                    pdf.text('PREPARE IMMEDIATELY', pageWidth / 2, yPosition, {
+                        align: 'center'
+                    });
+                    yPosition += 10;
+
+                    pdf.setFontSize(10);
+                    pdf.text('Thank you!', pageWidth / 2, yPosition, {
+                        align: 'center'
+                    });
+
+                    // Generate Base64 and Print
+                    const pdfBase64 = pdf.output('datauristring').split(',')[1];
+                    const botPrinterName = "printer02";
+                    await printPDFwithQZ(pdfBase64, botPrinterName, "BOT", false);
+                    console.log('BOT sent to printer successfully');
+
+                } catch (error) {
+                    console.error('BOT Generation Error:', error);
+                }
+            }
+
+            /**
+             * Separate items into food and beverage categories and print KOT/BOT
+             * @param {Array} items - All order items
+             * @param {Object} orderInfo - Order information
+             */
+            async function printKOTandBOT(items, orderInfo) {
+                // Separate items based on category or type
+                const foodItems = items.filter(item => {
+                    const category = item.category_name || item.category || '';
+                    // Add logic to identify food items
+                    return !category.toLowerCase().includes('beverage') &&
+                        !category.toLowerCase().includes('drink') &&
+                        !category.toLowerCase().includes('bar');
+                });
+
+                const beverageItems = items.filter(item => {
+                    const category = item.category_name || item.category || '';
+                    // Add logic to identify beverage items
+                    return category.toLowerCase().includes('beverage') ||
+                        category.toLowerCase().includes('drink') ||
+                        category.toLowerCase().includes('bar');
+                });
+
+                // Print KOT if there are food items
+                if (foodItems.length > 0) {
+                    await printKOT(foodItems, orderInfo);
+                }
+
+                // Print BOT if there are beverage items
+                if (beverageItems.length > 0) {
+                    await printBOT(beverageItems, orderInfo);
+                }
+            }
+
+            /**
+             * Calculate delta items - only items that are NEW or have INCREASED quantities
+             * @param {Array} currentItems - Current order items
+             * @param {Array} printedItems - Previously printed items
+             * @returns {Array} - Only items that need to be printed
+             */
+            function calculateDeltaItems(currentItems, printedItems) {
+                const deltaItems = [];
+
+                currentItems.forEach(currentItem => {
+                    // Find if this item was previously printed
+                    const printedItem = printedItems.find(p =>
+                        p.item_id === currentItem.item_id && p.name === currentItem.name
+                    );
+
+                    if (!printedItem) {
+                        // This is a completely NEW item - print all quantity
+                        deltaItems.push({
+                            ...currentItem
+                        });
+                    } else if (currentItem.quantity > printedItem.quantity) {
+                        // Item exists but quantity INCREASED - print only the difference
+                        const quantityDifference = currentItem.quantity - printedItem.quantity;
+                        deltaItems.push({
+                            ...currentItem,
+                            quantity: quantityDifference // Only the additional quantity
+                        });
+                    }
+                    // If quantity is same or decreased, don't print anything
+                });
+
+                return deltaItems;
+            }
+
+            /**
+             * Update the printed items tracker
+             * @param {Array} items - Items that were just printed
+             */
+            function updatePrintedItems(items) {
+                items.forEach(item => {
+                    const existingIndex = printedItems.findIndex(p =>
+                        p.item_id === item.item_id && p.name === item.name
+                    );
+
+                    if (existingIndex >= 0) {
+                        // Update quantity for existing item
+                        printedItems[existingIndex].quantity = item.quantity;
+                    } else {
+                        // Add new item to printed list
+                        printedItems.push({
+                            item_id: item.item_id,
+                            name: item.name,
+                            quantity: item.quantity,
+                            category: item.category || ''
+                        });
+                    }
+                });
+            }
 
             // Add item to bill
             function addItemToBill(itemId, itemName, itemPrice) {
@@ -936,11 +1968,68 @@
                     if (result.success) {
                         showNotification(result.message + ' (KOT/BOT sent to kitchen/bar)', 'Success');
 
+                        // --- AUTOMATIC KOT/BOT PRINTING ---
+                        // Print KOT and BOT automatically after order is placed
+                        try {
+                            const orderInfo = {
+                                order_number: String(result.order_number || currentOrderId || 'N/A'),
+                                table_number: String(selectedTableId || result.table_number || ''),
+                                user_name: String('{{ Auth::user()->name }}')
+                            };
+
+                            // Determine if this is a NEW order or an UPDATE
+                            const isNewOrder = !currentOrderId || printedItems.length === 0;
+
+                            let itemsToPrint;
+
+                            if (isNewOrder) {
+                                // NEW ORDER - Print all items
+                                console.log('New order detected - printing all items');
+                                itemsToPrint = itemsToSend.map(item => ({
+                                    item_id: item.item_id,
+                                    name: item.name,
+                                    quantity: item.quantity,
+                                    category: item.category || ''
+                                }));
+                            } else {
+                                // ORDER UPDATE - Only print NEW or INCREASED items
+                                console.log('Order update detected - calculating delta items');
+                                const deltaItems = calculateDeltaItems(itemsToSend, printedItems);
+
+                                if (deltaItems.length === 0) {
+                                    console.log('No new or increased items - skipping print');
+                                } else {
+                                    console.log(`Printing ${deltaItems.length} new/changed items:`, deltaItems);
+                                }
+
+                                itemsToPrint = deltaItems;
+                            }
+
+                            // Only print if there are items to print
+                            if (itemsToPrint && itemsToPrint.length > 0) {
+                                // Print KOT and BOT in the background (don't wait)
+                                printKOTandBOT(itemsToPrint, orderInfo).catch(err => {
+                                    console.error('Failed to print KOT/BOT:', err);
+                                    // Don't show error to user, just log it
+                                });
+
+                                // Update the printed items tracker with ALL current items
+                                updatePrintedItems(itemsToSend);
+                            } else {
+                                console.log('No items to print (no changes detected)');
+                            }
+                        } catch (printError) {
+                            console.error('Error initiating KOT/BOT print:', printError);
+                            // Continue even if printing fails
+                        }
+                        // --- END AUTOMATIC PRINTING ---
+
                         // Clear the POS for next order
                         billItems = [];
                         currentOrderId = null;
                         currentOrderType = null;
                         selectedTableId = null;
+                        printedItems = []; // Clear printed items tracker for next order
 
                         // Reset UI
                         renderBill();
@@ -1522,6 +2611,33 @@
                 }
                 cashInputValue = '0';
                 document.getElementById('paymentCashInput').value = '0.00';
+                document.getElementById('paymentCardInput').value = '0.00';
+
+                // Get input elements
+                const cashInputGroup = document.getElementById('cashInputGroup');
+                const cardInputGroup = document.getElementById('cardInputGroup');
+                const cardAmountRow = document.getElementById('cardAmountRow');
+
+                // Show/hide inputs based on payment type
+                if (type === 'cash') {
+                    cashInputGroup.style.display = 'block';
+                    cardInputGroup.style.display = 'none';
+                    if (cardAmountRow) cardAmountRow.style.display = 'none';
+                } else if (type === 'card') {
+                    cashInputGroup.style.display = 'none';
+                    cardInputGroup.style.display = 'block';
+                    if (cardAmountRow) cardAmountRow.style.display = 'flex';
+                } else if (type === 'card_cash') {
+                    // CARD & CASH: Show BOTH inputs
+                    cashInputGroup.style.display = 'block';
+                    cardInputGroup.style.display = 'block';
+                    if (cardAmountRow) cardAmountRow.style.display = 'flex';
+                } else if (type === 'credit') {
+                    cashInputGroup.style.display = 'none';
+                    cardInputGroup.style.display = 'none';
+                    if (cardAmountRow) cardAmountRow.style.display = 'none';
+                }
+
                 updatePaymentCalculations();
             };
 

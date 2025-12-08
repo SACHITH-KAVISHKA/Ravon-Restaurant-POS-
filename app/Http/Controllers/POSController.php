@@ -80,6 +80,7 @@ class POSController extends Controller
         $openOrders = Order::with(['table', 'orderItems.item'])
             ->where('status', 'pending')
             ->where('is_paid', false)
+            ->where('created_at', '>=', now()->startOfDay())
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($order) {
@@ -89,7 +90,7 @@ class POSController extends Controller
                     'table_number' => $order->table ? $order->table->table_number : 'N/A',
                     'order_type' => $order->order_type,
                     'total_amount' => $order->total_amount,
-                    'created_at' => $order->created_at->format('h:i A'),
+                    'created_at' => $order->created_at->setTimezone('Asia/Colombo')->format('h:i A'),
                     'items_count' => $order->orderItems->count(),
                 ];
             });
@@ -105,13 +106,18 @@ class POSController extends Controller
      */
     public function getClosedOrders()
     {
+        // Get today's date (start of day and end of day)
+        $todayStart = now()->startOfDay();
+        $todayEnd = now()->endOfDay();
+
         $closedOrders = Order::with(['table', 'orderItems.item', 'payment'])
             ->where(function ($q) {
                 $q->where('status', 'completed')
                     ->orWhere('is_paid', true);
             })
+            // Filter for TODAY only
+            ->whereBetween('completed_at', [$todayStart, $todayEnd])
             ->orderBy('completed_at', 'desc')
-            ->limit(50) // Last 50 closed orders
             ->get()
             ->map(function ($order) {
                 return [
@@ -120,7 +126,8 @@ class POSController extends Controller
                     'table_number' => $order->table ? $order->table->table_number : 'N/A',
                     'order_type' => $order->order_type,
                     'total_amount' => $order->total_amount,
-                    'completed_at' => $order->completed_at ? $order->completed_at->format('M d, h:i A') : 'N/A',
+                    // Format: Dec 08, 04:15 AM (using local timezone)
+                    'completed_at' => $order->completed_at ? $order->completed_at->timezone('Asia/Colombo')->format('M d, h:i A') : 'N/A',
                     'items_count' => $order->orderItems->count(),
                     'payment_method' => $order->payment ? $order->payment->payment_method : 'N/A',
                 ];
