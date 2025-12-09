@@ -15,19 +15,21 @@ class Payment extends Model
         'order_id',
         'payment_number',
         'total_amount',
-        'paid_amount',
+        'cash_amount',
+        'card_amount',
+        'credit_amount',
         'change_amount',
         'payment_method',
         'payment_status',
         'processed_by',
         'processed_at',
-        'reference_number',
-        'notes',
     ];
 
     protected $casts = [
         'total_amount' => 'decimal:2',
-        'paid_amount' => 'decimal:2',
+        'cash_amount' => 'decimal:2',
+        'card_amount' => 'decimal:2',
+        'credit_amount' => 'decimal:2',
         'change_amount' => 'decimal:2',
         'processed_at' => 'datetime',
     ];

@@ -186,7 +186,16 @@ class PrinterService
         if (!empty($data['payment_method'])) {
             $method = strtoupper($data['payment_method']);
             $content .= sprintf("%-30s %s\n", "Payment Method:", $method);
-            $content .= sprintf("%-30s %10.2f\n", "Paid:", $data['paid_amount']);
+            
+            if (($data['cash_amount'] ?? 0) > 0) {
+                $content .= sprintf("%-30s %10.2f\n", "Cash:", $data['cash_amount']);
+            }
+            if (($data['card_amount'] ?? 0) > 0) {
+                $content .= sprintf("%-30s %10.2f\n", "Card:", $data['card_amount']);
+            }
+            if (($data['credit_amount'] ?? 0) > 0) {
+                $content .= sprintf("%-30s %10.2f\n", "Credit:", $data['credit_amount']);
+            }
             if ($data['change'] > 0) {
                 $content .= sprintf("%-30s %10.2f\n", "Change:", $data['change']);
             }

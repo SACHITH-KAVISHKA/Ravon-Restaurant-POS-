@@ -2925,12 +2925,16 @@
                 }
 
                 const paymentMethod = order.payment?.payment_method?.toUpperCase() || 'CASH';
-                const amountPaid = order.payment?.paid_amount || order.payment?.amount_paid || order.total_amount || 0;
+                const cashAmount = order.payment?.cash_amount || 0;
+                const cardAmount = order.payment?.card_amount || 0;
+                const creditAmount = order.payment?.credit_amount || 0;
                 const changeAmount = order.payment?.change_amount || 0;
 
                 console.log('Payment details:', {
                     paymentMethod,
-                    amountPaid,
+                    cashAmount,
+                    cardAmount,
+                    creditAmount,
                     changeAmount
                 });
 
@@ -3153,9 +3157,27 @@
     
     <div class="payment-info">
         <div class="total-row">
+            <span>Payment Method</span>
             <span>${paymentMethod}</span>
-            <span>${parseFloat(amountPaid).toFixed(2)}</span>
         </div>
+        ${cashAmount > 0 ? `
+        <div class="total-row">
+            <span>Cash</span>
+            <span>${parseFloat(cashAmount).toFixed(2)}</span>
+        </div>
+        ` : ''}
+        ${cardAmount > 0 ? `
+        <div class="total-row">
+            <span>Card</span>
+            <span>${parseFloat(cardAmount).toFixed(2)}</span>
+        </div>
+        ` : ''}
+        ${creditAmount > 0 ? `
+        <div class="total-row">
+            <span>Credit</span>
+            <span>${parseFloat(creditAmount).toFixed(2)}</span>
+        </div>
+        ` : ''}
         ${parseFloat(changeAmount) > 0 ? `
         <div class="total-row">
             <span>Change</span>

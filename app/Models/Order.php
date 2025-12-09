@@ -18,6 +18,7 @@ class Order extends Model
         'order_type',
         'status',
         'is_paid',
+        'is_deleted',
         'waiter_id',
         'customer_name',
         'customer_phone',
@@ -41,6 +42,8 @@ class Order extends Model
 
     protected $casts = [
         'guest_count' => 'integer',
+        'is_paid' => 'boolean',
+        'is_deleted' => 'boolean',
         'subtotal' => 'decimal:2',
         'discount_amount' => 'decimal:2',
         'service_charge' => 'decimal:2',

@@ -50,16 +50,35 @@ class PaymentController extends Controller
 
             $changeAmount = max(0, $validated['amount_received'] - $order->total_amount);
 
+            // Calculate specific payment amounts
+            $cashAmount = 0;
+            $cardAmount = 0;
+            $creditAmount = 0;
+            $amountReceived = $validated['amount_received'];
+
+            switch ($validated['payment_method']) {
+                case 'cash':
+                    $cashAmount = $amountReceived;
+                    break;
+                case 'card':
+                    $cardAmount = $amountReceived;
+                    break;
+                case 'credit':
+                    $creditAmount = $order->total_amount;
+                    break;
+            }
+
             // Create payment record
             $payment = Payment::create([
                 'order_id' => $order->id,
-                'payment_method' => $validated['payment_method'],
-                'subtotal' => $order->subtotal,
-                'tax_amount' => $order->tax_amount,
-                'discount_amount' => $order->discount_amount ?? 0,
+                'payment_number' => 'PAY-' . date('Ymd') . '-' . str_pad($order->id, 5, '0', STR_PAD_LEFT),
                 'total_amount' => $order->total_amount,
-                'amount_received' => $validated['amount_received'],
+                'cash_amount' => $cashAmount,
+                'card_amount' => $cardAmount,
+                'credit_amount' => $creditAmount,
                 'change_amount' => $changeAmount,
+                'payment_method' => $validated['payment_method'],
+                'payment_status' => 'completed',
                 'processed_by' => Auth::id(),
                 'processed_at' => now(),
             ]);

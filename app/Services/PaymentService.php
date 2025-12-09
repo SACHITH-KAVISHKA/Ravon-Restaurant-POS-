@@ -26,29 +26,71 @@ class PaymentService
                 throw new Exception('Cannot pay for cancelled order');
             }
 
+            // Calculate specific payment amounts based on method
+            $cashAmount = 0;
+            $cardAmount = 0;
+            $creditAmount = 0;
+            $changeAmount = 0;
+
+            switch ($paymentData['payment_method']) {
+                case 'cash':
+                    $cashAmount = $paymentData['cash_amount'] ?? $paymentData['amount'] ?? 0;
+                    $changeAmount = max(0, $cashAmount - $order->total_amount);
+                    break;
+                case 'card':
+                    $cardAmount = $paymentData['card_amount'] ?? $paymentData['amount'] ?? 0;
+                    break;
+                case 'credit':
+                    $creditAmount = $order->total_amount;
+                    break;
+                case 'mixed':
+                    // For mixed, amounts will be set from splits below
+                    break;
+            }
+
             $payment = Payment::create([
                 'order_id' => $order->id,
                 'total_amount' => $order->total_amount,
-                'paid_amount' => $paymentData['paid_amount'],
-                'change_amount' => max(0, $paymentData['paid_amount'] - $order->total_amount),
+                'cash_amount' => $cashAmount,
+                'card_amount' => $cardAmount,
+                'credit_amount' => $creditAmount,
+                'change_amount' => $changeAmount,
                 'payment_method' => $paymentData['payment_method'],
                 'payment_status' => 'completed',
                 'processed_by' => auth()->id(),
                 'processed_at' => now(),
-                'reference_number' => $paymentData['reference_number'] ?? null,
-                'notes' => $paymentData['notes'] ?? null,
             ]);
 
             // Handle split payments
             if ($paymentData['payment_method'] === 'mixed' && isset($paymentData['splits'])) {
+                $mixedCash = 0;
+                $mixedCard = 0;
+                
                 foreach ($paymentData['splits'] as $split) {
                     PaymentSplit::create([
                         'payment_id' => $payment->id,
                         'payment_method' => $split['method'],
                         'amount' => $split['amount'],
-                        'reference_number' => $split['reference_number'] ?? null,
                     ]);
+                    
+                    // Accumulate amounts
+                    if ($split['method'] === 'cash') {
+                        $mixedCash += $split['amount'];
+                    } elseif ($split['method'] === 'card') {
+                        $mixedCard += $split['amount'];
+                    }
                 }
+                
+                // Calculate change: Card pays first (no change), then cash pays remainder
+                // Change comes only from excess cash
+                $remainingAfterCard = $order->total_amount - $mixedCard;
+                $mixedChangeAmount = max(0, $mixedCash - $remainingAfterCard);
+                
+                $payment->update([
+                    'cash_amount' => $mixedCash,
+                    'card_amount' => $mixedCard,
+                    'change_amount' => $mixedChangeAmount,
+                ]);
             }
 
             // Update order status
@@ -94,7 +136,6 @@ class PaymentService
 
             $payment->update([
                 'payment_status' => 'refunded',
-                'notes' => ($payment->notes ?? '') . "\nRefund Reason: " . $reason,
             ]);
 
             // Update order
@@ -163,7 +204,9 @@ class PaymentService
             
             // Payment
             'payment_method' => $order->payment?->payment_method,
-            'paid_amount' => $order->payment?->paid_amount,
+            'cash_amount' => $order->payment?->cash_amount ?? 0,
+            'card_amount' => $order->payment?->card_amount ?? 0,
+            'credit_amount' => $order->payment?->credit_amount ?? 0,
             'change' => $order->payment?->change_amount,
             
             // Footer
@@ -207,9 +250,9 @@ class PaymentService
         return [
             'total_transactions' => $payments->count(),
             'total_amount' => $payments->sum('total_amount'),
-            'cash_amount' => $payments->where('payment_method', 'cash')->sum('paid_amount'),
-            'card_amount' => $payments->where('payment_method', 'card')->sum('paid_amount'),
-            'mixed_amount' => $payments->where('payment_method', 'mixed')->sum('paid_amount'),
+            'cash_amount' => $payments->sum('cash_amount'),
+            'card_amount' => $payments->sum('card_amount'),
+            'credit_amount' => $payments->sum('credit_amount'),
             'average_transaction' => $payments->avg('total_amount'),
         ];
     }
@@ -225,8 +268,9 @@ class PaymentService
                 DB::raw('DATE(processed_at) as date'),
                 DB::raw('COUNT(*) as transaction_count'),
                 DB::raw('SUM(total_amount) as total_sales'),
-                DB::raw('SUM(CASE WHEN payment_method = "cash" THEN paid_amount ELSE 0 END) as cash_sales'),
-                DB::raw('SUM(CASE WHEN payment_method = "card" THEN paid_amount ELSE 0 END) as card_sales')
+                DB::raw('SUM(cash_amount) as cash_sales'),
+                DB::raw('SUM(card_amount) as card_sales'),
+                DB::raw('SUM(credit_amount) as credit_sales')
             )
             ->groupBy('date')
             ->orderBy('date')

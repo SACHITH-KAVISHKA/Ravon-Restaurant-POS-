@@ -473,7 +473,9 @@ class POSController extends Controller
         $validated = $request->validate([
             'order_id' => 'required|exists:orders,id',
             'payment_method' => 'required|in:cash,card,credit,card_cash,mixed',
-            'amount_paid' => 'required|numeric|min:0',
+            'amount_paid' => 'nullable|numeric|min:0',
+            'cash_amount' => 'nullable|numeric|min:0',
+            'card_amount' => 'nullable|numeric|min:0',
         ]);
 
         DB::beginTransaction();
@@ -490,22 +492,63 @@ class POSController extends Controller
 
             $totalAmount = $order->total_amount;
 
-            // For credit payment, allow any amount
-            if ($validated['payment_method'] !== 'credit' && $validated['amount_paid'] < $totalAmount) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Amount paid is less than total amount'
-                ], 400);
+            // Validate payment amounts based on method
+            if ($validated['payment_method'] === 'card_cash' || $validated['payment_method'] === 'mixed') {
+                $cashAmt = $validated['cash_amount'] ?? 0;
+                $cardAmt = $validated['card_amount'] ?? 0;
+                if (($cashAmt + $cardAmt) < $totalAmount) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Insufficient payment amount'
+                    ], 400);
+                }
+            } elseif ($validated['payment_method'] === 'cash') {
+                if (($validated['cash_amount'] ?? $validated['amount_paid'] ?? 0) < $totalAmount) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Insufficient cash amount'
+                    ], 400);
+                }
             }
 
             // Map payment methods
             $paymentMethodMap = [
                 'cash' => 'cash',
                 'card' => 'card',
-                'credit' => 'cash', // Credit is still cash-based
+                'credit' => 'credit',
                 'card_cash' => 'mixed',
                 'mixed' => 'mixed'
             ];
+
+            // Calculate specific payment amounts
+            $cashAmount = 0;
+            $cardAmount = 0;
+            $creditAmount = 0;
+            $changeAmount = 0;
+
+            switch ($validated['payment_method']) {
+                case 'cash':
+                    $cashAmount = $validated['cash_amount'] ?? $validated['amount_paid'] ?? 0;
+                    $changeAmount = max(0, $cashAmount - $totalAmount);
+                    break;
+                case 'card':
+                    $cardAmount = $validated['card_amount'] ?? $validated['amount_paid'] ?? $totalAmount;
+                    break;
+                case 'credit':
+                    $creditAmount = $totalAmount;
+                    break;
+                case 'card_cash':
+                case 'mixed':
+                    // For mixed payments: store full amounts given
+                    $cashAmount = $validated['cash_amount'] ?? 0;
+                    $cardAmount = $validated['card_amount'] ?? 0;
+                    
+                    // Card is applied first (exact, no change), cash pays the rest
+                    $remainingAfterCard = $totalAmount - $cardAmount;
+                    // Change only comes from excess cash (cash given minus what's needed after card)
+                    $changeAmount = max(0, $cashAmount - max(0, $remainingAfterCard));
+                    break;
+            }
 
             // Generate unique payment number
             $paymentNumber = 'PAY-' . date('Ymd') . '-' . str_pad($order->id, 5, '0', STR_PAD_LEFT);
@@ -515,13 +558,33 @@ class POSController extends Controller
                 'order_id' => $order->id,
                 'payment_number' => $paymentNumber,
                 'total_amount' => $totalAmount,
-                'paid_amount' => $validated['amount_paid'],
-                'change_amount' => max(0, $validated['amount_paid'] - $totalAmount),
+                'cash_amount' => $cashAmount,
+                'card_amount' => $cardAmount,
+                'credit_amount' => $creditAmount,
+                'change_amount' => $changeAmount,
                 'payment_method' => $paymentMethodMap[$validated['payment_method']],
                 'payment_status' => 'completed',
                 'processed_by' => Auth::id(),
                 'processed_at' => now(),
             ]);
+
+            // Create payment splits for mixed payments
+            if (($validated['payment_method'] === 'card_cash' || $validated['payment_method'] === 'mixed') && ($cashAmount > 0 || $cardAmount > 0)) {
+                if ($cashAmount > 0) {
+                    \App\Models\PaymentSplit::create([
+                        'payment_id' => $payment->id,
+                        'payment_method' => 'cash',
+                        'amount' => $cashAmount,
+                    ]);
+                }
+                if ($cardAmount > 0) {
+                    \App\Models\PaymentSplit::create([
+                        'payment_id' => $payment->id,
+                        'payment_method' => 'card',
+                        'amount' => $cardAmount,
+                    ]);
+                }
+            }
 
             // Update order
             $order->update([

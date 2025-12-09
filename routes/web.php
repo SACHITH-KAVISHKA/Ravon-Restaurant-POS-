@@ -5,6 +5,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\MenuController;
 use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\SalesReportController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -88,6 +89,15 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/export', function () {
             return redirect()->route('dashboard');
         })->name('export');
+    });
+
+    // Sales Report (Admin only)
+    Route::middleware(['role:admin'])->prefix('sales-report')->name('sales-report.')->group(function () {
+        Route::get('/', [SalesReportController::class, 'index'])->name('index');
+        Route::get('/sale-details/{order}', [SalesReportController::class, 'getSaleDetails'])->name('sale-details');
+        Route::get('/receipt/{order}', [SalesReportController::class, 'receipt'])->name('receipt');
+        Route::get('/export', [SalesReportController::class, 'exportExcel'])->name('export');
+        Route::delete('/order/{order}', [SalesReportController::class, 'softDelete'])->name('order.delete');
     });
 
     // POS (Cashier only)
