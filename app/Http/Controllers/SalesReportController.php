@@ -85,11 +85,17 @@ class SalesReportController extends Controller
             $totalTax += $order->tax_amount ?? 0;
             $totalServiceCharge += $order->service_charge ?? 0;
 
-            // Get payment amounts from specific columns
+            // Get payment amounts and subtract change from cash only
             if ($order->payment) {
-                $totalCash += $order->payment->cash_amount ?? 0;
-                $totalCard += $order->payment->card_amount ?? 0;
-                $totalCredit += $order->payment->credit_amount ?? 0;
+                $cashAmt = $order->payment->cash_amount ?? 0;
+                $cardAmt = $order->payment->card_amount ?? 0;
+                $creditAmt = $order->payment->credit_amount ?? 0;
+                $changeAmt = $order->payment->change_amount ?? 0;
+                
+                // Subtract change from cash amount only
+                $totalCash += max(0, $cashAmt - $changeAmt);
+                $totalCard += $cardAmt;
+                $totalCredit += $creditAmt;
             }
         }
 
@@ -263,10 +269,14 @@ class SalesReportController extends Controller
         // Data rows
         $row = 2;
         foreach ($orders as $order) {
-            // Get payment amounts from specific columns
+            // Get payment amounts from specific columns and subtract change from cash
             $cashAmount = $order->payment ? $order->payment->cash_amount : 0;
             $cardAmount = $order->payment ? $order->payment->card_amount : 0;
             $creditAmount = $order->payment ? $order->payment->credit_amount : 0;
+            $changeAmount = $order->payment ? $order->payment->change_amount : 0;
+            
+            // Subtract change from cash (net cash received)
+            $displayCashAmount = max(0, $cashAmount - $changeAmount);
 
             $sheet->setCellValue('A' . $row, $order->order_number);
             $sheet->setCellValue('B' . $row, $order->payment ? $order->payment->payment_number : 'N/A');
@@ -278,7 +288,7 @@ class SalesReportController extends Controller
             $sheet->setCellValue('H' . $row, $order->service_charge);
             $sheet->setCellValue('I' . $row, $order->tax_amount);
             $sheet->setCellValue('J' . $row, $order->total_amount);
-            $sheet->setCellValue('K' . $row, $cashAmount);
+            $sheet->setCellValue('K' . $row, $displayCashAmount);
             $sheet->setCellValue('L' . $row, $cardAmount);
             $sheet->setCellValue('M' . $row, $order->completed_at ? $order->completed_at->format('Y-m-d H:i:s') : 'N/A');
 
@@ -288,7 +298,7 @@ class SalesReportController extends Controller
             $totalServiceCharge += $order->service_charge;
             $totalTax += $order->tax_amount;
             $totalAmount += $order->total_amount;
-            $totalCash += $cashAmount;
+            $totalCash += $displayCashAmount;
             $totalCard += $cardAmount;
 
             $row++;

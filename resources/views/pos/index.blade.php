@@ -56,56 +56,10 @@
             <!-- Bill Totals -->
             <div class="p-4 border-t border-gray-700 bg-gray-900">
                 <div class="space-y-2 text-sm">
-                    <div class="flex justify-between text-gray-400">
-                        <span>Sub Total</span>
-                        <span id="subtotal">0.00</span>
-                    </div>
-                    <div class="flex justify-between text-gray-400">
-                        <span>Discount</span>
-                        <span id="discount">0.00</span>
-                    </div>
-                    <div class="flex justify-between text-gray-400">
-                        <span>Service</span>
-                        <span id="service">0.00</span>
-                    </div>
-                    <div class="flex justify-between text-gray-400">
-                        <span>Tax</span>
-                        <span id="tax">0.00</span>
-                    </div>
-                    <div class="flex justify-between text-gray-400">
-                        <span>Less Amount</span>
-                        <span id="lessAmount">0.00</span>
-                    </div>
-                    <div class="flex justify-between text-gray-400">
-                        <span>Delivery</span>
-                        <span id="delivery">0.00</span>
-                    </div>
-                    <div class="flex justify-between text-lg font-bold text-white border-t border-gray-700 pt-2 mt-2">
+                    <div class="flex justify-between text-lg font-bold text-white">
                         <span>Total</span>
                         <span id="total">0.00</span>
                     </div>
-                </div>
-
-                <!-- Action Buttons -->
-                <div class="grid grid-cols-3 gap-2 mt-4">
-                    <button class="bg-gray-700 text-white py-2 rounded hover:bg-gray-600 transition flex items-center justify-center">
-                        <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                        </svg>
-                        Quantity
-                    </button>
-                    <button class="bg-gray-700 text-white py-2 rounded hover:bg-gray-600 transition flex items-center justify-center" onclick="showModifiersModal()">
-                        <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                        </svg>
-                        Modifiers
-                    </button>
-                    <button class="bg-red-600 text-white py-2 rounded hover:bg-red-700 transition flex items-center justify-center" onclick="voidItem()">
-                        <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                        Void
-                    </button>
                 </div>
             </div>
         </div>
@@ -1726,7 +1680,6 @@
             // Calculate totals
             function calculateTotals() {
                 const subtotal = billItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-                document.getElementById('subtotal').textContent = subtotal.toFixed(2);
                 document.getElementById('total').textContent = subtotal.toFixed(2);
             }
 
@@ -2836,8 +2789,12 @@
                         currentOrderType = null;
                         selectedTableId = null;
 
-                        // Print receipt directly
-                        printReceiptInline(result.order);
+                        // Print receipt automatically using QZ Tray (like KOT/BOT)
+                        printReceiptWithQZ(result.order).catch(err => {
+                            console.error('Receipt printing error:', err);
+                            // Fallback to browser print if QZ Tray fails
+                            printReceiptInline(result.order);
+                        });
 
                         renderBill();
                         calculateTotals();
@@ -2856,7 +2813,232 @@
                 }
             };
 
-            // Print Receipt Inline
+            /**
+             * Print Receipt using QZ Tray (Automatic Printing like KOT/BOT)
+             * @param {Object} order - Order object with payment details
+             */
+            async function printReceiptWithQZ(order) {
+                if (!order) {
+                    console.error('No order data provided for receipt');
+                    return;
+                }
+
+                try {
+                    const { jsPDF } = window.jspdf;
+                    const pdf = new jsPDF({
+                        orientation: 'portrait',
+                        unit: 'mm',
+                        format: [80, 297]
+                    });
+
+                    let yPosition = 8;
+                    const pageWidth = 80;
+                    const leftMargin = 5;
+                    const rightMargin = 5;
+                    const contentWidth = pageWidth - leftMargin - rightMargin;
+
+                    // Header - Restaurant Name
+                    pdf.setFont('courier', 'bold');
+                    pdf.setFontSize(16);
+                    pdf.text('RAVON RESTAURANT', pageWidth / 2, yPosition, { align: 'center' });
+                    yPosition += 5;
+
+                    pdf.setFontSize(10);
+                    pdf.setFont('courier', 'normal');
+                    pdf.text('Ravon Restaurant (Pvt) Ltd', pageWidth / 2, yPosition, { align: 'center' });
+                    yPosition += 4;
+                    
+                    pdf.setFontSize(9);
+                    pdf.text('NO 282/A/2, KCTHALAWALA,', pageWidth / 2, yPosition, { align: 'center' });
+                    yPosition += 4;
+                    pdf.text('KADUWELA.', pageWidth / 2, yPosition, { align: 'center' });
+                    yPosition += 4;
+                    pdf.text('TEL.016-2006007', pageWidth / 2, yPosition, { align: 'center' });
+                    yPosition += 4;
+                    pdf.text('Email-ravonrestaurant@gmail.com', pageWidth / 2, yPosition, { align: 'center' });
+                    yPosition += 8;
+
+                    // Invoice Title
+                    pdf.setFont('courier', 'bold');
+                    pdf.setFontSize(14);
+                    pdf.text('INVOICE', pageWidth / 2, yPosition, { align: 'center' });
+                    yPosition += 8;
+
+                    // Order Information
+                    pdf.setFont('courier', 'normal');
+                    pdf.setFontSize(9);
+                    
+                    pdf.text('Invoice #', leftMargin, yPosition);
+                    pdf.text(String(order.order_number || order.id), pageWidth - rightMargin, yPosition, { align: 'right' });
+                    yPosition += 4;
+
+                    const now = new Date();
+                    const dateStr = now.toLocaleDateString('en-GB');
+                    const timeStr = now.toLocaleTimeString('en-GB', { hour12: false });
+                    
+                    pdf.text('Date', leftMargin, yPosition);
+                    pdf.text(`:${dateStr} Time ${timeStr}`, pageWidth - rightMargin, yPosition, { align: 'right' });
+                    yPosition += 4;
+
+                    pdf.text('Terminal:', leftMargin, yPosition);
+                    pdf.text('01', pageWidth - rightMargin, yPosition, { align: 'right' });
+                    yPosition += 4;
+
+                    const tableNumber = order.table ? order.table.table_number : 'Take Away';
+                    pdf.text('Table # :', leftMargin, yPosition);
+                    pdf.text(String(tableNumber), pageWidth - rightMargin, yPosition, { align: 'right' });
+                    yPosition += 4;
+
+                    const cashier = order.waiter ? order.waiter.name : 'Cashier User';
+                    pdf.text('Cashier :', leftMargin, yPosition);
+                    pdf.text(String(cashier), pageWidth - rightMargin, yPosition, { align: 'right' });
+                    yPosition += 6;
+
+                    // Separator
+                    pdf.setLineDashPattern([1, 1], 0);
+                    pdf.line(leftMargin, yPosition, pageWidth - rightMargin, yPosition);
+                    pdf.setLineDashPattern([], 0);
+                    yPosition += 5;
+
+                    // Items Header
+                    pdf.setFont('courier', 'bold');
+                    pdf.setFontSize(9);
+                    pdf.text('Item', leftMargin, yPosition);
+                    pdf.text('Qty   Amount', pageWidth - rightMargin, yPosition, { align: 'right' });
+                    yPosition += 4;
+
+                    pdf.setLineDashPattern([1, 1], 0);
+                    pdf.line(leftMargin, yPosition, pageWidth - rightMargin, yPosition);
+                    pdf.setLineDashPattern([], 0);
+                    yPosition += 4;
+
+                    // Print Items
+                    pdf.setFont('courier', 'normal');
+                    pdf.setFontSize(9);
+
+                    const items = order.order_items || order.orderItems || [];
+                    items.forEach((item, index) => {
+                        const itemName = item.item?.name || item.item_name || 'Unknown Item';
+                        const quantity = item.quantity || 0;
+                        const subtotal = parseFloat(item.subtotal || 0).toFixed(2);
+
+                        // Item number and name (first line)
+                        pdf.setFont('courier', 'bold');
+                        pdf.setFontSize(10);
+                        let displayName = `${index + 1}. ${itemName}`;
+                        if (displayName.length > 28) {
+                            displayName = displayName.substring(0, 25) + '...';
+                        }
+                        pdf.text(displayName, leftMargin, yPosition);
+                        yPosition += 5;
+
+                        // Second line: Quantity and Amount (right-aligned)
+                        pdf.setFont('courier', 'normal');
+                        pdf.setFontSize(9);
+                        
+                        // Quantity on the left side of second line
+                        pdf.text(`${quantity}x`, leftMargin + 10, yPosition);
+                        
+                        // Amount on the right side
+                        pdf.text(subtotal, pageWidth - rightMargin, yPosition, { align: 'right' });
+                        yPosition += 6;
+                    });
+
+                    // Separator
+                    yPosition += 2;
+                    pdf.setLineDashPattern([1, 1], 0);
+                    pdf.line(leftMargin, yPosition, pageWidth - rightMargin, yPosition);
+                    pdf.setLineDashPattern([], 0);
+                    yPosition += 4;
+
+                    // Subtotal
+                    pdf.setFont('courier', 'normal');
+                    pdf.setFontSize(10);
+                    pdf.text('Sub Total', leftMargin, yPosition);
+                    pdf.text(parseFloat(order.subtotal || 0).toFixed(2), pageWidth - rightMargin, yPosition, { align: 'right' });
+                    yPosition += 5;
+
+                    // Total Separator (thick line)
+                    pdf.setLineWidth(0.5);
+                    pdf.line(leftMargin, yPosition, pageWidth - rightMargin, yPosition);
+                    pdf.setLineWidth(0.2);
+                    yPosition += 5;
+
+                    // Grand Total
+                    pdf.setFont('courier', 'bold');
+                    pdf.setFontSize(11);
+                    pdf.text('Total', leftMargin, yPosition);
+                    pdf.text(parseFloat(order.total_amount || 0).toFixed(2), pageWidth - rightMargin, yPosition, { align: 'right' });
+                    yPosition += 7;
+
+                    // Payment Information
+                    pdf.setFont('courier', 'normal');
+                    pdf.setFontSize(9);
+
+                    const paymentMethod = order.payment?.payment_method?.toUpperCase() || 'CASH';
+                    pdf.text('Payment Method', leftMargin, yPosition);
+                    pdf.text(paymentMethod, pageWidth - rightMargin, yPosition, { align: 'right' });
+                    yPosition += 4;
+
+                    const cashAmount = order.payment?.cash_amount || 0;
+                    const cardAmount = order.payment?.card_amount || 0;
+                    const creditAmount = order.payment?.credit_amount || 0;
+                    const changeAmount = order.payment?.change_amount || 0;
+
+                    if (cashAmount > 0) {
+                        pdf.text('Cash', leftMargin, yPosition);
+                        pdf.text(parseFloat(cashAmount).toFixed(2), pageWidth - rightMargin, yPosition, { align: 'right' });
+                        yPosition += 4;
+                    }
+
+                    if (cardAmount > 0) {
+                        pdf.text('Card', leftMargin, yPosition);
+                        pdf.text(parseFloat(cardAmount).toFixed(2), pageWidth - rightMargin, yPosition, { align: 'right' });
+                        yPosition += 4;
+                    }
+
+                    if (creditAmount > 0) {
+                        pdf.text('Credit', leftMargin, yPosition);
+                        pdf.text(parseFloat(creditAmount).toFixed(2), pageWidth - rightMargin, yPosition, { align: 'right' });
+                        yPosition += 4;
+                    }
+
+                    if (changeAmount > 0) {
+                        pdf.text('Change', leftMargin, yPosition);
+                        pdf.text(parseFloat(changeAmount).toFixed(2), pageWidth - rightMargin, yPosition, { align: 'right' });
+                        yPosition += 4;
+                    }
+
+                    yPosition += 3;
+
+                    // Footer
+                    pdf.setFont('courier', 'bold');
+                    pdf.setFontSize(10);
+                    pdf.text('THANK YOU, COME AGAIN.', pageWidth / 2, yPosition, { align: 'center' });
+                    yPosition += 6;
+
+                    pdf.setLineDashPattern([1, 1], 0);
+                    pdf.line(leftMargin, yPosition, pageWidth - rightMargin, yPosition);
+                    pdf.setLineDashPattern([], 0);
+                    yPosition += 4;
+
+                    pdf.setFont('courier', 'normal');
+                    pdf.setFontSize(8);
+                    pdf.text('Software By SKM Labs', pageWidth / 2, yPosition, { align: 'center' });
+
+                    // Generate Base64 and Print
+                    const pdfBase64 = pdf.output('datauristring').split(',')[1];
+                    const receiptPrinterName = "Microsoft Print to PDF"; // Configure printer name
+                    await printPDFwithQZ(pdfBase64, receiptPrinterName, "Receipt", false);
+                    console.log('Receipt sent to printer successfully');
+
+                } catch (error) {
+                    console.error('Receipt Generation Error:', error);
+                    throw error;
+                }
+            }
+
+            // Print Receipt Inline (Fallback method using browser print dialog)
             function printReceiptInline(order) {
                 const receiptHTML = generateReceiptHTML(order);
 

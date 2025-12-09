@@ -83,14 +83,19 @@ class POSController extends Controller
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($order) {
+                // Count only non-cancelled items
+                $activeItemsCount = $order->orderItems->filter(function ($item) {
+                    return $item->status !== 'cancelled';
+                })->count();
+
                 return [
                     'id' => $order->id,
                     'order_number' => $order->order_number,
                     'table_number' => $order->table ? $order->table->table_number : 'N/A',
                     'order_type' => $order->order_type,
                     'total_amount' => $order->total_amount,
-                    'created_at' => $order->created_at->setTimezone('Asia/Colombo')->format('M d, h:i A'),
-                    'items_count' => $order->orderItems->count(),
+                    'created_at' => $order->created_at->format('M d, h:i A'),
+                    'items_count' => $activeItemsCount,
                 ];
             });
 
@@ -119,6 +124,11 @@ class POSController extends Controller
             ->orderBy('completed_at', 'desc')
             ->get()
             ->map(function ($order) {
+                // Count only non-cancelled items
+                $activeItemsCount = $order->orderItems->filter(function ($item) {
+                    return $item->status !== 'cancelled';
+                })->count();
+
                 return [
                     'id' => $order->id,
                     'order_number' => $order->order_number,
@@ -126,8 +136,8 @@ class POSController extends Controller
                     'order_type' => $order->order_type,
                     'total_amount' => $order->total_amount,
                     // Format: Dec 08, 04:15 AM (using local timezone)
-                    'completed_at' => $order->completed_at ? $order->completed_at->timezone('Asia/Colombo')->format('M d, h:i A') : 'N/A',
-                    'items_count' => $order->orderItems->count(),
+                    'completed_at' => $order->completed_at ? $order->completed_at->format('M d, h:i A') : 'N/A',
+                    'items_count' => $activeItemsCount,
                     'payment_method' => $order->payment ? $order->payment->payment_method : 'N/A',
                 ];
             });
@@ -147,15 +157,20 @@ class POSController extends Controller
             ->findOrFail($orderId);
 
         // Transform orderItems to items format expected by frontend
-        $items = $order->orderItems->map(function ($orderItem) {
-            return [
-                'item_id' => $orderItem->item_id,
-                'name' => $orderItem->item->name ?? 'Unknown Item',
-                'price' => $orderItem->unit_price,
-                'quantity' => $orderItem->quantity,
-                'modifiers' => []
-            ];
-        });
+        // Only include non-cancelled items
+        $items = $order->orderItems
+            ->filter(function ($orderItem) {
+                return $orderItem->status !== 'cancelled';
+            })
+            ->map(function ($orderItem) {
+                return [
+                    'item_id' => $orderItem->item_id,
+                    'name' => $orderItem->item_display_name ?? $orderItem->item->name ?? 'Unknown Item',
+                    'price' => $orderItem->unit_price,
+                    'quantity' => $orderItem->quantity,
+                    'modifiers' => []
+                ];
+            })->values(); // Reset array keys
 
         return response()->json([
             'success' => true,
@@ -186,7 +201,7 @@ class POSController extends Controller
             'pickme_ref_number' => 'nullable|string|max:100',
             'items' => 'required|array|min:1',
             'items.*.item_id' => 'required|exists:items,id',
-            'items.*.quantity' => 'required|integer|min:1',
+            'items.*.quantity' => 'required|integer|min:0', // Allow 0 for item removal
             'items.*.price' => 'required|numeric|min:0',
             'items.*.name' => 'required|string',
         ]);
@@ -196,6 +211,11 @@ class POSController extends Controller
             $isNewOrder = empty($validated['order_id']);
 
             if ($isNewOrder) {
+                // Filter out items with quantity 0 for new orders
+                $validated['items'] = array_filter($validated['items'], function($item) {
+                    return $item['quantity'] > 0;
+                });
+
                 // Create new order
                 $order = Order::create([
                     'order_type' => $validated['order_type'],
@@ -236,16 +256,35 @@ class POSController extends Controller
                 });
 
                 $itemsToProcess = [];
+                $processedKeys = []; // Track which items are still in the order
 
                 // Process each item from the request
                 foreach ($validated['items'] as $itemData) {
                     $key = $itemData['item_id'] . '_' . $itemData['name'];
+                    $processedKeys[] = $key;
 
                     if ($existingItems->has($key)) {
                         // Item exists - update it
                         $existingItem = $existingItems->get($key);
                         $requestedQty = $itemData['quantity'];
                         $currentQty = $existingItem->quantity;
+
+                        // Handle quantity = 0 or removal
+                        if ($requestedQty <= 0) {
+                            // Mark item as cancelled or delete it
+                            if ($existingItem->status !== 'pending') {
+                                // If already sent to kitchen, mark as cancelled
+                                $existingItem->update([
+                                    'status' => 'cancelled',
+                                    'quantity' => 0,
+                                    'subtotal' => 0
+                                ]);
+                            } else {
+                                // If still pending, delete it
+                                $existingItem->delete();
+                            }
+                            continue;
+                        }
 
                         if ($requestedQty != $currentQty) {
                             // Update the existing order item
@@ -267,6 +306,24 @@ class POSController extends Controller
                     } else {
                         // Completely new item - will create new order_item
                         $itemsToProcess[] = ['data' => $itemData, 'is_new' => true];
+                    }
+                }
+
+                // Handle items that were removed from the order (not in current request)
+                foreach ($existingItems as $key => $existingItem) {
+                    if (!in_array($key, $processedKeys)) {
+                        // Item was removed from the order
+                        if ($existingItem->status !== 'pending') {
+                            // If already sent to kitchen, mark as cancelled
+                            $existingItem->update([
+                                'status' => 'cancelled',
+                                'quantity' => 0,
+                                'subtotal' => 0
+                            ]);
+                        } else {
+                            // If still pending, delete it
+                            $existingItem->delete();
+                        }
                     }
                 }
 
@@ -304,9 +361,11 @@ class POSController extends Controller
                 ];
             }
 
-            // Recalculate order totals from all order items
+            // Recalculate order totals from all non-cancelled order items
             $order->refresh();
-            $subtotalFromAllItems = $order->orderItems->sum('subtotal');
+            $subtotalFromAllItems = $order->orderItems()
+                ->where('status', '!=', 'cancelled')
+                ->sum('subtotal');
 
             $order->update([
                 'subtotal' => $subtotalFromAllItems,

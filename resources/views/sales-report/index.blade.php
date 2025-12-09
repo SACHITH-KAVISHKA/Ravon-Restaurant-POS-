@@ -140,7 +140,11 @@
                             $cashAmount = $order->payment->cash_amount ?? 0;
                             $cardAmount = $order->payment->card_amount ?? 0;
                             $creditAmount = $order->payment->credit_amount ?? 0;
+                            $changeAmount = $order->payment->change_amount ?? 0;
                             $paymentMethod = $order->payment ? $order->payment->payment_method : null;
+                            
+                            // Subtract change from cash amount only (change is given back, so net cash received is less)
+                            $displayCashAmount = max(0, $cashAmount - $changeAmount);
                             @endphp
                             <tr class="hover:bg-gray-700/50 transition-colors" data-order-id="{{ $order->id }}">
                                 <td class="px-6 py-4 whitespace-nowrap">
@@ -181,7 +185,7 @@
                                     @endif
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-right text-gray-300">
-                                    LKR {{ number_format($cashAmount, 2) }}
+                                    LKR {{ number_format($displayCashAmount, 2) }}
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-right text-gray-300">
                                     LKR {{ number_format($cardAmount, 2) }}
@@ -499,9 +503,15 @@
                 });
 
                 // Close modals
-                $('.close-modal, .modal-backdrop').on('click', function(e) {
+                $('.close-modal').on('click', function(e) {
+                    e.preventDefault();
+                    $('#saleDetailsModal').addClass('hidden');
+                });
+
+                $('.modal-backdrop').on('click', function(e) {
                     if (e.target === this) {
                         $('#saleDetailsModal').addClass('hidden');
+                        $('#deleteConfirmModal').addClass('hidden');
                     }
                 });
 

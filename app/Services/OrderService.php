@@ -107,8 +107,30 @@ class OrderService
     /**
      * Update order item quantity.
      */
-    public function updateItemQuantity(OrderItem $orderItem, int $quantity): OrderItem
+    public function updateItemQuantity(OrderItem $orderItem, int $quantity): OrderItem|bool
     {
+        // Handle quantity = 0 (remove item)
+        if ($quantity <= 0) {
+            $order = $orderItem->order;
+            
+            // If item was already sent to kitchen, mark as cancelled
+            if ($orderItem->status !== 'pending') {
+                $orderItem->update([
+                    'status' => 'cancelled',
+                    'quantity' => 0,
+                    'subtotal' => 0,
+                ]);
+                
+                $this->calculateOrderTotal($order);
+                return $orderItem->fresh();
+            } else {
+                // If still pending, delete it
+                $orderItem->delete();
+                $this->calculateOrderTotal($order);
+                return false; // Item deleted
+            }
+        }
+
         $modifiersTotal = $orderItem->modifiers->sum('price_adjustment');
         
         $orderItem->update([
@@ -141,7 +163,10 @@ class OrderService
      */
     public function calculateOrderTotal(Order $order): Order
     {
-        $subtotal = $order->orderItems->sum('subtotal');
+        // Only include non-cancelled items in total calculation
+        $subtotal = $order->orderItems()
+            ->where('status', '!=', 'cancelled')
+            ->sum('subtotal');
         
         // Apply service charge (10%)
         $serviceCharge = $subtotal * 0.10;
