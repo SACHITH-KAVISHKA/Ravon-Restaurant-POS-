@@ -80,7 +80,6 @@ class POSController extends Controller
         $openOrders = Order::with(['table', 'orderItems.item'])
             ->where('status', 'pending')
             ->where('is_paid', false)
-            ->where('created_at', '>=', now()->startOfDay())
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($order) {
@@ -90,7 +89,7 @@ class POSController extends Controller
                     'table_number' => $order->table ? $order->table->table_number : 'N/A',
                     'order_type' => $order->order_type,
                     'total_amount' => $order->total_amount,
-                    'created_at' => $order->created_at->setTimezone('Asia/Colombo')->format('h:i A'),
+                    'created_at' => $order->created_at->setTimezone('Asia/Colombo')->format('M d, h:i A'),
                     'items_count' => $order->orderItems->count(),
                 ];
             });
@@ -144,13 +143,14 @@ class POSController extends Controller
      */
     public function getOrder($orderId)
     {
-        $order = Order::with(['orderItems.item.modifiers', 'table'])
+        $order = Order::with(['orderItems.item', 'table', 'waiter', 'payment'])
             ->findOrFail($orderId);
 
+        // Transform orderItems to items format expected by frontend
         $items = $order->orderItems->map(function ($orderItem) {
             return [
                 'item_id' => $orderItem->item_id,
-                'name' => $orderItem->item->name,
+                'name' => $orderItem->item->name ?? 'Unknown Item',
                 'price' => $orderItem->unit_price,
                 'quantity' => $orderItem->quantity,
                 'modifiers' => []
@@ -167,6 +167,7 @@ class POSController extends Controller
                 'table_number' => $order->table ? $order->table->table_number : null,
                 'items' => $items,
                 'total_amount' => $order->total_amount,
+                'status' => $order->status
             ]
         ]);
     }
@@ -278,7 +279,7 @@ class POSController extends Controller
 
             foreach ($itemsToProcess as $processItem) {
                 $itemData = $processItem['data'];
-                $item = Item::findOrFail($itemData['item_id']);
+                $item = Item::with('category')->findOrFail($itemData['item_id']);
 
                 if ($processItem['is_new']) {
                     // Create new order item
@@ -313,8 +314,9 @@ class POSController extends Controller
             ]);
 
             // Generate KOT/BOT for new/updated items
+            $kotNumbers = ['kot_number' => null, 'bot_number' => null];
             if (!empty($kotItems)) {
-                $this->generateKOT($order, $kotItems);
+                $kotNumbers = $this->generateKOT($order, $kotItems);
             }
 
             DB::commit();
@@ -323,6 +325,14 @@ class POSController extends Controller
                 'success' => true,
                 'message' => $isNewOrder ? 'Order placed successfully' : 'Order updated successfully',
                 'order' => $order->load(['orderItems.item', 'table']),
+                'order_number' => $order->order_number,
+                'order_type' => $order->order_type,
+                'table_number' => $order->table ? $order->table->table_number : null,
+                'pickme_ref_number' => $order->pickme_ref_number,
+                'kot_number' => $kotNumbers['kot_number'],
+                'bot_number' => $kotNumbers['bot_number'],
+                'kot_items' => $kotNumbers['kot_items'] ?? [],
+                'bot_items' => $kotNumbers['bot_items'] ?? [],
                 'is_new' => $isNewOrder,
             ]);
         } catch (\Exception $e) {
@@ -339,23 +349,38 @@ class POSController extends Controller
      */
     private function generateKOT($order, $kotItems)
     {
-        // Group items by print destination
+        // Group items by category - BEVERAGES go to BOT, everything else to KOT
         $kitchenItems = [];
         $barItems = [];
 
         foreach ($kotItems as $kotItem) {
             $item = $kotItem['item'];
-            $printDestination = $item->print_destination ?? 'kitchen';
 
-            if ($printDestination === 'bar' || $printDestination === 'both') {
-                $barItems[] = $kotItem;
+            // Load category if not already loaded
+            if (!$item->relationLoaded('category')) {
+                $item->load('category');
             }
-            if ($printDestination === 'kitchen' || $printDestination === 'both') {
+
+            // Check by category_id (3 is BEVERAGES) or category slug
+            $isBeverage = false;
+
+            if ($item->category_id == 3) {
+                $isBeverage = true;
+            } elseif ($item->category) {
+                $categorySlug = strtolower($item->category->slug);
+                $categoryName = strtoupper($item->category->name);
+                $isBeverage = ($categorySlug === 'beverages' || $categoryName === 'BEVERAGES');
+            }
+
+            if ($isBeverage) {
+                $barItems[] = $kotItem;
+            } else {
                 $kitchenItems[] = $kotItem;
             }
         }
 
         // Create KOT for kitchen
+        $kotNumber = null;
         if (!empty($kitchenItems)) {
             $kot = Kot::create([
                 'order_id' => $order->id,
@@ -366,6 +391,8 @@ class POSController extends Controller
                 'printed_at' => now(),
                 'print_count' => 1,
             ]);
+
+            $kotNumber = $kot->kot_number;
 
             foreach ($kitchenItems as $kotItem) {
                 KotItem::create([
@@ -381,6 +408,7 @@ class POSController extends Controller
         }
 
         // Create BOT for bar (using same KOT structure)
+        $botNumber = null;
         if (!empty($barItems)) {
             $bot = Kot::create([
                 'order_id' => $order->id,
@@ -391,6 +419,8 @@ class POSController extends Controller
                 'printed_at' => now(),
                 'print_count' => 1,
             ]);
+
+            $botNumber = $bot->kot_number;
 
             foreach ($barItems as $botItem) {
                 KotItem::create([
@@ -409,6 +439,30 @@ class POSController extends Controller
         $order->increment('kot_print_count');
         $order->last_kot_printed_at = now();
         $order->save();
+
+        // Prepare items data for frontend printing
+        $kotItemsData = array_map(function ($kotItem) {
+            return [
+                'name' => $kotItem['item']->name,
+                'quantity' => $kotItem['quantity'],
+                'item_id' => $kotItem['item']->id
+            ];
+        }, $kitchenItems);
+
+        $botItemsData = array_map(function ($botItem) {
+            return [
+                'name' => $botItem['item']->name,
+                'quantity' => $botItem['quantity'],
+                'item_id' => $botItem['item']->id
+            ];
+        }, $barItems);
+
+        return [
+            'kot_number' => $kotNumber,
+            'bot_number' => $botNumber,
+            'kot_items' => $kotItemsData,
+            'bot_items' => $botItemsData
+        ];
     }
 
     /**
@@ -492,7 +546,7 @@ class POSController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Payment processed successfully',
-                'order' => $order->load('payment'),
+                'order' => $order->load(['payment', 'orderItems.item', 'table', 'waiter']),
                 'payment' => $payment,
             ]);
         } catch (\Exception $e) {

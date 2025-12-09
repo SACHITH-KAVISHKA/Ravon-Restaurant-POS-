@@ -499,7 +499,7 @@
                                     oninput="handlePaymentInputChange('cash')"
                                     onkeypress="return validatePaymentInput(event)"
                                     class="w-full px-4 py-3 bg-yellow-50 text-gray-900 rounded-lg font-bold text-xl text-right border-2 border-yellow-400 focus:outline-none focus:border-yellow-500"
-                                    placeholder="0.00">
+                                    value="0.00">
                             </div>
 
                             <!-- Card Amount Input -->
@@ -511,7 +511,7 @@
                                     oninput="handlePaymentInputChange('card')"
                                     onkeypress="return validatePaymentInput(event)"
                                     class="w-full px-4 py-3 bg-blue-50 text-gray-900 rounded-lg font-bold text-xl text-right border-2 border-blue-400 focus:outline-none focus:border-blue-500"
-                                    placeholder="0.00">
+                                    value="0.00">
                             </div>
 
                             <!-- Balance -->
@@ -713,9 +713,8 @@
                 console.log('  - cardGroup:', cardGroup);
                 console.log('  - cardRow:', cardRow);
 
-
-                if (cashInput) cashInput.value = '';
-                if (cardInput) cardInput.value = '';
+                if (cashInput) cashInput.value = '0.00';
+                if (cardInput) cardInput.value = '0.00';
                 if (cashGroup) cashGroup.style.display = 'block';
                 if (cardGroup) cardGroup.style.display = 'none';
                 if (cardRow) cardRow.style.display = 'none';
@@ -794,8 +793,8 @@
                 // Reset amounts
                 paymentCashAmount = 0;
                 paymentCardAmount = 0;
-                document.getElementById('paymentCashInput').value = '';
-                document.getElementById('paymentCardInput').value = '';
+                document.getElementById('paymentCashInput').value = '0.00';
+                document.getElementById('paymentCardInput').value = '0.00';
 
                 // Reset border styles
                 document.getElementById('paymentCashInput').style.borderColor = '#FBBF24';
@@ -1105,15 +1104,12 @@
 
             // Handle Payment Input Change (when typing with keyboard)
             function handlePaymentInputChange(inputType) {
-                console.log('Payment input changed:', inputType);
+                let value;
 
                 if (inputType === 'cash') {
                     const input = document.getElementById('paymentCashInput');
-                    // Clean value - remove any non-numeric except decimal
-                    let cleanValue = input.value.replace(/[^\d.]/g, '');
-                    const numValue = parseFloat(cleanValue) || 0;
-                    paymentCashAmount = numValue;
-                    console.log('Cash:', input.value, '→', numValue);
+                    value = parseFloat(input.value) || 0;
+                    paymentCashAmount = value;
 
                     // Set as active input in CARD & CASH mode
                     if (selectedPaymentMethod === 'card_cash') {
@@ -1122,11 +1118,8 @@
                     }
                 } else if (inputType === 'card') {
                     const input = document.getElementById('paymentCardInput');
-                    // Clean value - remove any non-numeric except decimal
-                    let cleanValue = input.value.replace(/[^\d.]/g, '');
-                    const numValue = parseFloat(cleanValue) || 0;
-                    paymentCardAmount = numValue;
-                    console.log('Card:', input.value, '→', numValue);
+                    value = parseFloat(input.value) || 0;
+                    paymentCardAmount = value;
 
                     // Set as active input in CARD & CASH mode
                     if (selectedPaymentMethod === 'card_cash') {
@@ -1143,25 +1136,31 @@
             // DISABLED FOR DEVELOPMENT - QZ Tray will run in insecure mode
             // For production, you need proper RSA certificates
 
-
+            /* CERTIFICATE SETUP - COMMENTED OUT FOR DEVELOPMENT
+            
             // 1. Set Certificate Promise
             qz.security.setCertificatePromise(function(resolve, reject) {
                 resolve(`-----BEGIN CERTIFICATE-----
-                    MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDRdCXbmmwaImdT
-                    O0dvBZgpr1BA2Mvts7s/s0GYgRk96Zt4A9h4GX74aKBssMF9pZhJ+UOcL6t3aHXK
-                    qXfja+8QxOlNkBHBklBItGg20wgWNlSET+RzT994Q6jTqtOmpBLSUcRkON4Ti8aE
-                    lmY2MXu4SLLVX6dn1OI/rsnD7/RPAsaOniDOjQhX0TdZiG5CCI4FXwJjmiW9cvk2
-                    w/M+TcVwHz399Rr14uwCd4J6+pIbOl8lubpnHrAXjoowS/pVMk0VNuhkFonbqGnq
-                    E06DfVJF92RL3z5Ue2C2Kn0R50+EScUbPgXEwzLMtCRyOTBg/1K/7vLlzYCtpqq3
-                    zy2naPctAgMBAAECggEAMWnkG9FQnN8RNBKcNUOgn8VkzqWgaEbdkKJcD0t8kxT5
-                    u5uqIhQcqZQr0PPhm5dEMk+wk2gqLGZBcqBYN1RJq6P7vIbLT0nH5gRaVGEj9xpT
-                    ycCY+hPGsFyKQv6mGljl5ZA8qR+YPJdUgfq9XMEHGQvXbW8TqFiNP0lQGBl7nTQQ
-                    9J8cCLvKGZCJhvqLH9QzQfmWXwKLxLDrCpJGNfLt8eHEhfqPHvQN5NBPmTCQqPGt
-                    qQQx6TQHHFsPyWyGh5j4jLQcYKpF4fXDvI6DcQNhxLGTnPQvQWCvFPtF7Qxqh3kR
-                    JqKWfQGLtYF9gQKBgQD3NPXgFqJp0tPvVJxB4VF7qQxQGxZKfPmWXbJxQzQKBgQD
-                    YJxLGfPHqm8cpJ7r3QJp4fJKLGPJNDXbWqQxQQKBgQDSt0lMfKfPqJx4tP5JK9xR
-                    J7L8KQv6m8TqF0lQG4fX3kRJqKW9QGLtYF9gQKBgQD3NPXgFqJp0tPvVJxB4VF7
-                    qQxQGxZKfPmWXbJxQzQKBgQDYJxLGfPHqm8cpJ7r3QJp4fJKLGPJNDXbWqQxQQ==
+                    MIIDozCCAougAwIBAgIUWJpvpJOkleU6lWsqrMKfsq9u6OowDQYJKoZIhvcNAQEL
+                    BQAwYTELMAkGA1UEBhMCTEsxEDAOBgNVBAgMB1dlc3Rlcm4xEDAOBgNVBAcMB0Nv
+                    bG9tYm8xFTATBgNVBAoMDFJhdm9uIEJha2VyczEXMBUGA1UEAwwOMTI3LjAuMC4x
+                    OjgwMDAwHhcNMjUxMTE3MTgwNzI0WhcNMzUxMTE1MTgwNzI0WjBhMQswCQYDVQQG
+                    EwJMSzEQMA4GA1UECAwHV2VzdGVybjEQMA4GA1UEBwwHQ29sb21ibzEVMBMGA1UE
+                    CgwMUmF2b24gQmFrZXJzMRcwFQYDVQQDDA4xMjcuMC4wLjE6ODAwMDCCASIwDQYJ
+                    KoZIhvcNAQEBBQADggEPADCCAQoCggEBANF0JduabBoiZ1M7R28FmCmvUEDYy+2z
+                    uz+zQZiBGT3pm3gD2HgZfvhooGywwX2lmEn5Q5wvq3dodcqpd+Nr7xDE6U2QEcGS
+                    UEi0aDbTCBY2VIRP5HNP33hDqNOq06akEtJRxGQ43hOLxoSWZjYxe7hIstVfp2fU
+                    4j+uycPv9E8Cxo6eIM6NCFfRN1mIbkIIjgVfAmOaJb1y+TbD8z5NxXAfPf31GvXi
+                    7AJ3gnr6khs6XyW5umcesBeOijBL+lUyTRU26GQWiduoaeoTToN9UkX3ZEvfPlR7
+                    YLYqfRHnT4RJxRs+BcTDMsy0JHI5MGD/Ur/u8uXNgK2mqrfPLado9y0CAwEAAaNT
+                    MFEwHQYDVR0OBBYEFMSl/4RhhGD0mRYBD2bH4n+t/cNBMB8GA1UdIwQYMBaAFMSl
+                    /4RhhGD0mRYBD2bH4n+t/cNBMA8GA1UdEwEB/wQFMAMBAf8wDQYJKoZIhvcNAQEL
+                    BQADggEBADlwDYAu7LGzj+pGROVavOeVczrb8RibbIbXrIViV31iKC1uwXRmtTY1
+                    amAX+oEfMry3TIy//BHsJzGkAd6ozfosez33G4bbN8/y1Q9ZvcuaaHPT4DIBYrdR
+                    GX/B6TtAm63VxXyjfwrV4OUbbqwdgMtKuviRprB9A+oCE1QPa74p33hgy8UHYOCK
+                    g9lFgnRkyrLOb4fh2SmtjHhRV4aZf5CM+UbqBQAMiiuhHLAbqbmhBP3BYzVVZ066
+                    9moVkpDvvNADqW3FH6epeBDL8RyQXj2yikCyD3xXJIAih815xLJMh/pOmuqEjHdd
+                    NESCtDma6uLcth74mGaBwU3G3KsOCP4=
                 -----END CERTIFICATE-----`);
             });
 
@@ -1197,7 +1196,7 @@
                         });
                 };
             });
-
+            */
 
             console.log('QZ Tray: Running in INSECURE mode (no certificate validation)');
 
@@ -1315,18 +1314,29 @@
                     pdf.setFontSize(11);
                     pdf.setFont('courier', 'bold');
                     pdf.text('KOT NO:', leftMargin, yPosition);
-                    pdf.text(String(orderInfo.order_number || 'N/A'), pageWidth - rightMargin, yPosition, {
+                    pdf.text(String(orderInfo.kot_number || orderInfo.order_number || 'N/A'), pageWidth - rightMargin, yPosition, {
                         align: 'right'
                     });
                     yPosition += 6;
 
-                    if (orderInfo.table_number) {
-                        pdf.text('TABLE:', leftMargin, yPosition);
-                        pdf.text(String(orderInfo.table_number), pageWidth - rightMargin, yPosition, {
-                            align: 'right'
-                        });
-                        yPosition += 6;
+                    // Order Type
+                    pdf.text('TYPE:', leftMargin, yPosition);
+                    let typeText = '';
+                    if (orderInfo.order_type === 'dine_in' && orderInfo.table_number) {
+                        typeText = 'Table ' + String(orderInfo.table_number);
+                    } else if (orderInfo.order_type === 'takeaway') {
+                        typeText = 'Take Away';
+                    } else if (orderInfo.order_type === 'pickme' && orderInfo.pickme_ref) {
+                        typeText = 'PickMe - ' + String(orderInfo.pickme_ref);
+                    } else if (orderInfo.table_number) {
+                        typeText = 'Table ' + String(orderInfo.table_number);
+                    } else {
+                        typeText = 'Take Away';
                     }
+                    pdf.text(typeText, pageWidth - rightMargin, yPosition, {
+                        align: 'right'
+                    });
+                    yPosition += 6;
 
                     pdf.text('WAITER:', leftMargin, yPosition);
                     pdf.text(orderInfo.user_name || '{{ Auth::user()->name }}', pageWidth - rightMargin, yPosition, {
@@ -1348,18 +1358,7 @@
                     });
                     yPosition += 10;
 
-                    // Items Header
-                    pdf.setLineWidth(0.5);
-                    pdf.line(leftMargin, yPosition, pageWidth - rightMargin, yPosition);
-                    yPosition += 8;
-
-                    pdf.setFont('courier', 'bold');
-                    pdf.setFontSize(14);
-                    pdf.text('FOOD ITEMS', pageWidth / 2, yPosition, {
-                        align: 'center'
-                    });
-                    yPosition += 8;
-
+                    // Items separator
                     pdf.setLineWidth(0.5);
                     pdf.line(leftMargin, yPosition, pageWidth - rightMargin, yPosition);
                     yPosition += 8;
@@ -1398,13 +1397,6 @@
                     pdf.line(leftMargin, yPosition, pageWidth - rightMargin, yPosition);
                     yPosition += 8;
 
-                    pdf.setFont('courier', 'bold');
-                    pdf.setFontSize(16);
-                    pdf.text('PREPARE IMMEDIATELY', pageWidth / 2, yPosition, {
-                        align: 'center'
-                    });
-                    yPosition += 10;
-
                     pdf.setFontSize(10);
                     pdf.text('Thank you!', pageWidth / 2, yPosition, {
                         align: 'center'
@@ -1412,7 +1404,7 @@
 
                     // Generate Base64 and Print
                     const pdfBase64 = pdf.output('datauristring').split(',')[1];
-                    const kotPrinterName = "printer01";
+                    const kotPrinterName = "Microsoft Print to PDF";
                     await printPDFwithQZ(pdfBase64, kotPrinterName, "KOT", false);
                     console.log('KOT sent to printer successfully');
 
@@ -1477,18 +1469,29 @@
                     pdf.setFontSize(11);
                     pdf.setFont('courier', 'bold');
                     pdf.text('BOT NO:', leftMargin, yPosition);
-                    pdf.text(String(orderInfo.order_number || 'N/A'), pageWidth - rightMargin, yPosition, {
+                    pdf.text(String(orderInfo.bot_number || orderInfo.order_number || 'N/A'), pageWidth - rightMargin, yPosition, {
                         align: 'right'
                     });
                     yPosition += 6;
 
-                    if (orderInfo.table_number) {
-                        pdf.text('TABLE:', leftMargin, yPosition);
-                        pdf.text(String(orderInfo.table_number), pageWidth - rightMargin, yPosition, {
-                            align: 'right'
-                        });
-                        yPosition += 6;
+                    // Order Type
+                    pdf.text('TYPE:', leftMargin, yPosition);
+                    let typeText = '';
+                    if (orderInfo.order_type === 'dine_in' && orderInfo.table_number) {
+                        typeText = 'Table ' + String(orderInfo.table_number);
+                    } else if (orderInfo.order_type === 'takeaway') {
+                        typeText = 'Take Away';
+                    } else if (orderInfo.order_type === 'pickme' && orderInfo.pickme_ref) {
+                        typeText = 'PickMe - ' + String(orderInfo.pickme_ref);
+                    } else if (orderInfo.table_number) {
+                        typeText = 'Table ' + String(orderInfo.table_number);
+                    } else {
+                        typeText = 'Take Away';
                     }
+                    pdf.text(typeText, pageWidth - rightMargin, yPosition, {
+                        align: 'right'
+                    });
+                    yPosition += 6;
 
                     pdf.text('WAITER:', leftMargin, yPosition);
                     pdf.text(orderInfo.user_name || '{{ Auth::user()->name }}', pageWidth - rightMargin, yPosition, {
@@ -1510,18 +1513,7 @@
                     });
                     yPosition += 10;
 
-                    // Items Header
-                    pdf.setLineWidth(0.5);
-                    pdf.line(leftMargin, yPosition, pageWidth - rightMargin, yPosition);
-                    yPosition += 8;
-
-                    pdf.setFont('courier', 'bold');
-                    pdf.setFontSize(14);
-                    pdf.text('BEVERAGE ITEMS', pageWidth / 2, yPosition, {
-                        align: 'center'
-                    });
-                    yPosition += 8;
-
+                    // Items separator
                     pdf.setLineWidth(0.5);
                     pdf.line(leftMargin, yPosition, pageWidth - rightMargin, yPosition);
                     yPosition += 8;
@@ -1560,13 +1552,6 @@
                     pdf.line(leftMargin, yPosition, pageWidth - rightMargin, yPosition);
                     yPosition += 8;
 
-                    pdf.setFont('courier', 'bold');
-                    pdf.setFontSize(16);
-                    pdf.text('PREPARE IMMEDIATELY', pageWidth / 2, yPosition, {
-                        align: 'center'
-                    });
-                    yPosition += 10;
-
                     pdf.setFontSize(10);
                     pdf.text('Thank you!', pageWidth / 2, yPosition, {
                         align: 'center'
@@ -1574,7 +1559,7 @@
 
                     // Generate Base64 and Print
                     const pdfBase64 = pdf.output('datauristring').split(',')[1];
-                    const botPrinterName = "printer02";
+                    const botPrinterName = "Microsoft Print to PDF";
                     await printPDFwithQZ(pdfBase64, botPrinterName, "BOT", false);
                     console.log('BOT sent to printer successfully');
 
@@ -1584,36 +1569,23 @@
             }
 
             /**
-             * Separate items into food and beverage categories and print KOT/BOT
-             * @param {Array} items - All order items
-             * @param {Object} orderInfo - Order information
+             * Print KOT and BOT based on backend categorization
+             * Backend separates items by category (BEVERAGES go to BOT, others to KOT)
+             * @param {Object} orderInfo - Order information with kot_number, bot_number, kot_items, bot_items
              */
-            async function printKOTandBOT(items, orderInfo) {
-                // Separate items based on category or type
-                const foodItems = items.filter(item => {
-                    const category = item.category_name || item.category || '';
-                    // Add logic to identify food items
-                    return !category.toLowerCase().includes('beverage') &&
-                        !category.toLowerCase().includes('drink') &&
-                        !category.toLowerCase().includes('bar');
-                });
+            async function printKOTandBOT(orderInfo) {
+                // Backend provides separate item lists for KOT and BOT
 
-                const beverageItems = items.filter(item => {
-                    const category = item.category_name || item.category || '';
-                    // Add logic to identify beverage items
-                    return category.toLowerCase().includes('beverage') ||
-                        category.toLowerCase().includes('drink') ||
-                        category.toLowerCase().includes('bar');
-                });
-
-                // Print KOT if there are food items
-                if (foodItems.length > 0) {
-                    await printKOT(foodItems, orderInfo);
+                // Print KOT if there are kitchen items
+                if (orderInfo.kot_items && orderInfo.kot_items.length > 0) {
+                    console.log('Printing KOT with items:', orderInfo.kot_items);
+                    await printKOT(orderInfo.kot_items, orderInfo);
                 }
 
                 // Print BOT if there are beverage items
-                if (beverageItems.length > 0) {
-                    await printBOT(beverageItems, orderInfo);
+                if (orderInfo.bot_items && orderInfo.bot_items.length > 0) {
+                    console.log('Printing BOT with items:', orderInfo.bot_items);
+                    await printBOT(orderInfo.bot_items, orderInfo);
                 }
             }
 
@@ -1969,58 +1941,33 @@
                         showNotification(result.message + ' (KOT/BOT sent to kitchen/bar)', 'Success');
 
                         // --- AUTOMATIC KOT/BOT PRINTING ---
-                        // Print KOT and BOT automatically after order is placed
+                        // Backend has already separated items into KOT and BOT
                         try {
                             const orderInfo = {
-                                order_number: String(result.order_number || currentOrderId || 'N/A'),
-                                table_number: String(selectedTableId || result.table_number || ''),
+                                order_number: String(result.order_number || 'N/A'),
+                                order_type: String(result.order_type || currentOrderType || ''),
+                                table_number: String(result.table_number || ''),
+                                pickme_ref: String(result.pickme_ref_number || pickMeRefNumber || ''),
+                                kot_number: String(result.kot_number || 'N/A'),
+                                bot_number: String(result.bot_number || 'N/A'),
+                                kot_items: result.kot_items || [],
+                                bot_items: result.bot_items || [],
                                 user_name: String('{{ Auth::user()->name }}')
                             };
 
-                            // Determine if this is a NEW order or an UPDATE
-                            const isNewOrder = !currentOrderId || printedItems.length === 0;
+                            console.log('Order Info:', orderInfo);
 
-                            let itemsToPrint;
-
-                            if (isNewOrder) {
-                                // NEW ORDER - Print all items
-                                console.log('New order detected - printing all items');
-                                itemsToPrint = itemsToSend.map(item => ({
-                                    item_id: item.item_id,
-                                    name: item.name,
-                                    quantity: item.quantity,
-                                    category: item.category || ''
-                                }));
-                            } else {
-                                // ORDER UPDATE - Only print NEW or INCREASED items
-                                console.log('Order update detected - calculating delta items');
-                                const deltaItems = calculateDeltaItems(itemsToSend, printedItems);
-
-                                if (deltaItems.length === 0) {
-                                    console.log('No new or increased items - skipping print');
-                                } else {
-                                    console.log(`Printing ${deltaItems.length} new/changed items:`, deltaItems);
-                                }
-
-                                itemsToPrint = deltaItems;
-                            }
-
-                            // Only print if there are items to print
-                            if (itemsToPrint && itemsToPrint.length > 0) {
-                                // Print KOT and BOT in the background (don't wait)
-                                printKOTandBOT(itemsToPrint, orderInfo).catch(err => {
+                            // Print KOT and BOT if items exist
+                            if ((orderInfo.kot_items && orderInfo.kot_items.length > 0) ||
+                                (orderInfo.bot_items && orderInfo.bot_items.length > 0)) {
+                                printKOTandBOT(orderInfo).catch(err => {
                                     console.error('Failed to print KOT/BOT:', err);
-                                    // Don't show error to user, just log it
                                 });
-
-                                // Update the printed items tracker with ALL current items
-                                updatePrintedItems(itemsToSend);
                             } else {
-                                console.log('No items to print (no changes detected)');
+                                console.log('No items to print');
                             }
                         } catch (printError) {
                             console.error('Error initiating KOT/BOT print:', printError);
-                            // Continue even if printing fails
                         }
                         // --- END AUTOMATIC PRINTING ---
 
@@ -2572,7 +2519,9 @@
 
             // Payment Modal Variables
             let selectedPaymentType = 'cash';
+            let activePaymentField = 'cash'; // Track which field is active for number pad
             let cashInputValue = '0';
+            let cardInputValue = '0';
 
             // Show Close Order Modal
             window.showCloseOrderModal = function() {
@@ -2581,11 +2530,14 @@
                     return;
                 }
                 selectedPaymentType = 'cash';
+                activePaymentField = 'cash';
                 cashInputValue = '0';
+                cardInputValue = '0';
                 const total = parseFloat(document.getElementById('total').textContent);
                 document.getElementById('paymentSubtotal').textContent = total.toFixed(2);
                 document.getElementById('paymentTotal').textContent = total.toFixed(2);
                 document.getElementById('paymentCashInput').value = '0.00';
+                document.getElementById('paymentCardInput').value = '0.00';
                 selectPaymentType('cash');
                 updatePaymentCalculations();
                 document.getElementById('closeOrderModal').classList.remove('hidden');
@@ -2593,7 +2545,11 @@
 
             // Select Payment Type
             window.selectPaymentType = function(type) {
-                selectedPaymentType = type;
+                selectedPaymentMethod = type; // Fixed: was selectedPaymentType
+                selectedPaymentType = type; // Keep for backward compatibility
+
+                console.log('Payment type selected:', type);
+
                 document.querySelectorAll('.payment-type-btn').forEach(btn => {
                     btn.classList.remove('bg-blue-600');
                     btn.classList.add('bg-gray-700');
@@ -2609,7 +2565,10 @@
                     selectedBtn.classList.remove('bg-gray-700');
                     selectedBtn.classList.add('bg-blue-600');
                 }
+                
+                // Reset input values
                 cashInputValue = '0';
+                cardInputValue = '0';
                 document.getElementById('paymentCashInput').value = '0.00';
                 document.getElementById('paymentCardInput').value = '0.00';
 
@@ -2623,42 +2582,125 @@
                     cashInputGroup.style.display = 'block';
                     cardInputGroup.style.display = 'none';
                     if (cardAmountRow) cardAmountRow.style.display = 'none';
+                    activePaymentField = 'cash';
                 } else if (type === 'card') {
                     cashInputGroup.style.display = 'none';
                     cardInputGroup.style.display = 'block';
                     if (cardAmountRow) cardAmountRow.style.display = 'flex';
+                    activePaymentField = 'card';
                 } else if (type === 'card_cash') {
                     // CARD & CASH: Show BOTH inputs
                     cashInputGroup.style.display = 'block';
                     cardInputGroup.style.display = 'block';
                     if (cardAmountRow) cardAmountRow.style.display = 'flex';
+                    activePaymentField = 'cash'; // Default to cash field
                 } else if (type === 'credit') {
                     cashInputGroup.style.display = 'none';
                     cardInputGroup.style.display = 'none';
                     if (cardAmountRow) cardAmountRow.style.display = 'none';
+                    activePaymentField = null;
                 }
 
                 updatePaymentCalculations();
             };
 
-            // Number Pad
+            // Set Active Payment Input Field (for clicking on inputs)
+            window.setActivePaymentInput = function(fieldType) {
+                activePaymentField = fieldType;
+                console.log('Active payment field:', fieldType);
+                
+                // Visual feedback - highlight active field
+                const cashInput = document.getElementById('paymentCashInput');
+                const cardInput = document.getElementById('paymentCardInput');
+                
+                if (fieldType === 'cash') {
+                    cashInput.style.borderColor = '#3B82F6';
+                    cashInput.style.borderWidth = '3px';
+                    cardInput.style.borderColor = '#60A5FA';
+                    cardInput.style.borderWidth = '2px';
+                } else if (fieldType === 'card') {
+                    cardInput.style.borderColor = '#3B82F6';
+                    cardInput.style.borderWidth = '3px';
+                    cashInput.style.borderColor = '#FBBF24';
+                    cashInput.style.borderWidth = '2px';
+                }
+            };
+
+            // Number Pad - Works with active field
             window.appendNumber = function(num) {
-                if (cashInputValue === '0' && num !== '.') cashInputValue = num;
-                else if (num === '.' && cashInputValue.includes('.')) return;
-                else cashInputValue += num;
-                document.getElementById('paymentCashInput').value = parseFloat(cashInputValue || 0).toFixed(2);
+                if (!activePaymentField) return; // No active field (e.g., credit mode)
+                
+                let currentValue = activePaymentField === 'cash' ? cashInputValue : cardInputValue;
+                
+                if (currentValue === '0' && num !== '.') {
+                    currentValue = num;
+                } else if (num === '.' && currentValue.includes('.')) {
+                    return; // Don't add multiple decimals
+                } else {
+                    currentValue += num;
+                }
+                
+                // Update the appropriate variable and input field
+                if (activePaymentField === 'cash') {
+                    cashInputValue = currentValue;
+                    document.getElementById('paymentCashInput').value = parseFloat(cashInputValue || 0).toFixed(2);
+                } else if (activePaymentField === 'card') {
+                    cardInputValue = currentValue;
+                    document.getElementById('paymentCardInput').value = parseFloat(cardInputValue || 0).toFixed(2);
+                }
+                
                 updatePaymentCalculations();
             };
 
             window.backspaceNumber = function() {
-                cashInputValue = cashInputValue.length > 1 ? cashInputValue.slice(0, -1) : '0';
-                document.getElementById('paymentCashInput').value = parseFloat(cashInputValue || 0).toFixed(2);
+                if (!activePaymentField) return;
+                
+                let currentValue = activePaymentField === 'cash' ? cashInputValue : cardInputValue;
+                currentValue = currentValue.length > 1 ? currentValue.slice(0, -1) : '0';
+                
+                // Update the appropriate variable and input field
+                if (activePaymentField === 'cash') {
+                    cashInputValue = currentValue;
+                    document.getElementById('paymentCashInput').value = parseFloat(cashInputValue || 0).toFixed(2);
+                } else if (activePaymentField === 'card') {
+                    cardInputValue = currentValue;
+                    document.getElementById('paymentCardInput').value = parseFloat(cardInputValue || 0).toFixed(2);
+                }
+                
                 updatePaymentCalculations();
             };
 
             window.clearNumber = function() {
-                cashInputValue = '0';
-                document.getElementById('paymentCashInput').value = '0.00';
+                if (!activePaymentField) return;
+                
+                // Clear the appropriate variable and input field
+                if (activePaymentField === 'cash') {
+                    cashInputValue = '0';
+                    document.getElementById('paymentCashInput').value = '0.00';
+                } else if (activePaymentField === 'card') {
+                    cardInputValue = '0';
+                    document.getElementById('paymentCardInput').value = '0.00';
+                }
+                
+                updatePaymentCalculations();
+            };
+
+            // Handle keyboard input changes
+            window.handlePaymentInputChange = function(inputType) {
+                const input = document.getElementById(inputType === 'cash' ? 'paymentCashInput' : 'paymentCardInput');
+                const value = input.value.replace(/[^0-9.]/g, ''); // Remove non-numeric characters
+                
+                // Update the internal value
+                if (inputType === 'cash') {
+                    cashInputValue = value || '0';
+                } else if (inputType === 'card') {
+                    cardInputValue = value || '0';
+                }
+                
+                // Set this as the active field
+                activePaymentField = inputType;
+                setActivePaymentInput(inputType);
+                
                 updatePaymentCalculations();
             };
 
@@ -2666,11 +2708,29 @@
             function updatePaymentCalculations() {
                 const total = parseFloat(document.getElementById('paymentTotal').textContent);
                 const cashAmount = parseFloat(cashInputValue) || 0;
+                const cardAmount = parseFloat(cardInputValue) || 0;
                 let balance = 0,
                     credit = 0;
 
                 if (selectedPaymentType === 'cash') {
                     balance = cashAmount - total;
+                    if (balance < 0) {
+                        credit = Math.abs(balance);
+                        balance = 0;
+                    }
+                } else if (selectedPaymentType === 'card') {
+                    // Card payment - show card amount in summary
+                    document.getElementById('paymentCardAmount').textContent = cardAmount.toFixed(2);
+                    balance = cardAmount - total;
+                    if (balance < 0) {
+                        credit = Math.abs(balance);
+                        balance = 0;
+                    }
+                } else if (selectedPaymentType === 'card_cash') {
+                    // Mixed payment
+                    const totalPaid = cashAmount + cardAmount;
+                    document.getElementById('paymentCardAmount').textContent = cardAmount.toFixed(2);
+                    balance = totalPaid - total;
                     if (balance < 0) {
                         credit = Math.abs(balance);
                         balance = 0;
@@ -2686,12 +2746,12 @@
             }
 
             // Complete Payment
-            window.completePayment = async function() {
-                const total = parseFloat(document.getElementById('paymentTotal').textContent);
-                const cashAmount = parseFloat(cashInputValue) || 0;
+            let isProcessingPayment = false;
 
-                if (selectedPaymentType === 'cash' && cashAmount < total) {
-                    showNotification('Insufficient cash amount', 'Payment Error');
+            window.completePayment = async function() {
+                // Prevent double submission
+                if (isProcessingPayment) {
+                    console.log('Payment already in progress...');
                     return;
                 }
 
@@ -2699,6 +2759,55 @@
                     showNotification('No active order', 'Error');
                     return;
                 }
+
+                // Check if payment method is selected
+                if (!selectedPaymentMethod) {
+                    showNotification('Please select a payment method', 'Payment Error');
+                    return;
+                }
+
+                const total = parseFloat(document.getElementById('paymentTotal').textContent);
+
+                // Get amounts from the actual input fields
+                const cashInputElement = document.getElementById('paymentCashInput');
+                const cardInputElement = document.getElementById('paymentCardInput');
+
+                const cashAmount = parseFloat(cashInputElement.value) || 0;
+                const cardAmount = parseFloat(cardInputElement.value) || 0;
+
+                let amountPaid = 0;
+                let paymentMethod = selectedPaymentMethod;
+
+                // Calculate amount paid based on payment method
+                if (paymentMethod === 'cash') {
+                    amountPaid = cashAmount;
+                    if (cashAmount < total) {
+                        showNotification('Insufficient cash amount. Total: ' + total.toFixed(2), 'Payment Error');
+                        return;
+                    }
+                } else if (paymentMethod === 'card') {
+                    amountPaid = total; // Card payment is exact
+                } else if (paymentMethod === 'card_cash') {
+                    amountPaid = cashAmount + cardAmount;
+                    if (amountPaid < total) {
+                        showNotification('Insufficient payment. Total: ' + total.toFixed(2) + ', Paid: ' + amountPaid.toFixed(2), 'Payment Error');
+                        return;
+                    }
+                } else if (paymentMethod === 'credit') {
+                    amountPaid = 0; // Credit payment
+                }
+
+                isProcessingPayment = true;
+                const orderIdToProcess = currentOrderId;
+
+                console.log('Processing payment:', {
+                    orderId: orderIdToProcess,
+                    paymentMethod: paymentMethod,
+                    total: total,
+                    amountPaid: amountPaid,
+                    cashAmount: cashAmount,
+                    cardAmount: cardAmount
+                });
 
                 try {
                     const response = await fetch('{{ route("pos.payment") }}', {
@@ -2708,35 +2817,363 @@
                             'X-CSRF-TOKEN': '{{ csrf_token() }}'
                         },
                         body: JSON.stringify({
-                            order_id: currentOrderId,
-                            payment_method: selectedPaymentType,
-                            amount_paid: selectedPaymentType === 'card' ? total : cashAmount
+                            order_id: orderIdToProcess,
+                            payment_method: paymentMethod,
+                            amount_paid: amountPaid,
+                            cash_amount: cashAmount,
+                            card_amount: cardAmount
                         })
                     });
 
                     const result = await response.json();
+
                     if (result.success) {
                         showNotification('Payment completed!', 'Success');
+
+                        // Clear order state immediately
                         billItems = [];
                         currentOrderId = null;
                         currentOrderType = null;
                         selectedTableId = null;
+
+                        // Print receipt directly
+                        printReceiptInline(result.order);
+
                         renderBill();
                         calculateTotals();
                         closeModal('closeOrderModal');
                         document.getElementById('orderTypeDisplay').textContent = 'Select Order Type';
                         document.getElementById('menuSelectionContainer').classList.replace('flex', 'hidden');
                         document.getElementById('initialStateMessage')?.classList.remove('hidden');
-
-                        // Open Closed Orders modal after successful payment
-                        setTimeout(() => openClosedOrdersModal(), 500);
                     } else {
                         showNotification('Error: ' + (result.message || 'Unknown error'), 'Payment Error');
                     }
                 } catch (error) {
+                    console.error('Payment error:', error);
                     showNotification('Error: ' + error.message, 'System Error');
+                } finally {
+                    isProcessingPayment = false;
                 }
             };
+
+            // Print Receipt Inline
+            function printReceiptInline(order) {
+                const receiptHTML = generateReceiptHTML(order);
+
+                // Create a hidden iframe for printing
+                let printFrame = document.getElementById('print-frame');
+                if (!printFrame) {
+                    printFrame = document.createElement('iframe');
+                    printFrame.id = 'print-frame';
+                    printFrame.style.display = 'none';
+                    document.body.appendChild(printFrame);
+                }
+
+                const doc = printFrame.contentWindow.document;
+                doc.open();
+                doc.write(receiptHTML);
+                doc.close();
+
+                // Wait for content to load then print
+                setTimeout(() => {
+                    printFrame.contentWindow.print();
+                }, 500);
+            }
+
+            // Generate Receipt HTML
+            function generateReceiptHTML(order) {
+                console.log('Generating receipt for order:', order);
+
+                const now = new Date();
+                const dateStr = now.toLocaleDateString('en-GB');
+                const timeStr = now.toLocaleTimeString('en-US', {
+                    hour12: false
+                });
+
+                let itemsHTML = '';
+                let itemCount = 0;
+
+                // Handle both order_items and orderItems (Laravel uses snake_case or camelCase)
+                const items = order.order_items || order.orderItems || [];
+
+                if (items.length === 0) {
+                    console.warn('No items found in order');
+                    itemsHTML = '<div class="item-row">No items</div>';
+                } else {
+                    items.forEach(item => {
+                        itemCount++;
+                        const itemName = item.item?.name || item.item_name || 'Unknown Item';
+                        const itemCode = item.item?.item_code || item.item_code || '';
+                        const unitPrice = parseFloat(item.unit_price || 0).toFixed(2);
+                        const quantity = item.quantity || 0;
+                        const subtotal = parseFloat(item.subtotal || 0).toFixed(2);
+
+                        itemsHTML += `
+                            <div class="item-row">
+                                <div class="item-line">
+                                    <span>${itemCount}</span>
+                                    <span>${itemName}</span>
+                                </div>
+                                <div class="item-line">
+                                    <span>${itemCode}</span>
+                                    <span>${unitPrice} x ${quantity}</span>
+                                    <span>${subtotal}</span>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+
+                const paymentMethod = order.payment?.payment_method?.toUpperCase() || 'CASH';
+                const amountPaid = order.payment?.paid_amount || order.payment?.amount_paid || order.total_amount || 0;
+                const changeAmount = order.payment?.change_amount || 0;
+
+                console.log('Payment details:', {
+                    paymentMethod,
+                    amountPaid,
+                    changeAmount
+                });
+
+                return `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Receipt - ${order.order_number || 'Order #' + order.id}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        @page {
+            size: 80mm auto;
+            margin: 0;
+        }
+        
+        body {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 11px;
+            line-height: 1.3;
+            width: 80mm;
+            padding: 5mm;
+            margin: 0 auto;
+            background: white;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 8px;
+            padding-bottom: 8px;
+        }
+        
+        .header h1 {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 2px;
+            letter-spacing: 1px;
+        }
+        
+        .header .subtitle {
+            font-size: 10px;
+            margin-bottom: 2px;
+        }
+        
+        .header .address {
+            font-size: 9px;
+            line-height: 1.4;
+        }
+        
+        .divider {
+            border-top: 1px dashed #000;
+            margin: 5px 0;
+        }
+        
+        .divider-thick {
+            border-top: 2px solid #000;
+            margin: 5px 0;
+        }
+        
+        .invoice-title {
+            text-align: center;
+            font-weight: bold;
+            font-size: 14px;
+            margin: 8px 0;
+        }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 2px;
+            font-size: 10px;
+        }
+        
+        .info-row .label {
+            min-width: 80px;
+        }
+        
+        .section {
+            margin: 8px 0;
+        }
+        
+        .items-header {
+            display: flex;
+            justify-content: space-between;
+            font-weight: bold;
+            margin-bottom: 3px;
+            padding-bottom: 3px;
+            border-bottom: 1px dashed #000;
+        }
+        
+        .item-row {
+            margin-bottom: 5px;
+        }
+        
+        .item-line {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 5px;
+        }
+        
+        .item-line:first-child {
+            font-weight: bold;
+        }
+        
+        .totals {
+            margin-top: 8px;
+        }
+        
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 3px;
+        }
+        
+        .total-row.grand {
+            font-weight: bold;
+            font-size: 13px;
+            padding-top: 3px;
+            margin-top: 3px;
+        }
+        
+        .payment-info {
+            margin-top: 8px;
+        }
+        
+        .credit-note {
+            margin-top: 5px;
+            font-size: 10px;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 10px;
+        }
+        
+        .footer-note {
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px dashed #000;
+            font-size: 9px;
+        }
+        
+        @media print {
+            body {
+                width: 80mm;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>RAVON RESTAURANT</h1>
+        <div class="subtitle">Ravon Restaurant (Pvt) Ltd</div>
+        <div class="address">
+            NO 282/A/2, KCTHALAWALA,<br>
+            KADUWELA.<br>
+            TEL.016-2006007<br>
+            Email-ravonrestaurant@gmail.com
+        </div>
+    </div>
+    
+    <div class="invoice-title">INVOICE</div>
+    
+    <div class="section">
+        <div class="info-row">
+            <span class="label">Invoice #</span>
+            <span>${order.order_number || order.id}</span>
+        </div>
+        <div class="info-row">
+            <span class="label">Date</span>
+            <span>:${dateStr} Time ${timeStr}</span>
+        </div>
+        <div class="info-row">
+            <span class="label">Terminal:</span>
+            <span>01</span>
+        </div>
+        <div class="info-row">
+            <span class="label">Table # :</span>
+            <span>${order.table ? order.table.table_number : 'Take Away'}</span>
+        </div>
+        <div class="info-row">
+            <span class="label">Cashier :</span>
+            <span>${order.waiter ? order.waiter.name : 'Cashier'}</span>
+        </div>
+    </div>
+    
+    <div class="divider"></div>
+    
+    <div class="items-header">
+        <span>In Item Price</span>
+        <span>Qty Amount</span>
+    </div>
+    
+    <div class="divider"></div>
+    
+    ${itemsHTML}
+    
+    <div class="divider"></div>
+    
+    <div class="totals">
+        <div class="total-row">
+            <span>Sub Total</span>
+            <span>${parseFloat(order.subtotal).toFixed(2)}</span>
+        </div>
+    </div>
+    
+    <div class="divider-thick"></div>
+    
+    <div class="total-row grand">
+        <span>Total</span>
+        <span>${parseFloat(order.total_amount).toFixed(2)}</span>
+    </div>
+    
+    <div class="payment-info">
+        <div class="total-row">
+            <span>${paymentMethod}</span>
+            <span>${parseFloat(amountPaid).toFixed(2)}</span>
+        </div>
+        ${parseFloat(changeAmount) > 0 ? `
+        <div class="total-row">
+            <span>Change</span>
+            <span>${parseFloat(changeAmount).toFixed(2)}</span>
+        </div>
+        ` : ''}
+    </div>
+    
+    <div class="footer">
+        <div style="font-weight: bold; margin-bottom: 5px;">THANK YOU, COME AGAIN.</div>
+        <div class="footer-note">
+            Software By SKM Labs
+        </div>
+    </div>
+</body>
+</html>
+                `;
+            }
 
             // Open Closed Orders Modal
             window.openClosedOrdersModal = async function() {
@@ -2786,24 +3223,28 @@
                 }
             };
 
-            // Print Receipt (Hidden Iframe)
-            window.printReceipt = function(orderId) {
-                const url = '{{ url("/pos/receipt") }}/' + orderId;
+            // Print Receipt (Inline Thermal Receipt)
+            window.printReceipt = async function(orderId) {
+                try {
+                    // Fetch order details using POS route
+                    const response = await fetch(`/pos/order/${orderId}`);
+                    const result = await response.json();
 
-                // Create invisible iframe
-                const iframe = document.createElement('iframe');
-                iframe.style.position = 'absolute';
-                iframe.style.width = '0px';
-                iframe.style.height = '0px';
-                iframe.style.border = 'none';
-                iframe.src = url;
-
-                document.body.appendChild(iframe);
-
-                // Remove iframe after a delay
-                setTimeout(() => {
-                    document.body.removeChild(iframe);
-                }, 10000);
+                    if (result.success && result.order) {
+                        // Map 'items' to 'orderItems' for the receipt generator
+                        const orderData = {
+                            ...result.order,
+                            orderItems: result.order.items || result.order.orderItems || result.order.order_items,
+                            order_items: result.order.items || result.order.orderItems || result.order.order_items
+                        };
+                        printReceiptInline(orderData);
+                    } else {
+                        showNotification('Failed to load order details', 'Error');
+                    }
+                } catch (error) {
+                    console.error('Error printing receipt:', error);
+                    showNotification('Error printing receipt: ' + error.message, 'Error');
+                }
             };
         </script>
         @endsection
