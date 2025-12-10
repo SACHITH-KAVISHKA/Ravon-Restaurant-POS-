@@ -38,19 +38,27 @@ class Kot extends Model
 
         static::creating(function ($kot) {
             if (empty($kot->kot_number)) {
-                $kot->kot_number = static::generateKotNumber();
+                // Determine if this is a BOT (Bar Order Ticket) based on kitchen_station_id
+                // Kitchen station 2 is typically the bar
+                $isBar = $kot->kitchen_station_id == 2;
+                $kot->kot_number = static::generateKotNumber($isBar);
             }
         });
     }
 
     /**
-     * Generate unique KOT number.
+     * Generate unique KOT/BOT number with separate sequences.
      */
-    public static function generateKotNumber(): string
+    public static function generateKotNumber(bool $isBar = false): string
     {
-        $prefix = 'KOT';
+        $prefix = $isBar ? 'BOT' : 'KOT';
         $date = now()->format('Ymd');
-        $count = static::whereDate('created_at', today())->count() + 1;
+        
+        // Count only tickets of the same type (KOT or BOT) for separate sequences
+        $count = static::whereDate('created_at', today())
+            ->where('kot_number', 'like', $prefix . '-%')
+            ->count() + 1;
+            
         return sprintf('%s-%s-%04d', $prefix, $date, $count);
     }
 

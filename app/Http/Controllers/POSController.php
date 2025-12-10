@@ -457,7 +457,7 @@ class POSController extends Controller
                 KotItem::create([
                     'kot_id' => $kot->id,
                     'order_item_id' => $kotItem['order_item']->id,
-                    'item_name' => $kotItem['item']->name,
+                    'item_name' => $kotItem['order_item']->item_display_name ?? $kotItem['item']->name,
                     'quantity' => $kotItem['quantity'],
                     'special_instructions' => $kotItem['order_item']->special_instructions,
                     'modifiers' => $kotItem['order_item']->modifiers ?? null,
@@ -485,7 +485,7 @@ class POSController extends Controller
                 KotItem::create([
                     'kot_id' => $bot->id,
                     'order_item_id' => $botItem['order_item']->id,
-                    'item_name' => $botItem['item']->name,
+                    'item_name' => $botItem['order_item']->item_display_name ?? $botItem['item']->name,
                     'quantity' => $botItem['quantity'],
                     'special_instructions' => $botItem['order_item']->special_instructions,
                     'modifiers' => $botItem['order_item']->modifiers ?? null,
@@ -502,7 +502,7 @@ class POSController extends Controller
         // Prepare items data for frontend printing
         $kotItemsData = array_map(function ($kotItem) {
             return [
-                'name' => $kotItem['item']->name,
+                'name' => $kotItem['order_item']->item_display_name ?? $kotItem['item']->name,
                 'quantity' => $kotItem['quantity'],
                 'item_id' => $kotItem['item']->id
             ];
@@ -510,7 +510,7 @@ class POSController extends Controller
 
         $botItemsData = array_map(function ($botItem) {
             return [
-                'name' => $botItem['item']->name,
+                'name' => $botItem['order_item']->item_display_name ?? $botItem['item']->name,
                 'quantity' => $botItem['quantity'],
                 'item_id' => $botItem['item']->id
             ];

@@ -76,10 +76,13 @@ class PrinterService
         foreach ($data['items'] as $item) {
             $content .= sprintf("%-4s %s\n", "x{$item['quantity']}", strtoupper($item['name']));
             
-            // Modifiers
+            // Modifiers (exclude portion types)
             if (!empty($item['modifiers'])) {
                 foreach ($item['modifiers'] as $modifier) {
-                    $content .= "     + " . $modifier['name'] . "\n";
+                    // Filter out portion/size modifiers
+                    if (!$this->isPortionModifier($modifier['name'])) {
+                        $content .= "     + " . $modifier['name'] . "\n";
+                    }
                 }
             }
             
@@ -147,9 +150,9 @@ class PrinterService
                 $item['subtotal']
             );
             
-            // Modifiers
+            // Modifiers (exclude portion types)
             foreach ($item['modifiers'] as $mod) {
-                if ($mod['price'] != 0) {
+                if ($mod['price'] != 0 && !$this->isPortionModifier($mod['name'])) {
                     $content .= sprintf("  + %-17s %3s %8.2f\n", 
                         substr($mod['name'], 0, 17), '', $mod['price']
                     );
@@ -214,6 +217,32 @@ class PrinterService
         $content .= $this->cutPaper();
 
         return $content;
+    }
+
+    /**
+     * Check if a modifier name is a portion/size type.
+     */
+    protected function isPortionModifier(string $modifierName): bool
+    {
+        $modifierLower = strtolower($modifierName);
+        
+        // Common portion/size keywords
+        $portionKeywords = [
+            'full', 'half', 'quarter',
+            'large', 'medium', 'small', 'regular',
+            'mini', 'jumbo', 'king', 'queen',
+            'single', 'double', 'triple',
+            'ml', 'liter', 'litre', ' l', 'oz',
+            'portion', 'size'
+        ];
+        
+        foreach ($portionKeywords as $keyword) {
+            if (strpos($modifierLower, $keyword) !== false) {
+                return true;
+            }
+        }
+        
+        return false;
     }
 
     /**

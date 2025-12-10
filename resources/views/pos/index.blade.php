@@ -1257,7 +1257,7 @@
                     pdf.text('Ravon Restaurant', pageWidth / 2, yPosition, {
                         align: 'center'
                     });
-                    yPosition += 10;
+                    yPosition += 6;
 
                     // Separator
                     pdf.setLineWidth(0.5);
@@ -1310,30 +1310,33 @@
                     }), pageWidth - rightMargin, yPosition, {
                         align: 'right'
                     });
-                    yPosition += 10;
+                    yPosition += 6;
 
                     // Items separator
                     pdf.setLineWidth(0.5);
                     pdf.line(leftMargin, yPosition, pageWidth - rightMargin, yPosition);
-                    yPosition += 8;
+                    yPosition += 6;
 
                     // Print Items
                     foodItems.forEach((item, index) => {
                         pdf.setFont('courier', 'bold');
-                        pdf.setFontSize(13);
+                        pdf.setFontSize(12);
 
                         let itemName = item.name || item.item_name;
-                        if (itemName.length > 22) {
-                            itemName = itemName.substring(0, 19) + '...';
-                        }
-
-                        pdf.text(itemName, leftMargin, yPosition);
-                        yPosition += 6;
+                        
+                        // Word wrap for long item names
+                        const maxWidth = pageWidth - leftMargin - rightMargin;
+                        const lines = pdf.splitTextToSize(itemName, maxWidth);
+                        
+                        lines.forEach(line => {
+                            pdf.text(line, leftMargin, yPosition);
+                            yPosition += 5;
+                        });
 
                         // Quantity
                         pdf.setFontSize(14);
                         pdf.text(`x ${item.quantity}`, leftMargin + 2, yPosition);
-                        yPosition += 8;
+                        yPosition += 6;
 
                         // Add spacing between items
                         if (index < foodItems.length - 1) {
@@ -1412,7 +1415,7 @@
                     pdf.text('Ravon Restaurant', pageWidth / 2, yPosition, {
                         align: 'center'
                     });
-                    yPosition += 10;
+                    yPosition += 6;
 
                     // Separator
                     pdf.setLineWidth(0.5);
@@ -1465,30 +1468,33 @@
                     }), pageWidth - rightMargin, yPosition, {
                         align: 'right'
                     });
-                    yPosition += 10;
+                    yPosition += 6;
 
                     // Items separator
                     pdf.setLineWidth(0.5);
                     pdf.line(leftMargin, yPosition, pageWidth - rightMargin, yPosition);
-                    yPosition += 8;
+                    yPosition += 6;
 
                     // Print Items
                     beverageItems.forEach((item, index) => {
                         pdf.setFont('courier', 'bold');
-                        pdf.setFontSize(13);
+                        pdf.setFontSize(12);
 
                         let itemName = item.name || item.item_name;
-                        if (itemName.length > 22) {
-                            itemName = itemName.substring(0, 19) + '...';
-                        }
-
-                        pdf.text(itemName, leftMargin, yPosition);
-                        yPosition += 6;
+                        
+                        // Word wrap for long item names
+                        const maxWidth = pageWidth - leftMargin - rightMargin;
+                        const lines = pdf.splitTextToSize(itemName, maxWidth);
+                        
+                        lines.forEach(line => {
+                            pdf.text(line, leftMargin, yPosition);
+                            yPosition += 5;
+                        });
 
                         // Quantity
                         pdf.setFontSize(14);
                         pdf.text(`x ${item.quantity}`, leftMargin + 2, yPosition);
-                        yPosition += 8;
+                        yPosition += 6;
 
                         // Add spacing between items
                         if (index < beverageItems.length - 1) {
@@ -2884,9 +2890,28 @@
                     pdf.text('01', pageWidth - rightMargin, yPosition, { align: 'right' });
                     yPosition += 4;
 
-                    const tableNumber = order.table ? order.table.table_number : 'Take Away';
+                    // Determine table/order type display
+                    let tableDisplay = '';
+                    if (order.table && order.table.table_number) {
+                        tableDisplay = String(order.table.table_number);
+                    } else {
+                        // Show order type for non-table orders
+                        const orderType = order.order_type || 'takeaway';
+                        if (orderType === 'pickme') {
+                            tableDisplay = 'PickMe Food';
+                        } else if (orderType === 'uber_eats') {
+                            tableDisplay = 'Uber Eats';
+                        } else if (orderType === 'delivery') {
+                            tableDisplay = 'Delivery';
+                        } else if (orderType === 'takeaway') {
+                            tableDisplay = 'Take Away';
+                        } else {
+                            tableDisplay = 'Take Away';
+                        }
+                    }
+                    
                     pdf.text('Table # :', leftMargin, yPosition);
-                    pdf.text(String(tableNumber), pageWidth - rightMargin, yPosition, { align: 'right' });
+                    pdf.text(tableDisplay, pageWidth - rightMargin, yPosition, { align: 'right' });
                     yPosition += 4;
 
                     const cashier = order.waiter ? order.waiter.name : 'Cashier User';
@@ -3302,7 +3327,24 @@
         </div>
         <div class="info-row">
             <span class="label">Table # :</span>
-            <span>${order.table ? order.table.table_number : 'Take Away'}</span>
+            <span>${(() => {
+                if (order.table && order.table.table_number) {
+                    return order.table.table_number;
+                } else {
+                    const orderType = order.order_type || 'takeaway';
+                    if (orderType === 'pickme') {
+                        return 'PickMe Food';
+                    } else if (orderType === 'uber_eats') {
+                        return 'Uber Eats';
+                    } else if (orderType === 'delivery') {
+                        return 'Delivery';
+                    } else if (orderType === 'takeaway') {
+                        return 'Take Away';
+                    } else {
+                        return 'Take Away';
+                    }
+                }
+            })()}</span>
         </div>
         <div class="info-row">
             <span class="label">Cashier :</span>

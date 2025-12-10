@@ -67,7 +67,7 @@ class KOTService
                 KotItem::create([
                     'kot_id' => $kot->id,
                     'order_item_id' => $orderItem->id,
-                    'item_name' => $orderItem->item->name,
+                    'item_name' => $orderItem->item_display_name ?? $orderItem->item->name,
                     'quantity' => $orderItem->quantity,
                     'special_instructions' => $orderItem->special_instructions,
                     'modifiers' => $modifiers,

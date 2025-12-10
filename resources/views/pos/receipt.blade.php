@@ -127,8 +127,14 @@
         @endif
         <div class="info-row">
             <span>Order Type:</span>
-            <span>{{ strtoupper($order->order_type) }}</span>
+            <span>{{ $order->order_type === 'dine_in' ? 'Dine In' : ($order->order_type === 'takeaway' ? 'Take Away' : ($order->order_type === 'pickme' ? 'PickMe Food' : ($order->order_type === 'uber_eats' ? 'Uber Eats' : ucwords(str_replace('_', ' ', $order->order_type))))) }}</span>
         </div>
+        @if($order->order_type === 'pickme' && $order->pickme_ref_number)
+        <div class="info-row">
+            <span>PickMe Ref:</span>
+            <span>{{ $order->pickme_ref_number }}</span>
+        </div>
+        @endif
         <div class="info-row">
             <span>Cashier:</span>
             <span>{{ $order->waiter ? $order->waiter->name : 'N/A' }}</span>
@@ -152,7 +158,10 @@
                 @ Rs. {{ number_format($item->unit_price, 2) }} each
             </div>
             @if($item->modifiers->count() > 0)
-            @foreach($item->modifiers as $modifier)
+            @php
+                $nonPortionModifiers = \App\Helpers\PrintHelper::filterPortionModifiers($item->modifiers);
+            @endphp
+            @foreach($nonPortionModifiers as $modifier)
             <div class="item-details">
                 + {{ $modifier->modifier ? $modifier->modifier->name : 'Modifier' }} (Rs. {{ number_format($modifier->price_adjustment, 2) }})
             </div>
