@@ -283,7 +283,7 @@
 
         <!-- Table Selection Modal -->
         <div id="tableModal" class="hidden fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center">
-            <div class="bg-gray-800 rounded-xl p-6 max-w-4xl w-full mx-4">
+            <div class="bg-gray-800 rounded-xl p-6 max-w-4xl w-full mx-4 max-h-[90vh] flex flex-col">
                 <div class="flex justify-between items-center mb-4">
                     <h2 class="text-2xl font-bold text-white">Select Table</h2>
                     <button onclick="closeModal('tableModal')" class="text-gray-400 hover:text-white">
@@ -292,8 +292,10 @@
                         </svg>
                     </button>
                 </div>
-                <div class="grid grid-cols-5 gap-4" id="tableGrid">
-                    <!-- Tables will be loaded dynamically -->
+                <div class="overflow-y-auto flex-1">
+                    <div class="grid grid-cols-5 gap-4" id="tableGrid">
+                        <!-- Tables will be loaded dynamically -->
+                    </div>
                 </div>
             </div>
         </div>

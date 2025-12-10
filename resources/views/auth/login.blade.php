@@ -8,13 +8,31 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
         body { font-family: 'Inter', sans-serif; }
-        .gradient-bg {
-            background: linear-gradient(135deg, #000000 0%, #0a0e27 50%, #1a1a2e 100%);
+        .restaurant-bg {
+            background-image: url('/images/restaurant-bg.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            position: relative;
+        }
+        .restaurant-bg::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.5) 0%, rgba(10, 14, 39, 0.6) 50%, rgba(26, 26, 46, 0.5) 100%);
+            z-index: 0;
+        }
+        .login-container {
+            position: relative;
+            z-index: 1;
         }
     </style>
 </head>
-<body class="gradient-bg min-h-screen flex items-center justify-center p-4">
-    <div class="w-full max-w-md">
+<body class="restaurant-bg min-h-screen flex items-center justify-center p-4">
+    <div class="w-full max-w-md login-container">
         <!-- Logo & Title -->
         <div class="text-center mb-8">
             <div class="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl shadow-2xl mb-4">
@@ -96,32 +114,6 @@
                     Sign In
                 </button>
             </form>
-            
-            <!-- Demo Credentials -->
-            <div class="mt-8 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
-                <h3 class="text-sm font-semibold text-blue-400 mb-3">Demo Credentials:</h3>
-                <div class="grid grid-cols-2 gap-3 text-xs">
-                    <div class="bg-black/30 p-2 rounded">
-                        <div class="text-gray-400">Admin</div>
-                        <div class="text-white font-mono">admin</div>
-                    </div>
-                    <div class="bg-black/30 p-2 rounded">
-                        <div class="text-gray-400">Cashier</div>
-                        <div class="text-white font-mono">cashier</div>
-                    </div>
-                    <div class="bg-black/30 p-2 rounded">
-                        <div class="text-gray-400">Waiter</div>
-                        <div class="text-white font-mono">waiter</div>
-                    </div>
-                    <div class="bg-black/30 p-2 rounded">
-                        <div class="text-gray-400">Kitchen</div>
-                        <div class="text-white font-mono">kitchen</div>
-                    </div>
-                    <div class="col-span-2 text-center text-gray-400 mt-1">
-                        Password: <span class="text-white font-mono">password</span>
-                    </div>
-                </div>
-            </div>
         </div>
         
         <!-- Footer -->
