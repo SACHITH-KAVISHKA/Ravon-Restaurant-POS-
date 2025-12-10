@@ -6,6 +6,7 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\MenuController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\SalesReportController;
+use App\Http\Controllers\ItemSalesReportController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -80,9 +81,14 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/daily-sales', function () {
             return view('dashboard');
         })->name('daily-sales');
-        Route::get('/item-sales', function () {
-            return view('dashboard');
-        })->name('item-sales');
+        
+        // Sales by Item Summary Report
+        Route::get('/item-sales', [ItemSalesReportController::class, 'index'])->name('item-sales');
+        Route::post('/item-sales/filter', [ItemSalesReportController::class, 'filter'])->name('item-sales.filter');
+        Route::post('/item-sales/details', [ItemSalesReportController::class, 'getItemDetails'])->name('item-sales.details');
+        Route::get('/item-sales/export', [ItemSalesReportController::class, 'exportSummary'])->name('item-sales.export');
+        Route::get('/item-sales/export-details', [ItemSalesReportController::class, 'exportItemDetails'])->name('item-sales.export-details');
+        
         Route::get('/staff-performance', function () {
             return view('dashboard');
         })->name('staff-performance');

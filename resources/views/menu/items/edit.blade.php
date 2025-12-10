@@ -111,25 +111,63 @@
                     <div class="space-y-2">
                         <h3 class="text-sm font-semibold text-gray-400 mb-2">Existing Portions</h3>
                         @forelse($item->modifiers as $modifier)
-                        <div class="bg-gray-700 rounded-lg p-3 border border-gray-600">
-                            <div class="flex justify-between items-start mb-2">
-                                <div>
-                                    <h4 class="font-semibold text-white text-sm">{{ $modifier->name }}</h4>
+                        <div class="bg-gray-700 rounded-lg p-3 border border-gray-600" id="portion-{{ $modifier->id }}">
+                            <!-- View Mode -->
+                            <div class="view-mode-{{ $modifier->id }}">
+                                <div class="flex justify-between items-start mb-2">
+                                    <div>
+                                        <h4 class="font-semibold text-white text-sm">{{ $modifier->name }}</h4>
+                                    </div>
+                                    <span class="text-sm font-bold text-green-400">
+                                        Rs. {{ number_format($modifier->price_adjustment, 2) }}
+                                    </span>
                                 </div>
-                                <span class="text-sm font-bold text-green-400">
-                                    Rs. {{ number_format($modifier->price_adjustment, 2) }}
-                                </span>
+
+                                <div class="flex items-center justify-between">
+                                    <span class="text-xs text-green-400">Active</span>
+
+                                    <div class="flex gap-2">
+                                        <button onclick="toggleEditMode({{ $modifier->id }})" class="text-blue-400 hover:text-blue-300 text-xs">
+                                            Edit
+                                        </button>
+                                        <form action="{{ route('menu.modifiers.destroy', $modifier) }}" method="POST" onsubmit="return confirm('Delete this portion?')">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="text-red-400 hover:text-red-300 text-xs">
+                                                Delete
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
                             </div>
 
-                            <div class="flex items-center justify-between">
-                                <span class="text-xs text-green-400">Active</span>
-
-                                <form action="{{ route('menu.modifiers.destroy', $modifier) }}" method="POST" onsubmit="return confirm('Delete this portion?')">
+                            <!-- Edit Mode -->
+                            <div class="edit-mode-{{ $modifier->id }} hidden">
+                                <form action="{{ route('menu.modifiers.update', $modifier) }}" method="POST">
                                     @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="text-red-400 hover:text-red-300 text-xs">
-                                        Delete
-                                    </button>
+                                    @method('PUT')
+                                    <div class="space-y-2">
+                                        <div>
+                                            <label class="block text-xs font-semibold text-gray-300 mb-1">Portion Name *</label>
+                                            <input type="text" name="name" value="{{ $modifier->name }}" required
+                                                class="w-full px-3 py-1.5 bg-gray-600 text-white rounded-lg border border-gray-500 focus:outline-none focus:border-blue-500 text-sm">
+                                        </div>
+
+                                        <div>
+                                            <label class="block text-xs font-semibold text-gray-300 mb-1">Price (Rs.) *</label>
+                                            <input type="number" name="price" value="{{ $modifier->price_adjustment }}" step="0.01" min="0" required
+                                                class="w-full px-3 py-1.5 bg-gray-600 text-white rounded-lg border border-gray-500 focus:outline-none focus:border-blue-500 text-sm">
+                                        </div>
+
+                                        <div class="flex gap-2">
+                                            <button type="submit" class="flex-1 px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-xs">
+                                                Save
+                                            </button>
+                                            <button type="button" onclick="toggleEditMode({{ $modifier->id }})" class="flex-1 px-3 py-1.5 bg-gray-600 text-white rounded-lg hover:bg-gray-500 transition text-xs">
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    </div>
                                 </form>
                             </div>
                         </div>
@@ -143,4 +181,19 @@
         </div>
     </div>
 </div>
+
+<script>
+function toggleEditMode(modifierId) {
+    const viewMode = document.querySelector('.view-mode-' + modifierId);
+    const editMode = document.querySelector('.edit-mode-' + modifierId);
+    
+    if (viewMode.classList.contains('hidden')) {
+        viewMode.classList.remove('hidden');
+        editMode.classList.add('hidden');
+    } else {
+        viewMode.classList.add('hidden');
+        editMode.classList.remove('hidden');
+    }
+}
+</script>
 @endsection

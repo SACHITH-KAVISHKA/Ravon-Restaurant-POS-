@@ -202,6 +202,24 @@ class MenuController extends Controller
     }
 
     /**
+     * Update a modifier.
+     */
+    public function updateModifier(Request $request, ItemModifier $modifier)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'price' => 'required|numeric|min:0',
+        ]);
+
+        $modifier->update([
+            'name' => $validated['name'],
+            'price_adjustment' => $validated['price'],
+        ]);
+
+        return redirect()->route('menu.items.edit', $modifier->item)->with('success', 'Portion updated successfully!');
+    }
+
+    /**
      * Delete a modifier.
      */
     public function destroyModifier(ItemModifier $modifier)
