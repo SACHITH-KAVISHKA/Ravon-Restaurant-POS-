@@ -125,7 +125,7 @@ class SalesReportController extends Controller
      */
     public function getSaleDetails(Order $order)
     {
-        $order->load(['orderItems.item', 'orderItems.modifiers', 'payment.splits', 'waiter']);
+        $order->load(['activeItems.item', 'activeItems.modifiers', 'payment.splits', 'waiter']);
 
         // Get payment amounts from specific columns
         $cashAmount = 0;
@@ -158,7 +158,7 @@ class SalesReportController extends Controller
                 'credit_amount' => $creditAmount,
                 'completed_at' => $order->completed_at ? $order->completed_at->format('Y-m-d H:i:s') : 'N/A',
             ],
-            'items' => $order->orderItems->map(function ($item) {
+            'items' => $order->activeItems->map(function ($item) {
                 $modifiersText = $item->modifiers->map(function ($modifier) {
                     return $modifier->modifier_name . ' (+' . number_format($modifier->price_adjustment, 2) . ')';
                 })->join(', ');
@@ -179,7 +179,15 @@ class SalesReportController extends Controller
      */
     public function receipt(Order $order)
     {
-        $order->load(['orderItems.item', 'orderItems.modifiers', 'payment.splits', 'waiter', 'table']);
+        $order->load([
+            'orderItems' => function($query) {
+                $query->where('status', '!=', 'deleted')
+                    ->with(['item', 'modifiers']);
+            },
+            'payment.splits',
+            'waiter',
+            'table'
+        ]);
 
         // Get payment amounts from specific columns
         $cashAmount = 0;

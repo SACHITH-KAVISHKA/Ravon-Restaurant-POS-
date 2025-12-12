@@ -21,8 +21,9 @@ class KOTService
     {
         $kots = [];
         
-        // Group items by kitchen station
+        // Group items by kitchen station (only active items)
         $itemsByStation = $order->orderItems()
+            ->where('status', '!=', 'deleted')
             ->with(['item.kitchenStation', 'modifiers.modifier'])
             ->get()
             ->groupBy('item.kitchen_station_id');

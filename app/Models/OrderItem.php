@@ -96,4 +96,20 @@ class OrderItem extends Model
     {
         return $query->where('status', 'ready');
     }
+
+    /**
+     * Scope for active (non-deleted) items.
+     */
+    public function scopeActive($query)
+    {
+        return $query->where('status', '!=', 'deleted');
+    }
+
+    /**
+     * Scope for deleted items.
+     */
+    public function scopeDeleted($query)
+    {
+        return $query->where('status', 'deleted');
+    }
 }

@@ -148,7 +148,7 @@
     </div>
 
     <div class="items">
-        @foreach($order->orderItems as $item)
+        @foreach($order->orderItems->where('status', '!=', 'deleted') as $item)
         <div class="item">
             <div class="item-header">
                 <span>{{ $item->quantity }} x {{ $item->item->name }}</span>

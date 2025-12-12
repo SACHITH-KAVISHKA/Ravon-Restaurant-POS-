@@ -130,10 +130,11 @@ class OrderController extends Controller
             $orderItem = OrderItem::findOrFail($id);
             $order = $orderItem->order;
             
-            $orderItem->delete();
+            // Mark item as deleted instead of hard delete
+            $orderItem->update(['status' => 'deleted']);
 
-            // If no items left, delete the order and update table
-            if ($order->items()->count() === 0) {
+            // If no active items left, delete the order and update table
+            if ($order->items()->active()->count() === 0) {
                 $table = $order->table;
                 if ($table) {
                     $table->update([
@@ -164,7 +165,8 @@ class OrderController extends Controller
 
     private function recalculateOrderTotals($order)
     {
-        $subtotal = $order->items()->sum('subtotal');
+        // Only sum active (non-deleted) items
+        $subtotal = $order->items()->active()->sum('subtotal');
         $taxRate = 0.10; // 10% tax
         $taxAmount = $subtotal * $taxRate;
         $total = $subtotal + $taxAmount;

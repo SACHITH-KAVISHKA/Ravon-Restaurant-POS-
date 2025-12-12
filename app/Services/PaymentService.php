@@ -176,8 +176,8 @@ class PaymentService
             'waiter' => $order->waiter?->name ?? 'N/A',
             'guest_count' => $order->guest_count,
             
-            // Items
-            'items' => $order->orderItems->map(function ($item) {
+            // Items (only active items)
+            'items' => $order->activeItems->map(function ($item) {
                 $modifiers = $item->modifiers->map(function ($mod) {
                     return [
                         'name' => $mod->modifier->name,

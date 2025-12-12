@@ -21,7 +21,7 @@ class ReportService
 
         $orders = Order::whereDate('created_at', $date)
             ->where('status', '!=', 'cancelled')
-            ->with(['orderItems', 'payment'])
+            ->with(['activeItems', 'payment'])
             ->get();
 
         return [

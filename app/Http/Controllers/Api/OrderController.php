@@ -47,7 +47,7 @@ class OrderController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Order created successfully',
-            'data' => $order->load(['items.item', 'kots']),
+            'data' => $order->load(['activeItems.item', 'kots']),
         ], 201);
     }
 
@@ -59,8 +59,8 @@ class OrderController extends Controller
         $order->load([
             'table.floor',
             'waiter',
-            'items.item.category',
-            'items.modifiers.modifier',
+            'activeItems.item.category',
+            'activeItems.modifiers.modifier',
             'kots.kitchenStation',
             'payment',
         ]);

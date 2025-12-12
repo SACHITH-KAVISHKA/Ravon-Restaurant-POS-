@@ -28,7 +28,7 @@ class TableService
      */
     public function getTableWithOrder($tableId)
     {
-        return Table::with(['currentOrder.orderItems.item', 'floor'])
+        return Table::with(['currentOrder.activeItems.item', 'floor'])
             ->findOrFail($tableId);
     }
 

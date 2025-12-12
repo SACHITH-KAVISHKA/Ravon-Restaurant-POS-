@@ -118,7 +118,13 @@ class Order extends Model
     {
         return $this->hasMany(OrderItem::class);
     }
-
+    /**
+     * Get active (non-deleted) order items.
+     */
+    public function activeItems(): HasMany
+    {
+        return $this->hasMany(OrderItem::class)->where('status', '!=', 'deleted');
+    }
     /**
      * Get KOTs.
      */
@@ -212,7 +218,7 @@ class Order extends Model
      */
     public function calculateTotal(): void
     {
-        $this->subtotal = $this->orderItems->sum('subtotal');
+        $this->subtotal = $this->activeItems->sum('subtotal');
         $this->total_amount = $this->subtotal
             - $this->discount_amount
             + $this->service_charge

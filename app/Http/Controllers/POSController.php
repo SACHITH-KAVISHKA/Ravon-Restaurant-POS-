@@ -77,15 +77,15 @@ class POSController extends Controller
      */
     public function getOpenChecks()
     {
-        $openOrders = Order::with(['table', 'orderItems.item'])
+        $openOrders = Order::with(['table', 'activeItems.item'])
             ->where('status', 'pending')
             ->where('is_paid', false)
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($order) {
-                // Count only non-cancelled items
+                // Count only active items (not cancelled or deleted)
                 $activeItemsCount = $order->orderItems->filter(function ($item) {
-                    return $item->status !== 'cancelled';
+                    return !in_array($item->status, ['cancelled', 'deleted']);
                 })->count();
 
                 return [
@@ -114,7 +114,7 @@ class POSController extends Controller
         $todayStart = now()->startOfDay();
         $todayEnd = now()->endOfDay();
 
-        $closedOrders = Order::with(['table', 'orderItems.item', 'payment'])
+        $closedOrders = Order::with(['table', 'activeItems.item', 'payment'])
             ->where(function ($q) {
                 $q->where('status', 'completed')
                     ->orWhere('is_paid', true);
@@ -153,22 +153,37 @@ class POSController extends Controller
      */
     public function getOrder($orderId)
     {
-        $order = Order::with(['orderItems.item', 'table', 'waiter', 'payment'])
-            ->findOrFail($orderId);
+        $order = Order::with([
+            'orderItems' => function($query) {
+                $query->where('status', '!=', 'deleted')
+                    ->with('item');
+            },
+            'table',
+            'waiter',
+            'payment'
+        ])->findOrFail($orderId);
 
         // Transform orderItems to items format expected by frontend
-        // Only include non-cancelled items
+        // Only include active items (not cancelled or deleted)
         $items = $order->orderItems
             ->filter(function ($orderItem) {
-                return $orderItem->status !== 'cancelled';
+                return !in_array($orderItem->status, ['cancelled', 'deleted']);
             })
             ->map(function ($orderItem) {
                 return [
                     'item_id' => $orderItem->item_id,
                     'name' => $orderItem->item_display_name ?? $orderItem->item->name ?? 'Unknown Item',
+                    'item_name' => $orderItem->item_display_name ?? $orderItem->item->name ?? 'Unknown Item',
+                    'item_code' => $orderItem->item->item_code ?? '',
                     'price' => $orderItem->unit_price,
+                    'unit_price' => $orderItem->unit_price,
                     'quantity' => $orderItem->quantity,
-                    'modifiers' => []
+                    'subtotal' => $orderItem->subtotal,
+                    'modifiers' => [],
+                    'item' => [
+                        'name' => $orderItem->item->name ?? 'Unknown Item',
+                        'item_code' => $orderItem->item->item_code ?? ''
+                    ]
                 ];
             })->values(); // Reset array keys
 
@@ -181,8 +196,12 @@ class POSController extends Controller
                 'table_id' => $order->table_id,
                 'table_number' => $order->table ? $order->table->table_number : null,
                 'items' => $items,
+                'orderItems' => $items,
+                'order_items' => $items,
                 'total_amount' => $order->total_amount,
-                'status' => $order->status
+                'subtotal' => $order->subtotal,
+                'status' => $order->status,
+                'payment' => $order->payment
             ]
         ]);
     }
@@ -321,8 +340,8 @@ class POSController extends Controller
                                 'subtotal' => 0
                             ]);
                         } else {
-                            // If still pending, delete it
-                            $existingItem->delete();
+                            // If still pending, mark as deleted
+                            $existingItem->update(['status' => 'deleted']);
                         }
                     }
                 }
@@ -361,10 +380,10 @@ class POSController extends Controller
                 ];
             }
 
-            // Recalculate order totals from all non-cancelled order items
+            // Recalculate order totals from all active order items
             $order->refresh();
             $subtotalFromAllItems = $order->orderItems()
-                ->where('status', '!=', 'cancelled')
+                ->whereNotIn('status', ['cancelled', 'deleted'])
                 ->sum('subtotal');
 
             $order->update([
@@ -378,12 +397,45 @@ class POSController extends Controller
                 $kotNumbers = $this->generateKOT($order, $kotItems);
             }
 
+            // Prepare items payload for frontend printing (non-cancelled, non-deleted)
+            $printItemsRaw = $order->orderItems()
+                ->whereNotIn('status', ['cancelled', 'deleted'])
+                ->with('item')
+                ->get();
+
+            $printItems = $printItemsRaw->map(function ($orderItem) {
+                return [
+                    'id' => $orderItem->id,
+                    'item_id' => $orderItem->item_id,
+                    'name' => $orderItem->item_display_name ?? $orderItem->item->name ?? 'Unknown Item',
+                    'item_name' => $orderItem->item_display_name ?? $orderItem->item->name ?? 'Unknown Item',
+                    'item_code' => $orderItem->item->item_code ?? '',
+                    'unit_price' => $orderItem->unit_price,
+                    'price' => $orderItem->unit_price,
+                    'quantity' => $orderItem->quantity,
+                    'subtotal' => $orderItem->subtotal,
+                    'status' => $orderItem->status,
+                    'item' => [
+                        'name' => $orderItem->item->name ?? 'Unknown Item',
+                        'item_code' => $orderItem->item->item_code ?? '',
+                    ],
+                ];
+            })->values();
+
+            // Attach relations/attributes so JS can read order.orderItems / order_items
+            $order = $order->load(['table', 'waiter', 'payment']);
+            $order->setRelation('orderItems', $printItemsRaw);
+            $order->setAttribute('order_items', $printItems);
+
             DB::commit();
 
             return response()->json([
                 'success' => true,
                 'message' => $isNewOrder ? 'Order placed successfully' : 'Order updated successfully',
-                'order' => $order->load(['orderItems.item', 'table']),
+                'order' => $order,
+                'order_items' => $printItems,
+                'orderItems' => $printItems,
+                'items' => $printItems,
                 'order_number' => $order->order_number,
                 'order_type' => $order->order_type,
                 'table_number' => $order->table ? $order->table->table_number : null,
@@ -663,12 +715,44 @@ class POSController extends Controller
                 }
             }
 
+            // Prepare items payload for receipt/printing
+            $printItemsRaw = $order->orderItems()
+                ->whereNotIn('status', ['cancelled', 'deleted'])
+                ->with('item')
+                ->get();
+
+            $printItems = $printItemsRaw->map(function ($orderItem) {
+                return [
+                    'id' => $orderItem->id,
+                    'item_id' => $orderItem->item_id,
+                    'name' => $orderItem->item_display_name ?? $orderItem->item->name ?? 'Unknown Item',
+                    'item_name' => $orderItem->item_display_name ?? $orderItem->item->name ?? 'Unknown Item',
+                    'item_code' => $orderItem->item->item_code ?? '',
+                    'unit_price' => $orderItem->unit_price,
+                    'price' => $orderItem->unit_price,
+                    'quantity' => $orderItem->quantity,
+                    'subtotal' => $orderItem->subtotal,
+                    'status' => $orderItem->status,
+                    'item' => [
+                        'name' => $orderItem->item->name ?? 'Unknown Item',
+                        'item_code' => $orderItem->item->item_code ?? '',
+                    ],
+                ];
+            })->values();
+
+            $order = $order->load(['payment', 'table', 'waiter']);
+            $order->setRelation('orderItems', $printItemsRaw);
+            $order->setAttribute('order_items', $printItems);
+
             DB::commit();
 
             return response()->json([
                 'success' => true,
                 'message' => 'Payment processed successfully',
-                'order' => $order->load(['payment', 'orderItems.item', 'table', 'waiter']),
+                'order' => $order,
+                'order_items' => $printItems,
+                'orderItems' => $printItems,
+                'items' => $printItems,
                 'payment' => $payment,
             ]);
         } catch (\Exception $e) {
@@ -685,8 +769,15 @@ class POSController extends Controller
      */
     public function printReceipt($orderId)
     {
-        $order = Order::with(['orderItems.item', 'orderItems.modifiers.modifier', 'table', 'waiter', 'payment'])
-            ->findOrFail($orderId);
+        $order = Order::with([
+            'orderItems' => function($query) {
+                $query->where('status', '!=', 'deleted')
+                    ->with(['item', 'modifiers.modifier']);
+            },
+            'table',
+            'waiter',
+            'payment'
+        ])->findOrFail($orderId);
 
         return view('pos.receipt', compact('order'));
     }

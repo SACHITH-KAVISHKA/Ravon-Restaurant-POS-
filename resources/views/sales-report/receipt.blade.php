@@ -208,7 +208,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach($order->orderItems as $item)
+                    @foreach($order->orderItems->where('status', '!=', 'deleted') as $item)
                     <tr>
                         <td class="item-name">
                             {{ $item->item_display_name }}

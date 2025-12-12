@@ -63,7 +63,7 @@ class OrderService
             // Broadcast
             broadcast(new \App\Events\OrderCreated($order));
 
-            return $order->fresh(['orderItems.item', 'table']);
+            return $order->fresh(['activeItems.item', 'table']);
 
         } catch (Exception $e) {
             DB::rollBack();
@@ -124,8 +124,8 @@ class OrderService
                 $this->calculateOrderTotal($order);
                 return $orderItem->fresh();
             } else {
-                // If still pending, delete it
-                $orderItem->delete();
+                // If still pending, mark as deleted
+                $orderItem->update(['status' => 'deleted']);
                 $this->calculateOrderTotal($order);
                 return false; // Item deleted
             }
@@ -149,7 +149,7 @@ class OrderService
     public function removeItemFromOrder(OrderItem $orderItem): bool
     {
         $order = $orderItem->order;
-        $orderItem->delete();
+        $orderItem->update(['status' => 'deleted']);
         
         $this->calculateOrderTotal($order);
 
@@ -163,9 +163,9 @@ class OrderService
      */
     public function calculateOrderTotal(Order $order): Order
     {
-        // Only include non-cancelled items in total calculation
+        // Only include active items (exclude cancelled and deleted)
         $subtotal = $order->orderItems()
-            ->where('status', '!=', 'cancelled')
+            ->whereNotIn('status', ['cancelled', 'deleted'])
             ->sum('subtotal');
         
         // Apply service charge (10%)
@@ -301,7 +301,7 @@ class OrderService
     public function getActiveOrders()
     {
         return Order::active()
-            ->with(['table', 'waiter', 'orderItems.item'])
+            ->with(['table', 'waiter', 'activeItems.item'])
             ->latest()
             ->get();
     }
@@ -314,8 +314,8 @@ class OrderService
         return Order::with([
             'table.floor',
             'waiter',
-            'orderItems.item.category',
-            'orderItems.modifiers.modifier',
+            'activeItems.item.category',
+            'activeItems.modifiers.modifier',
             'kots.kitchenStation',
             'payment',
             'deliveryOrder'
