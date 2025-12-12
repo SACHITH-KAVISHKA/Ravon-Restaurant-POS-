@@ -156,7 +156,7 @@ class POSController extends Controller
         $order = Order::with([
             'orderItems' => function($query) {
                 $query->where('status', '!=', 'deleted')
-                    ->with('item');
+                    ->with(['item', 'modifiers.modifier']);
             },
             'table',
             'waiter',
@@ -170,6 +170,15 @@ class POSController extends Controller
                 return !in_array($orderItem->status, ['cancelled', 'deleted']);
             })
             ->map(function ($orderItem) {
+                $modifiers = $orderItem->modifiers->map(function ($mod) {
+                    return [
+                        'id' => $mod->id,
+                        'modifier_id' => $mod->modifier_id,
+                        'name' => $mod->modifier->name ?? 'Modifier',
+                        'price_adjustment' => $mod->price_adjustment,
+                    ];
+                })->toArray();
+
                 return [
                     'item_id' => $orderItem->item_id,
                     'name' => $orderItem->item_display_name ?? $orderItem->item->name ?? 'Unknown Item',
@@ -179,7 +188,7 @@ class POSController extends Controller
                     'unit_price' => $orderItem->unit_price,
                     'quantity' => $orderItem->quantity,
                     'subtotal' => $orderItem->subtotal,
-                    'modifiers' => [],
+                    'modifiers' => $modifiers,
                     'item' => [
                         'name' => $orderItem->item->name ?? 'Unknown Item',
                         'item_code' => $orderItem->item->item_code ?? ''
@@ -400,10 +409,19 @@ class POSController extends Controller
             // Prepare items payload for frontend printing (non-cancelled, non-deleted)
             $printItemsRaw = $order->orderItems()
                 ->whereNotIn('status', ['cancelled', 'deleted'])
-                ->with('item')
+                ->with(['item', 'modifiers.modifier'])
                 ->get();
 
             $printItems = $printItemsRaw->map(function ($orderItem) {
+                $modifiers = $orderItem->modifiers->map(function ($mod) {
+                    return [
+                        'id' => $mod->id,
+                        'modifier_id' => $mod->modifier_id,
+                        'name' => $mod->modifier->name ?? 'Modifier',
+                        'price_adjustment' => $mod->price_adjustment,
+                    ];
+                })->toArray();
+
                 return [
                     'id' => $orderItem->id,
                     'item_id' => $orderItem->item_id,
@@ -415,6 +433,7 @@ class POSController extends Controller
                     'quantity' => $orderItem->quantity,
                     'subtotal' => $orderItem->subtotal,
                     'status' => $orderItem->status,
+                    'modifiers' => $modifiers,
                     'item' => [
                         'name' => $orderItem->item->name ?? 'Unknown Item',
                         'item_code' => $orderItem->item->item_code ?? '',
@@ -718,10 +737,19 @@ class POSController extends Controller
             // Prepare items payload for receipt/printing
             $printItemsRaw = $order->orderItems()
                 ->whereNotIn('status', ['cancelled', 'deleted'])
-                ->with('item')
+                ->with(['item', 'modifiers.modifier'])
                 ->get();
 
             $printItems = $printItemsRaw->map(function ($orderItem) {
+                $modifiers = $orderItem->modifiers->map(function ($mod) {
+                    return [
+                        'id' => $mod->id,
+                        'modifier_id' => $mod->modifier_id,
+                        'name' => $mod->modifier->name ?? 'Modifier',
+                        'price_adjustment' => $mod->price_adjustment,
+                    ];
+                })->toArray();
+
                 return [
                     'id' => $orderItem->id,
                     'item_id' => $orderItem->item_id,
@@ -733,6 +761,7 @@ class POSController extends Controller
                     'quantity' => $orderItem->quantity,
                     'subtotal' => $orderItem->subtotal,
                     'status' => $orderItem->status,
+                    'modifiers' => $modifiers,
                     'item' => [
                         'name' => $orderItem->item->name ?? 'Unknown Item',
                         'item_code' => $orderItem->item->item_code ?? '',
