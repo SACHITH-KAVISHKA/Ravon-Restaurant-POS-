@@ -14,18 +14,28 @@
             theme: {
                 extend: {
                     colors: {
-                        primary: {
-                            50: '#eff6ff',
-                            100: '#dbeafe',
-                            200: '#bfdbfe',
-                            300: '#93c5fd',
-                            400: '#60a5fa',
-                            500: '#3b82f6',
-                            600: '#2563eb',
-                            700: '#1d4ed8',
-                            800: '#1e40af',
-                            900: '#1e3a8a',
+                        ravon: {
+                            primary: '#667eea',
+                            primaryEnd: '#764ba2',
+                            primaryHover: '#5a6fd8',
+                            primaryHoverEnd: '#6a4190',
+                            success: '#28a745',
+                            successEnd: '#20c997',
+                            danger: '#dc3545',
+                            warning: '#ffc107',
+                            info: '#17a2b8',
+                            secondary: '#6c757d',
+                            bg: '#f8f9fa',
+                            surface: '#ffffff',
+                            text: '#495057',
+                            textMuted: '#6c757d',
+                            textWhite: '#ffffff',
+                            border: '#dee2e6',
                         }
+                    },
+                    boxShadow: {
+                        'ravon-soft': '0 6px 18px rgba(102, 126, 234, 0.25)',
+                        'ravon-subtle': '0 4px 10px rgba(118, 75, 162, 0.15)',
                     }
                 }
             }
@@ -39,23 +49,23 @@
             font-family: 'Inter', sans-serif;
         }
         
-        /* Custom scrollbar for dark theme */
+        /* Custom scrollbar */
         ::-webkit-scrollbar {
             width: 10px;
             height: 10px;
         }
         
         ::-webkit-scrollbar-track {
-            background: #1a1a1a;
+            background: #f8f9fa;
         }
         
         ::-webkit-scrollbar-thumb {
-            background: #3b82f6;
+            background: linear-gradient(135deg, #667eea, #764ba2);
             border-radius: 5px;
         }
         
         ::-webkit-scrollbar-thumb:hover {
-            background: #2563eb;
+            background: linear-gradient(135deg, #5a6fd8, #6a4190);
         }
         
         /* Touch-friendly buttons */
@@ -66,13 +76,13 @@
         
         /* Gradient background */
         .gradient-bg {
-            background: linear-gradient(135deg, #000000 0%, #1a1a2e 50%, #16213e 100%);
+            background: linear-gradient(180deg, #f8f9fa 0%, #ffffff 50%, #f8f9fa 100%);
         }
     </style>
     
     @stack('styles')
 </head>
-<body class="bg-black text-gray-100 antialiased">
+<body class="bg-ravon-bg text-ravon-text antialiased">
     @if(isset($hideNavigation) && $hideNavigation)
         @yield('content')
     @else
@@ -96,9 +106,10 @@
         function showToast(message, type = 'success') {
             const toast = document.createElement('div');
             toast.className = `flex items-center p-4 rounded-lg shadow-lg transform transition-all duration-300 ${
-                type === 'success' ? 'bg-blue-600' : 
-                type === 'error' ? 'bg-red-600' : 
-                type === 'warning' ? 'bg-yellow-600' : 'bg-gray-700'
+                type === 'success' ? 'bg-gradient-to-r from-[#28a745] to-[#20c997]' : 
+                type === 'error' ? 'bg-[#dc3545]' : 
+                type === 'warning' ? 'bg-[#ffc107] text-gray-800' : 
+                type === 'info' ? 'bg-[#17a2b8]' : 'bg-white border border-gray-200 text-gray-800 shadow-ravon-subtle'
             } text-white`;
             
             toast.innerHTML = `

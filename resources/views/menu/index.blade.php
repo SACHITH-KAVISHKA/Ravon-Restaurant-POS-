@@ -3,7 +3,7 @@
 @section('title', 'Menu Management')
 
 @section('content')
-<div class="min-h-screen bg-gray-900 flex">
+<div class="min-h-screen bg-gray-50 flex">
     <!-- Sidebar Component -->
     <x-sidebar />
 
@@ -13,11 +13,11 @@
         <div class="mb-6">
             <div class="flex justify-between items-center">
                 <div>
-                    <h1 class="text-3xl font-bold text-white">Menu Management</h1>
-                    <p class="text-gray-400 mt-1">Manage your restaurant menu items, categories, and modifiers</p>
+                    <h1 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#667eea] to-[#764ba2]">Menu Management</h1>
+                    <p class="text-gray-600 mt-1">Manage your restaurant menu items, categories, and modifiers</p>
                 </div>
                 <div class="flex gap-3">
-                    <a href="{{ route('menu.items.create') }}" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-2">
+                    <a href="{{ route('menu.items.create') }}" class="bg-gradient-to-r from-[#667eea] to-[#764ba2] hover:shadow-lg hover:shadow-purple-500/50 text-white font-semibold px-6 py-2.5 rounded-lg transition duration-200 flex items-center gap-2">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                         </svg>
@@ -28,20 +28,20 @@
         </div>
 
         @if(session('success'))
-        <div class="mb-4 p-4 bg-green-900 border border-green-700 text-green-100 rounded-lg">
+        <div class="mb-4 p-4 bg-green-50 border border-green-200 text-green-700 rounded-lg">
             {{ session('success') }}
         </div>
         @endif
 
         <!-- Categories Tabs -->
-        <div class="bg-gray-800 rounded-lg shadow-lg mb-6">
-            <div class="border-b border-gray-700">
+        <div class="bg-white rounded-lg shadow-md mb-6 border border-gray-200">
+            <div class="border-b border-gray-200">
                 <div class="flex overflow-x-auto">
-                    <button onclick="filterCategory('all')" class="category-filter px-6 py-4 text-white bg-blue-600 font-semibold border-b-2 border-blue-500 whitespace-nowrap">
+                    <button onclick="filterCategory('all')" class="category-filter px-6 py-4 text-purple-600 bg-purple-50 font-semibold border-b-2 border-purple-600 whitespace-nowrap">
                         All Items
                     </button>
                     @foreach($categories as $category)
-                    <button onclick="filterCategory({{ $category->id }})" class="category-filter px-6 py-4 text-gray-400 hover:text-white font-semibold border-b-2 border-transparent hover:border-gray-600 whitespace-nowrap">
+                    <button onclick="filterCategory({{ $category->id }})" class="category-filter px-6 py-4 text-gray-600 hover:text-purple-600 font-semibold border-b-2 border-transparent hover:border-purple-300 whitespace-nowrap transition">
                         {{ $category->name }}
                     </button>
                     @endforeach
@@ -50,19 +50,19 @@
         </div>
 
         <!-- Items Table -->
-        <div class="bg-gray-800 rounded-lg shadow-lg overflow-hidden">
+        <div class="bg-white rounded-lg shadow-md overflow-hidden border border-gray-200">
             <div class="overflow-x-auto">
                 <table class="w-full">
                     <thead>
-                        <tr class="bg-gray-900 border-b border-gray-700">
-                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Item Name</th>
-                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Category</th>
-                            <th class="px-6 py-4 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">Actions</th>
+                        <tr class="bg-gradient-to-r from-[#667eea] to-[#764ba2]">
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">Item Name</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">Category</th>
+                            <th class="px-6 py-4 text-center text-xs font-semibold text-white uppercase tracking-wider">Actions</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-700">
+                    <tbody class="divide-y divide-gray-200">
                         @forelse($items as $item)
-                        <tr class="item-row hover:bg-gray-700 transition" data-category="{{ $item->category_id }}">
+                        <tr class="item-row hover:bg-purple-50 transition" data-category="{{ $item->category_id }}">
                             <!-- Item Name -->
                             <td class="px-6 py-4">
                                 <div class="flex items-center">
@@ -70,17 +70,17 @@
                                         @if($item->image)
                                         <img src="{{ asset('storage/' . $item->image) }}" alt="{{ $item->name }}" class="h-12 w-12 rounded-lg object-cover">
                                         @else
-                                        <div class="h-12 w-12 rounded-lg bg-gray-700 flex items-center justify-center">
-                                            <svg class="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <div class="h-12 w-12 rounded-lg bg-gray-100 flex items-center justify-center">
+                                            <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                             </svg>
                                         </div>
                                         @endif
                                     </div>
                                     <div>
-                                        <div class="text-sm font-semibold text-white">{{ $item->name }}</div>
+                                        <div class="text-sm font-semibold text-gray-800">{{ $item->name }}</div>
                                         @if($item->description)
-                                        <div class="text-xs text-gray-400 mt-1">{{ Str::limit($item->description, 50) }}</div>
+                                        <div class="text-xs text-gray-500 mt-1">{{ Str::limit($item->description, 50) }}</div>
                                         @endif
                                     </div>
                                 </div>
@@ -88,13 +88,13 @@
 
                             <!-- Category -->
                             <td class="px-6 py-4">
-                                <span class="text-sm text-gray-300">{{ $item->category->name }}</span>
+                                <span class="text-sm text-gray-700">{{ $item->category->name }}</span>
                             </td>
 
                             <!-- Actions -->
                             <td class="px-6 py-4">
                                 <div class="flex items-center justify-center gap-2">
-                                    <a href="{{ route('menu.items.edit', $item) }}" class="inline-flex items-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition" title="Edit">
+                                    <a href="{{ route('menu.items.edit', $item) }}" class="inline-flex items-center px-3 py-2 bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white rounded-lg hover:shadow-md transition" title="Edit">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                         </svg>
@@ -114,11 +114,11 @@
                         @empty
                         <tr>
                             <td colspan="3" class="px-6 py-12 text-center">
-                                <svg class="w-16 h-16 mx-auto text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg class="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
                                 </svg>
-                                <p class="text-gray-400 text-lg">No menu items found</p>
-                                <a href="{{ route('menu.items.create') }}" class="inline-block mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                                <p class="text-gray-600 text-lg">No menu items found</p>
+                                <a href="{{ route('menu.items.create') }}" class="inline-block mt-4 btn-primary">
                                     Add Your First Item
                                 </a>
                             </td>
@@ -138,11 +138,11 @@
 
         // Update filter buttons
         filters.forEach(btn => {
-            btn.classList.remove('bg-blue-600', 'border-blue-500', 'text-white');
-            btn.classList.add('text-gray-400', 'border-transparent');
+            btn.classList.remove('bg-purple-50', 'border-purple-600', 'text-purple-600');
+            btn.classList.add('text-gray-600', 'border-transparent');
         });
-        event.target.classList.remove('text-gray-400', 'border-transparent');
-        event.target.classList.add('bg-blue-600', 'border-blue-500', 'text-white');
+        event.target.classList.remove('text-gray-600', 'border-transparent');
+        event.target.classList.add('bg-purple-50', 'border-purple-600', 'text-purple-600');
 
         // Filter items
         items.forEach(item => {
