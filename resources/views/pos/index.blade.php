@@ -2014,14 +2014,26 @@
                                 </div>
                             `;
                         } else {
-                            container.innerHTML = result.orders.map(order => `
+                            container.innerHTML = result.orders.map(order => {
+                                let typeDisplay = '';
+                                if (order.order_type === 'dine_in' && order.table_number !== 'N/A') {
+                                    typeDisplay = `Table: ${order.table_number}`;
+                                } else if (order.order_type === 'takeaway') {
+                                    typeDisplay = 'TakeAway';
+                                } else if (order.order_type === 'pickme' && order.pickme_ref_number) {
+                                    typeDisplay = `PickMe - ${order.pickme_ref_number}`;
+                                } else {
+                                    typeDisplay = order.order_type || 'N/A';
+                                }
+                                
+                                return `
                                 <div class="bg-gray-700 rounded-lg p-4 hover:bg-gray-600 cursor-pointer transition"
                                      onclick="loadOrder(${order.id})">
                                     <div class="flex justify-between items-center">
                                         <div>
                                             <div class="text-white font-semibold">${order.order_number}</div>
                                             <div class="text-sm text-gray-400">
-                                                Table: ${order.table_number} | ${order.items_count} items
+                                                ${typeDisplay} | ${order.items_count} items
                                             </div>
                                         </div>
                                         <div class="text-right">
@@ -2030,7 +2042,8 @@
                                         </div>
                                     </div>
                                 </div>
-                            `).join('');
+                                `;
+                            }).join('');
                         }
 
                         document.getElementById('openChecksModal').classList.remove('hidden');
@@ -2899,7 +2912,9 @@
                     } else {
                         // Show order type for non-table orders
                         const orderType = order.order_type || 'takeaway';
-                        if (orderType === 'pickme') {
+                        if (orderType === 'pickme' && order.pickme_ref_number) {
+                            tableDisplay = 'PickMe - ' + String(order.pickme_ref_number);
+                        } else if (orderType === 'pickme') {
                             tableDisplay = 'PickMe Food';
                         } else if (orderType === 'uber_eats') {
                             tableDisplay = 'Uber Eats';
@@ -3351,7 +3366,9 @@
                     return order.table.table_number;
                 } else {
                     const orderType = order.order_type || 'takeaway';
-                    if (orderType === 'pickme') {
+                    if (orderType === 'pickme' && order.pickme_ref_number) {
+                        return 'PickMe - ' + order.pickme_ref_number;
+                    } else if (orderType === 'pickme') {
                         return 'PickMe Food';
                     } else if (orderType === 'uber_eats') {
                         return 'Uber Eats';
@@ -3456,12 +3473,24 @@
                                 </div>
                             `;
                         } else {
-                            container.innerHTML = result.orders.map(order => `
+                            container.innerHTML = result.orders.map(order => {
+                                let typeDisplay = '';
+                                if (order.order_type === 'dine_in' && order.table_number !== 'N/A') {
+                                    typeDisplay = `Table: ${order.table_number}`;
+                                } else if (order.order_type === 'takeaway') {
+                                    typeDisplay = 'TakeAway';
+                                } else if (order.order_type === 'pickme' && order.pickme_ref_number) {
+                                    typeDisplay = `PickMe - ${order.pickme_ref_number}`;
+                                } else {
+                                    typeDisplay = order.order_type || 'N/A';
+                                }
+                                
+                                return `
                                 <div class="bg-gray-700 rounded-lg p-4 mb-2 flex justify-between items-center hover:bg-gray-650 transition">
                                     <div>
                                         <div class="text-white font-semibold">${order.order_number}</div>
                                         <div class="text-sm text-gray-400">
-                                            Table: ${order.table_number} | ${order.items_count} items | ${order.payment_method.toUpperCase()}
+                                            ${typeDisplay} | ${order.items_count} items | ${order.payment_method.toUpperCase()}
                                         </div>
                                     </div>
                                     <div class="flex items-center gap-4">
@@ -3478,7 +3507,8 @@
                                         </button>
                                     </div>
                                 </div>
-                            `).join('');
+                                `;
+                            }).join('');
                         }
 
                         document.getElementById('closedOrdersModal').classList.remove('hidden');
@@ -3488,7 +3518,7 @@
                 }
             };
 
-            // Print Receipt (Inline Thermal Receipt)
+            // Print Receipt (Using jsPDF and QZ Tray - same as POS payment receipt)
             window.printReceipt = async function(orderId) {
                 try {
                     // Fetch order details using POS route
@@ -3502,7 +3532,10 @@
                             orderItems: result.order.items || result.order.orderItems || result.order.order_items,
                             order_items: result.order.items || result.order.orderItems || result.order.order_items
                         };
-                        printReceiptInline(orderData);
+                        
+                        // Use the same PDF printing function as POS payment flow
+                        await printReceiptWithQZ(orderData);
+                        showNotification('Receipt sent to printer', 'Success');
                     } else {
                         showNotification('Failed to load order details', 'Error');
                     }

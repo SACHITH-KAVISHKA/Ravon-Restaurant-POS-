@@ -93,6 +93,7 @@ class POSController extends Controller
                     'order_number' => $order->order_number,
                     'table_number' => $order->table ? $order->table->table_number : 'N/A',
                     'order_type' => $order->order_type,
+                    'pickme_ref_number' => $order->pickme_ref_number,
                     'total_amount' => $order->total_amount,
                     'created_at' => $order->created_at->format('M d, h:i A'),
                     'items_count' => $activeItemsCount,
@@ -134,6 +135,7 @@ class POSController extends Controller
                     'order_number' => $order->order_number,
                     'table_number' => $order->table ? $order->table->table_number : 'N/A',
                     'order_type' => $order->order_type,
+                    'pickme_ref_number' => $order->pickme_ref_number,
                     'total_amount' => $order->total_amount,
                     // Format: Dec 08, 04:15 AM (using local timezone)
                     'completed_at' => $order->completed_at ? $order->completed_at->format('M d, h:i A') : 'N/A',
@@ -204,6 +206,15 @@ class POSController extends Controller
                 'order_type' => $order->order_type,
                 'table_id' => $order->table_id,
                 'table_number' => $order->table ? $order->table->table_number : null,
+                'pickme_ref_number' => $order->pickme_ref_number,
+                'table' => $order->table ? [
+                    'id' => $order->table->id,
+                    'table_number' => $order->table->table_number
+                ] : null,
+                'waiter' => $order->waiter ? [
+                    'id' => $order->waiter->id,
+                    'name' => $order->waiter->name
+                ] : null,
                 'items' => $items,
                 'orderItems' => $items,
                 'order_items' => $items,
