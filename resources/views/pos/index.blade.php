@@ -2945,11 +2945,13 @@
 
                     const items = order.order_items || order.orderItems || [];
                     items.forEach((item, index) => {
-                        const itemName = item.item?.name || item.item_name || 'Unknown Item';
+                        const itemName = item.item_display_name || item.name || item.item?.name || item.item_name || 'Unknown Item';
                         const quantity = item.quantity || 0;
+                        const unitPrice = parseFloat(item.unit_price || item.price || 0).toFixed(2);
                         const subtotal = parseFloat(item.subtotal || 0).toFixed(2);
+                        const modifiers = item.modifiers || [];
 
-                        // Item number and name (first line)
+                        // Item number and name with portion (first line)
                         pdf.setFont('courier', 'bold');
                         pdf.setFontSize(10);
                         let displayName = `${index + 1}. ${itemName}`;
@@ -2959,16 +2961,31 @@
                         pdf.text(displayName, leftMargin, yPosition);
                         yPosition += 5;
 
-                        // Second line: Quantity and Amount (right-aligned)
+                        // Second line: Quantity x Unit Price = Amount
                         pdf.setFont('courier', 'normal');
                         pdf.setFontSize(9);
 
-                        // Quantity on the left side of second line
-                        pdf.text(`${quantity}x`, leftMargin + 10, yPosition);
+                        // Quantity x @ Unit Price on the left
+                        pdf.text(`${quantity}x @ Rs. ${unitPrice}`, leftMargin + 3, yPosition);
 
                         // Amount on the right side
                         pdf.text(subtotal, pageWidth - rightMargin, yPosition, { align: 'right' });
-                        yPosition += 6;
+                        yPosition += 5;
+
+                        // Print modifiers (portion sizes, extras)
+                        if (modifiers.length > 0) {
+                            pdf.setFontSize(8);
+                            modifiers.forEach(modifier => {
+                                const modName = modifier.name || 'Modifier';
+                                const modPrice = parseFloat(modifier.price_adjustment || 0).toFixed(2);
+                                const modText = `  + ${modName} (+Rs. ${modPrice})`;
+                                pdf.text(modText, leftMargin + 5, yPosition);
+                                yPosition += 4;
+                            });
+                            yPosition += 1; // Extra space after modifiers
+                        }
+
+                        yPosition += 1; // Space before next item
                     });
 
                     // Separator
