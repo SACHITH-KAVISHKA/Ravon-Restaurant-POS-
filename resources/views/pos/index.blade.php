@@ -1092,8 +1092,8 @@
             // DISABLED FOR DEVELOPMENT - QZ Tray will run in insecure mode
             // For production, you need proper RSA certificates
 
-            /* CERTIFICATE SETUP - COMMENTED OUT FOR DEVELOPMENT
-            
+            // CERTIFICATE SETUP - COMMENTED OUT FOR DEVELOPMENT
+
             // 1. Set Certificate Promise
             qz.security.setCertificatePromise(function(resolve, reject) {
                 resolve(`-----BEGIN CERTIFICATE-----
@@ -1152,7 +1152,7 @@
                         });
                 };
             });
-            */
+
 
             console.log('QZ Tray: Running in INSECURE mode (no certificate validation)');
 
@@ -1325,11 +1325,11 @@
                         pdf.setFontSize(12);
 
                         let itemName = item.name || item.item_name;
-                        
+
                         // Word wrap for long item names
                         const maxWidth = pageWidth - leftMargin - rightMargin;
                         const lines = pdf.splitTextToSize(itemName, maxWidth);
-                        
+
                         lines.forEach(line => {
                             pdf.text(line, leftMargin, yPosition);
                             yPosition += 5;
@@ -1363,7 +1363,7 @@
 
                     // Generate Base64 and Print
                     const pdfBase64 = pdf.output('datauristring').split(',')[1];
-                    const kotPrinterName = "Microsoft Print to PDF";
+                    const kotPrinterName = "XP-80C";
                     await printPDFwithQZ(pdfBase64, kotPrinterName, "KOT", false);
                     console.log('KOT sent to printer successfully');
 
@@ -1483,11 +1483,11 @@
                         pdf.setFontSize(12);
 
                         let itemName = item.name || item.item_name;
-                        
+
                         // Word wrap for long item names
                         const maxWidth = pageWidth - leftMargin - rightMargin;
                         const lines = pdf.splitTextToSize(itemName, maxWidth);
-                        
+
                         lines.forEach(line => {
                             pdf.text(line, leftMargin, yPosition);
                             yPosition += 5;
@@ -1521,7 +1521,7 @@
 
                     // Generate Base64 and Print
                     const pdfBase64 = pdf.output('datauristring').split(',')[1];
-                    const botPrinterName = "Microsoft Print to PDF";
+                    const botPrinterName = "XP-80C";
                     await printPDFwithQZ(pdfBase64, botPrinterName, "BOT", false);
                     console.log('BOT sent to printer successfully');
 
@@ -1982,7 +1982,7 @@
                             }
 
                             return `
-                                <button 
+                                <button
                                     ${clickable ? `onclick="selectTable('${table.table_number}', ${table.id})"` : 'disabled'}
                                     class="p-4 ${bgColor} text-white rounded-lg transition font-semibold">
                                     ${table.table_number}
@@ -2526,7 +2526,7 @@
                     selectedBtn.classList.remove('bg-gray-700');
                     selectedBtn.classList.add('bg-blue-600');
                 }
-                
+
                 // Reset input values
                 cashInputValue = '0';
                 cardInputValue = '0';
@@ -2569,11 +2569,11 @@
             window.setActivePaymentInput = function(fieldType) {
                 activePaymentField = fieldType;
                 console.log('Active payment field:', fieldType);
-                
+
                 // Visual feedback - highlight active field
                 const cashInput = document.getElementById('paymentCashInput');
                 const cardInput = document.getElementById('paymentCardInput');
-                
+
                 if (fieldType === 'cash') {
                     cashInput.style.borderColor = '#3B82F6';
                     cashInput.style.borderWidth = '3px';
@@ -2590,9 +2590,9 @@
             // Number Pad - Works with active field
             window.appendNumber = function(num) {
                 if (!activePaymentField) return; // No active field (e.g., credit mode)
-                
+
                 let currentValue = activePaymentField === 'cash' ? cashInputValue : cardInputValue;
-                
+
                 if (currentValue === '0' && num !== '.') {
                     currentValue = num;
                 } else if (num === '.' && currentValue.includes('.')) {
@@ -2600,7 +2600,7 @@
                 } else {
                     currentValue += num;
                 }
-                
+
                 // Update the appropriate variable and input field
                 if (activePaymentField === 'cash') {
                     cashInputValue = currentValue;
@@ -2609,16 +2609,16 @@
                     cardInputValue = currentValue;
                     document.getElementById('paymentCardInput').value = parseFloat(cardInputValue || 0).toFixed(2);
                 }
-                
+
                 updatePaymentCalculations();
             };
 
             window.backspaceNumber = function() {
                 if (!activePaymentField) return;
-                
+
                 let currentValue = activePaymentField === 'cash' ? cashInputValue : cardInputValue;
                 currentValue = currentValue.length > 1 ? currentValue.slice(0, -1) : '0';
-                
+
                 // Update the appropriate variable and input field
                 if (activePaymentField === 'cash') {
                     cashInputValue = currentValue;
@@ -2627,13 +2627,13 @@
                     cardInputValue = currentValue;
                     document.getElementById('paymentCardInput').value = parseFloat(cardInputValue || 0).toFixed(2);
                 }
-                
+
                 updatePaymentCalculations();
             };
 
             window.clearNumber = function() {
                 if (!activePaymentField) return;
-                
+
                 // Clear the appropriate variable and input field
                 if (activePaymentField === 'cash') {
                     cashInputValue = '0';
@@ -2642,7 +2642,7 @@
                     cardInputValue = '0';
                     document.getElementById('paymentCardInput').value = '0.00';
                 }
-                
+
                 updatePaymentCalculations();
             };
 
@@ -2650,18 +2650,18 @@
             window.handlePaymentInputChange = function(inputType) {
                 const input = document.getElementById(inputType === 'cash' ? 'paymentCashInput' : 'paymentCardInput');
                 const value = input.value.replace(/[^0-9.]/g, ''); // Remove non-numeric characters
-                
+
                 // Update the internal value
                 if (inputType === 'cash') {
                     cashInputValue = value || '0';
                 } else if (inputType === 'card') {
                     cardInputValue = value || '0';
                 }
-                
+
                 // Set this as the active field
                 activePaymentField = inputType;
                 setActivePaymentInput(inputType);
-                
+
                 updatePaymentCalculations();
             };
 
@@ -2855,7 +2855,7 @@
                     pdf.setFont('courier', 'normal');
                     pdf.text('Ravon Restaurant (Pvt) Ltd', pageWidth / 2, yPosition, { align: 'center' });
                     yPosition += 4;
-                    
+
                     pdf.setFontSize(9);
                     pdf.text('NO 282/A/2, KCTHALAWALA,', pageWidth / 2, yPosition, { align: 'center' });
                     yPosition += 4;
@@ -2875,7 +2875,7 @@
                     // Order Information
                     pdf.setFont('courier', 'normal');
                     pdf.setFontSize(9);
-                    
+
                     pdf.text('Invoice #', leftMargin, yPosition);
                     pdf.text(String(order.order_number || order.id), pageWidth - rightMargin, yPosition, { align: 'right' });
                     yPosition += 4;
@@ -2883,7 +2883,7 @@
                     const now = new Date();
                     const dateStr = now.toLocaleDateString('en-GB');
                     const timeStr = now.toLocaleTimeString('en-GB', { hour12: false });
-                    
+
                     pdf.text('Date', leftMargin, yPosition);
                     pdf.text(`:${dateStr} Time ${timeStr}`, pageWidth - rightMargin, yPosition, { align: 'right' });
                     yPosition += 4;
@@ -2911,7 +2911,7 @@
                             tableDisplay = 'Take Away';
                         }
                     }
-                    
+
                     pdf.text('Table # :', leftMargin, yPosition);
                     pdf.text(tableDisplay, pageWidth - rightMargin, yPosition, { align: 'right' });
                     yPosition += 4;
@@ -2962,10 +2962,10 @@
                         // Second line: Quantity and Amount (right-aligned)
                         pdf.setFont('courier', 'normal');
                         pdf.setFontSize(9);
-                        
+
                         // Quantity on the left side of second line
                         pdf.text(`${quantity}x`, leftMargin + 10, yPosition);
-                        
+
                         // Amount on the right side
                         pdf.text(subtotal, pageWidth - rightMargin, yPosition, { align: 'right' });
                         yPosition += 6;
@@ -3055,7 +3055,7 @@
 
                     // Generate Base64 and Print
                     const pdfBase64 = pdf.output('datauristring').split(',')[1];
-                    const receiptPrinterName = "Microsoft Print to PDF"; // Configure printer name
+                    const receiptPrinterName = "XP-80C"; // Configure printer name
                     await printPDFwithQZ(pdfBase64, receiptPrinterName, "Receipt", false);
                     console.log('Receipt sent to printer successfully');
 
@@ -3159,12 +3159,12 @@
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         @page {
             size: 80mm auto;
             margin: 0;
         }
-        
+
         body {
             font-family: 'Courier New', Courier, monospace;
             font-size: 11px;
@@ -3174,62 +3174,62 @@
             margin: 0 auto;
             background: white;
         }
-        
+
         .header {
             text-align: center;
             margin-bottom: 8px;
             padding-bottom: 8px;
         }
-        
+
         .header h1 {
             font-size: 16px;
             font-weight: bold;
             margin-bottom: 2px;
             letter-spacing: 1px;
         }
-        
+
         .header .subtitle {
             font-size: 10px;
             margin-bottom: 2px;
         }
-        
+
         .header .address {
             font-size: 9px;
             line-height: 1.4;
         }
-        
+
         .divider {
             border-top: 1px dashed #000;
             margin: 5px 0;
         }
-        
+
         .divider-thick {
             border-top: 2px solid #000;
             margin: 5px 0;
         }
-        
+
         .invoice-title {
             text-align: center;
             font-weight: bold;
             font-size: 14px;
             margin: 8px 0;
         }
-        
+
         .info-row {
             display: flex;
             justify-content: space-between;
             margin-bottom: 2px;
             font-size: 10px;
         }
-        
+
         .info-row .label {
             min-width: 80px;
         }
-        
+
         .section {
             margin: 8px 0;
         }
-        
+
         .items-header {
             display: flex;
             justify-content: space-between;
@@ -3238,61 +3238,61 @@
             padding-bottom: 3px;
             border-bottom: 1px dashed #000;
         }
-        
+
         .item-row {
             margin-bottom: 5px;
         }
-        
+
         .item-line {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
             gap: 5px;
         }
-        
+
         .item-line:first-child {
             font-weight: bold;
         }
-        
+
         .totals {
             margin-top: 8px;
         }
-        
+
         .total-row {
             display: flex;
             justify-content: space-between;
             margin-bottom: 3px;
         }
-        
+
         .total-row.grand {
             font-weight: bold;
             font-size: 13px;
             padding-top: 3px;
             margin-top: 3px;
         }
-        
+
         .payment-info {
             margin-top: 8px;
         }
-        
+
         .credit-note {
             margin-top: 5px;
             font-size: 10px;
         }
-        
+
         .footer {
             text-align: center;
             margin-top: 10px;
             font-size: 10px;
         }
-        
+
         .footer-note {
             margin-top: 8px;
             padding-top: 8px;
             border-top: 1px dashed #000;
             font-size: 9px;
         }
-        
+
         @media print {
             body {
                 width: 80mm;
@@ -3311,9 +3311,9 @@
             Email-ravonrestaurant@gmail.com
         </div>
     </div>
-    
+
     <div class="invoice-title">INVOICE</div>
-    
+
     <div class="section">
         <div class="info-row">
             <span class="label">Invoice #</span>
@@ -3353,34 +3353,34 @@
             <span>${order.waiter ? order.waiter.name : 'Cashier'}</span>
         </div>
     </div>
-    
+
     <div class="divider"></div>
-    
+
     <div class="items-header">
         <span>In Item Price</span>
         <span>Qty Amount</span>
     </div>
-    
+
     <div class="divider"></div>
-    
+
     ${itemsHTML}
-    
+
     <div class="divider"></div>
-    
+
     <div class="totals">
         <div class="total-row">
             <span>Sub Total</span>
             <span>${parseFloat(order.subtotal).toFixed(2)}</span>
         </div>
     </div>
-    
+
     <div class="divider-thick"></div>
-    
+
     <div class="total-row grand">
         <span>Total</span>
         <span>${parseFloat(order.total_amount).toFixed(2)}</span>
     </div>
-    
+
     <div class="payment-info">
         <div class="total-row">
             <span>Payment Method</span>
@@ -3411,7 +3411,7 @@
         </div>
         ` : ''}
     </div>
-    
+
     <div class="footer">
         <div style="font-weight: bold; margin-bottom: 5px;">THANK YOU, COME AGAIN.</div>
         <div class="footer-note">
@@ -3452,7 +3452,7 @@
                                             <div class="text-white font-bold">Rs. ${parseFloat(order.total_amount).toFixed(2)}</div>
                                             <div class="text-xs text-gray-400">${order.completed_at}</div>
                                         </div>
-                                        <button onclick="printReceipt(${order.id})" 
+                                        <button onclick="printReceipt(${order.id})"
                                                 class="bg-rose-500 hover:bg-rose-600 text-white p-2 rounded-lg transition shadow-sm"
                                                 title="Print Receipt">
                                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
