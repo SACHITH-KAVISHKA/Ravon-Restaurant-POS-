@@ -142,14 +142,6 @@ class Order extends Model
     }
 
     /**
-     * Get delivery order.
-     */
-    public function deliveryOrder(): HasOne
-    {
-        return $this->hasOne(DeliveryOrder::class);
-    }
-
-    /**
      * Scope for dine-in orders.
      */
     public function scopeDineIn($query)

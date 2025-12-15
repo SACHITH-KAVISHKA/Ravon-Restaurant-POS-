@@ -6,7 +6,6 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Payment;
 use App\Models\User;
-use App\Models\DailyReport;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
@@ -172,20 +171,18 @@ class ReportService
         $date = $date ?? today();
 
         return Order::join('tables', 'orders.table_id', '=', 'tables.id')
-            ->join('floors', 'tables.floor_id', '=', 'floors.id')
             ->whereDate('orders.created_at', $date)
             ->where('orders.status', '!=', 'cancelled')
             ->whereNotNull('orders.table_id')
             ->select(
                 'tables.id',
                 'tables.table_number',
-                'floors.name as floor_name',
                 DB::raw('COUNT(orders.id) as times_used'),
                 DB::raw('SUM(orders.total_amount) as total_revenue'),
                 DB::raw('AVG(orders.total_amount) as avg_order_value'),
                 DB::raw('AVG(orders.guest_count) as avg_guests')
             )
-            ->groupBy('tables.id', 'tables.table_number', 'floors.name')
+            ->groupBy('tables.id', 'tables.table_number')
             ->orderByDesc('total_revenue')
             ->get();
     }
@@ -195,8 +192,7 @@ class ReportService
      */
     public function getDeliveryPerformanceReport($startDate, $endDate)
     {
-        return Order::with('deliveryOrder')
-            ->whereIn('order_type', ['delivery', 'uber_eats', 'pickme'])
+        return Order::whereIn('order_type', ['delivery', 'uber_eats', 'pickme'])
             ->whereBetween('created_at', [$startDate, $endDate])
             ->where('status', '!=', 'cancelled')
             ->select(
@@ -251,16 +247,6 @@ class ReportService
             ->groupBy('hour')
             ->orderBy('hour')
             ->get();
-    }
-
-    /**
-     * Generate and save daily report.
-     */
-    public function generateDailyReport($date = null)
-    {
-        $date = $date ?? today();
-        
-        return DailyReport::generateForDate($date);
     }
 
     /**
@@ -330,21 +316,21 @@ class ReportService
     public function exportToCSV(array $data, string $filename): string
     {
         $filepath = storage_path("app/reports/{$filename}");
-        
+
         $file = fopen($filepath, 'w');
-        
+
         // Write headers
         if (!empty($data)) {
             fputcsv($file, array_keys($data[0]));
         }
-        
+
         // Write data
         foreach ($data as $row) {
             fputcsv($file, $row);
         }
-        
+
         fclose($file);
-        
+
         return $filepath;
     }
 }

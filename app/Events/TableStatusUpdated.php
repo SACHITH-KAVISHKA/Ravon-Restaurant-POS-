@@ -20,7 +20,7 @@ class TableStatusUpdated implements ShouldBroadcast
      */
     public function __construct(Table $table)
     {
-        $this->table = $table->load(['floor', 'currentOrder']);
+        $this->table = $table->load(['currentOrder']);
     }
 
     /**
@@ -30,7 +30,6 @@ class TableStatusUpdated implements ShouldBroadcast
     {
         return [
             new Channel('tables'),
-            new Channel('floor.' . $this->table->floor_id),
         ];
     }
 
@@ -50,12 +49,9 @@ class TableStatusUpdated implements ShouldBroadcast
         return [
             'id' => $this->table->id,
             'table_number' => $this->table->table_number,
-            'floor_id' => $this->table->floor_id,
             'status' => $this->table->status,
             'capacity' => $this->table->capacity,
             'current_order_id' => $this->table->current_order_id,
-            'position_x' => $this->table->position_x,
-            'position_y' => $this->table->position_y,
             'updated_at' => $this->table->updated_at->toISOString(),
         ];
     }

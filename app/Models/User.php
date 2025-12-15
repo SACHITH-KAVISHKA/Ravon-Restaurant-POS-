@@ -75,14 +75,6 @@ class User extends Authenticatable
     }
 
     /**
-     * Get audit logs.
-     */
-    public function auditLogs()
-    {
-        return $this->hasMany(AuditLog::class);
-    }
-
-    /**
      * Scope to get only active users.
      */
     public function scopeActive($query)

@@ -6,37 +6,23 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 
 class Table extends Model
 {
     use HasFactory;
 
     protected $fillable = [
-        'floor_id',
         'table_number',
         'capacity',
         'status',
         'current_order_id',
-        'position_x',
-        'position_y',
         'is_active',
     ];
 
     protected $casts = [
         'capacity' => 'integer',
-        'position_x' => 'integer',
-        'position_y' => 'integer',
         'is_active' => 'boolean',
     ];
-
-    /**
-     * Get the floor.
-     */
-    public function floor(): BelongsTo
-    {
-        return $this->belongsTo(Floor::class);
-    }
 
     /**
      * Get the current order.
@@ -103,14 +89,6 @@ class Table extends Model
     }
 
     /**
-     * Scope to get by floor.
-     */
-    public function scopeOnFloor($query, $floorId)
-    {
-        return $query->where('floor_id', $floorId);
-    }
-
-    /**
      * Check if table is available.
      */
     public function isAvailable(): bool
@@ -131,7 +109,7 @@ class Table extends Model
      */
     public function getStatusColorAttribute(): string
     {
-        return match($this->status) {
+        return match ($this->status) {
             'available' => 'green',
             'ordered' => 'orange',
             'serving' => 'red',
