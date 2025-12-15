@@ -7,6 +7,7 @@ use App\Http\Controllers\MenuController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\SalesReportController;
 use App\Http\Controllers\ItemSalesReportController;
+use App\Http\Controllers\UserController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -81,14 +82,14 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/daily-sales', function () {
             return view('dashboard');
         })->name('daily-sales');
-        
+
         // Sales by Item Summary Report
         Route::get('/item-sales', [ItemSalesReportController::class, 'index'])->name('item-sales');
         Route::post('/item-sales/filter', [ItemSalesReportController::class, 'filter'])->name('item-sales.filter');
         Route::post('/item-sales/details', [ItemSalesReportController::class, 'getItemDetails'])->name('item-sales.details');
         Route::get('/item-sales/export', [ItemSalesReportController::class, 'exportSummary'])->name('item-sales.export');
         Route::get('/item-sales/export-details', [ItemSalesReportController::class, 'exportItemDetails'])->name('item-sales.export-details');
-        
+
         Route::get('/staff-performance', function () {
             return view('dashboard');
         })->name('staff-performance');
@@ -104,6 +105,16 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/receipt/{order}', [SalesReportController::class, 'receipt'])->name('receipt');
         Route::get('/export', [SalesReportController::class, 'exportExcel'])->name('export');
         Route::delete('/order/{order}', [SalesReportController::class, 'softDelete'])->name('order.delete');
+    });
+
+    // User Management (Admin only)
+    Route::middleware(['role:admin'])->prefix('users')->name('users.')->group(function () {
+        Route::get('/', [UserController::class, 'index'])->name('index');
+        Route::post('/', [UserController::class, 'store'])->name('store');
+        Route::get('/{user}', [UserController::class, 'show'])->name('show');
+        Route::put('/{user}', [UserController::class, 'update'])->name('update');
+        Route::delete('/{user}', [UserController::class, 'destroy'])->name('destroy');
+        Route::post('/{user}/regenerate-pin', [UserController::class, 'regeneratePin'])->name('regenerate-pin');
     });
 
     // POS (Cashier only)

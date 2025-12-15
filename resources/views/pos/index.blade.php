@@ -61,6 +61,23 @@
                         <span id="total">0.00</span>
                     </div>
                 </div>
+                
+                <!-- VOID and Print Invoice Buttons -->
+                <div class="mt-4 space-y-2">
+                    <button onclick="voidCurrentOrder()" class="w-full bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-lg transition duration-200 shadow-md flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                        </svg>
+                        Void
+                    </button>
+                    
+                    <button onclick="printCurrentInvoice()" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 px-4 rounded-lg transition duration-200 shadow-md flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                        </svg>
+                        Print Invoice
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -493,9 +510,9 @@
                             </button>
                             <button onclick="completePayment()" class="flex-1 px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold transition flex items-center justify-center space-x-2">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
-                                <span>Print Receipt</span>
+                                <span>Pay</span>
                             </button>
                         </div>
                     </div>
@@ -1089,70 +1106,19 @@
 
 
             // --- QZ TRAY SECURITY CONFIGURATION (START) ---
-            // DISABLED FOR DEVELOPMENT - QZ Tray will run in insecure mode
-            // For production, you need proper RSA certificates
+            // RUNNING IN INSECURE MODE - No certificate/signature required
+            // For production, implement proper RSA certificates
 
-            // CERTIFICATE SETUP - COMMENTED OUT FOR DEVELOPMENT
-
-            // 1. Set Certificate Promise
+            // Override security with null functions to disable signing
             qz.security.setCertificatePromise(function(resolve, reject) {
-                resolve(`-----BEGIN CERTIFICATE-----
-                    MIIDozCCAougAwIBAgIUWJpvpJOkleU6lWsqrMKfsq9u6OowDQYJKoZIhvcNAQEL
-                    BQAwYTELMAkGA1UEBhMCTEsxEDAOBgNVBAgMB1dlc3Rlcm4xEDAOBgNVBAcMB0Nv
-                    bG9tYm8xFTATBgNVBAoMDFJhdm9uIEJha2VyczEXMBUGA1UEAwwOMTI3LjAuMC4x
-                    OjgwMDAwHhcNMjUxMTE3MTgwNzI0WhcNMzUxMTE1MTgwNzI0WjBhMQswCQYDVQQG
-                    EwJMSzEQMA4GA1UECAwHV2VzdGVybjEQMA4GA1UEBwwHQ29sb21ibzEVMBMGA1UE
-                    CgwMUmF2b24gQmFrZXJzMRcwFQYDVQQDDA4xMjcuMC4wLjE6ODAwMDCCASIwDQYJ
-                    KoZIhvcNAQEBBQADggEPADCCAQoCggEBANF0JduabBoiZ1M7R28FmCmvUEDYy+2z
-                    uz+zQZiBGT3pm3gD2HgZfvhooGywwX2lmEn5Q5wvq3dodcqpd+Nr7xDE6U2QEcGS
-                    UEi0aDbTCBY2VIRP5HNP33hDqNOq06akEtJRxGQ43hOLxoSWZjYxe7hIstVfp2fU
-                    4j+uycPv9E8Cxo6eIM6NCFfRN1mIbkIIjgVfAmOaJb1y+TbD8z5NxXAfPf31GvXi
-                    7AJ3gnr6khs6XyW5umcesBeOijBL+lUyTRU26GQWiduoaeoTToN9UkX3ZEvfPlR7
-                    YLYqfRHnT4RJxRs+BcTDMsy0JHI5MGD/Ur/u8uXNgK2mqrfPLado9y0CAwEAAaNT
-                    MFEwHQYDVR0OBBYEFMSl/4RhhGD0mRYBD2bH4n+t/cNBMB8GA1UdIwQYMBaAFMSl
-                    /4RhhGD0mRYBD2bH4n+t/cNBMA8GA1UdEwEB/wQFMAMBAf8wDQYJKoZIhvcNAQEL
-                    BQADggEBADlwDYAu7LGzj+pGROVavOeVczrb8RibbIbXrIViV31iKC1uwXRmtTY1
-                    amAX+oEfMry3TIy//BHsJzGkAd6ozfosez33G4bbN8/y1Q9ZvcuaaHPT4DIBYrdR
-                    GX/B6TtAm63VxXyjfwrV4OUbbqwdgMtKuviRprB9A+oCE1QPa74p33hgy8UHYOCK
-                    g9lFgnRkyrLOb4fh2SmtjHhRV4aZf5CM+UbqBQAMiiuhHLAbqbmhBP3BYzVVZ066
-                    9moVkpDvvNADqW3FH6epeBDL8RyQXj2yikCyD3xXJIAih815xLJMh/pOmuqEjHdd
-                    NESCtDma6uLcth74mGaBwU3G3KsOCP4=
-                -----END CERTIFICATE-----`);
+                resolve();
             });
 
-            // 2. Set Signature Promise - Retrieve Signature from the Server
             qz.security.setSignaturePromise(function(toSign) {
                 return function(resolve, reject) {
-                    // CSRF Token
-                    var tokenMeta = document.querySelector('meta[name="csrf-token"]');
-                    var token = tokenMeta ? tokenMeta.content : "";
-
-                    fetch('/qz/sign', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRF-TOKEN': token
-                            },
-                            body: JSON.stringify({
-                                data: toSign
-                            })
-                        })
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.signature) {
-                                resolve(data.signature);
-                            } else {
-                                console.error("Signature Error:", data);
-                                reject(data.error || "No signature returned");
-                            }
-                        })
-                        .catch(err => {
-                            console.error("Signing Failed:", err);
-                            reject(err);
-                        });
+                    resolve();
                 };
             });
-
 
             console.log('QZ Tray: Running in INSECURE mode (no certificate validation)');
 
@@ -1363,7 +1329,7 @@
 
                     // Generate Base64 and Print
                     const pdfBase64 = pdf.output('datauristring').split(',')[1];
-                    const kotPrinterName = "XP-80C";
+                    const kotPrinterName = "Microsoft Print to PDF";
                     await printPDFwithQZ(pdfBase64, kotPrinterName, "KOT", false);
                     console.log('KOT sent to printer successfully');
 
@@ -1521,7 +1487,7 @@
 
                     // Generate Base64 and Print
                     const pdfBase64 = pdf.output('datauristring').split(',')[1];
-                    const botPrinterName = "XP-80C";
+                    const botPrinterName = "Microsoft Print to PDF";
                     await printPDFwithQZ(pdfBase64, botPrinterName, "BOT", false);
                     console.log('BOT sent to printer successfully');
 
@@ -2311,6 +2277,40 @@
                 showNotification('Select an item to void', 'Void Item');
             }
 
+            // VOID current order (placeholder for future functionality)
+            function voidCurrentOrder() {
+                if (!currentOrderId) {
+                    showNotification('No active order to void', 'Error');
+                    return;
+                }
+                showNotification('VOID functionality will be implemented soon', 'Feature Unavailable');
+            }
+
+            // Print Invoice for current order (without payment details)
+            async function printCurrentInvoice() {
+                if (!currentOrderId) {
+                    showNotification('No active order to print', 'Error');
+                    return;
+                }
+
+                try {
+                    // Fetch current order details
+                    const response = await fetch(`/pos/order/${currentOrderId}`);
+                    const result = await response.json();
+
+                    if (result.success && result.order) {
+                        // Use the receipt printing function without payment details
+                        await printInvoiceWithoutPayment(result.order);
+                        showNotification('Invoice sent to printer', 'Success');
+                    } else {
+                        showNotification('Failed to load order details', 'Error');
+                    }
+                } catch (error) {
+                    console.error('Error printing invoice:', error);
+                    showNotification('Error printing invoice: ' + error.message, 'Error');
+                }
+            }
+
             function cancelOrder() {
                 showConfirmation('Are you sure you want to cancel the entire order?', 'Cancel Order', () => {
                     // Clear items
@@ -2810,13 +2810,6 @@
                         currentOrderType = null;
                         selectedTableId = null;
 
-                        // Print receipt automatically using QZ Tray (like KOT/BOT)
-                        printReceiptWithQZ(result.order).catch(err => {
-                            console.error('Receipt printing error:', err);
-                            // Fallback to browser print if QZ Tray fails
-                            printReceiptInline(result.order);
-                        });
-
                         renderBill();
                         calculateTotals();
                         closeModal('closeOrderModal');
@@ -3087,12 +3080,227 @@
 
                     // Generate Base64 and Print
                     const pdfBase64 = pdf.output('datauristring').split(',')[1];
-                    const receiptPrinterName = "XP-80C"; // Configure printer name
+                    const receiptPrinterName = "Microsoft Print to PDF"; // Configure printer name
                     await printPDFwithQZ(pdfBase64, receiptPrinterName, "Receipt", false);
                     console.log('Receipt sent to printer successfully');
 
                 } catch (error) {
                     console.error('Receipt Generation Error:', error);
+                    throw error;
+                }
+            }
+
+            /**
+             * Print Invoice WITHOUT Payment Details (For current orders before payment)
+             * @param {Object} order - Order object
+             */
+            async function printInvoiceWithoutPayment(order) {
+                if (!order) {
+                    console.error('No order data provided for invoice');
+                    return;
+                }
+
+                try {
+                    const { jsPDF } = window.jspdf;
+                    const pdf = new jsPDF({
+                        orientation: 'portrait',
+                        unit: 'mm',
+                        format: [80, 297]
+                    });
+
+                    let yPosition = 8;
+                    const pageWidth = 80;
+                    const leftMargin = 5;
+                    const rightMargin = 5;
+
+                    // Header - Restaurant Name
+                    pdf.setFont('courier', 'bold');
+                    pdf.setFontSize(16);
+                    pdf.text('RAVON RESTAURANT', pageWidth / 2, yPosition, { align: 'center' });
+                    yPosition += 5;
+
+                    pdf.setFontSize(10);
+                    pdf.setFont('courier', 'normal');
+                    pdf.text('Ravon Restaurant (Pvt) Ltd', pageWidth / 2, yPosition, { align: 'center' });
+                    yPosition += 4;
+                    
+                    pdf.setFontSize(9);
+                    pdf.text('NO 282/A/2, KCTHALAWALA,', pageWidth / 2, yPosition, { align: 'center' });
+                    yPosition += 4;
+                    pdf.text('KADUWELA.', pageWidth / 2, yPosition, { align: 'center' });
+                    yPosition += 4;
+                    pdf.text('TEL.016-2006007', pageWidth / 2, yPosition, { align: 'center' });
+                    yPosition += 4;
+                    pdf.text('Email-ravonrestaurant@gmail.com', pageWidth / 2, yPosition, { align: 'center' });
+                    yPosition += 8;
+
+                    // Invoice Title
+                    pdf.setFont('courier', 'bold');
+                    pdf.setFontSize(14);
+                    pdf.text('INVOICE', pageWidth / 2, yPosition, { align: 'center' });
+                    yPosition += 8;
+
+                    // Order Information
+                    pdf.setFont('courier', 'normal');
+                    pdf.setFontSize(9);
+                    
+                    pdf.text('Invoice #', leftMargin, yPosition);
+                    pdf.text(String(order.order_number || order.id), pageWidth - rightMargin, yPosition, { align: 'right' });
+                    yPosition += 4;
+
+                    const now = new Date();
+                    const dateStr = now.toLocaleDateString('en-GB');
+                    const timeStr = now.toLocaleTimeString('en-GB', { hour12: false });
+                    
+                    pdf.text('Date', leftMargin, yPosition);
+                    pdf.text(`:${dateStr} Time ${timeStr}`, pageWidth - rightMargin, yPosition, { align: 'right' });
+                    yPosition += 4;
+
+                    pdf.text('Terminal:', leftMargin, yPosition);
+                    pdf.text('01', pageWidth - rightMargin, yPosition, { align: 'right' });
+                    yPosition += 4;
+
+                    // Determine table/order type display
+                    let tableDisplay = '';
+                    if (order.table && order.table.table_number) {
+                        tableDisplay = String(order.table.table_number);
+                    } else {
+                        const orderType = order.order_type || 'takeaway';
+                        if (orderType === 'pickme' && order.pickme_ref_number) {
+                            tableDisplay = 'PickMe - ' + String(order.pickme_ref_number);
+                        } else if (orderType === 'pickme') {
+                            tableDisplay = 'PickMe Food';
+                        } else if (orderType === 'takeaway') {
+                            tableDisplay = 'Take Away';
+                        } else {
+                            tableDisplay = 'Take Away';
+                        }
+                    }
+                    
+                    pdf.text('Table # :', leftMargin, yPosition);
+                    pdf.text(tableDisplay, pageWidth - rightMargin, yPosition, { align: 'right' });
+                    yPosition += 4;
+
+                    const cashier = order.waiter ? order.waiter.name : '{{ Auth::user()->name }}';
+                    pdf.text('Cashier :', leftMargin, yPosition);
+                    pdf.text(String(cashier), pageWidth - rightMargin, yPosition, { align: 'right' });
+                    yPosition += 6;
+
+                    // Separator
+                    pdf.setLineDashPattern([1, 1], 0);
+                    pdf.line(leftMargin, yPosition, pageWidth - rightMargin, yPosition);
+                    pdf.setLineDashPattern([], 0);
+                    yPosition += 5;
+
+                    // Items Header
+                    pdf.setFont('courier', 'bold');
+                    pdf.setFontSize(9);
+                    pdf.text('Item', leftMargin, yPosition);
+                    pdf.text('Qty   Amount', pageWidth - rightMargin, yPosition, { align: 'right' });
+                    yPosition += 4;
+
+                    pdf.setLineDashPattern([1, 1], 0);
+                    pdf.line(leftMargin, yPosition, pageWidth - rightMargin, yPosition);
+                    pdf.setLineDashPattern([], 0);
+                    yPosition += 4;
+
+                    // Print Items
+                    pdf.setFont('courier', 'normal');
+                    pdf.setFontSize(9);
+
+                    const items = order.order_items || order.orderItems || [];
+                    items.forEach((item, index) => {
+                        const itemName = item.item_display_name || item.name || item.item?.name || item.item_name || 'Unknown Item';
+                        const quantity = item.quantity || 0;
+                        const unitPrice = parseFloat(item.unit_price || item.price || 0).toFixed(2);
+                        const subtotal = parseFloat(item.subtotal || 0).toFixed(2);
+                        const modifiers = item.modifiers || [];
+
+                        // Item number and name with portion (first line)
+                        pdf.setFont('courier', 'bold');
+                        pdf.setFontSize(10);
+                        let displayName = `${index + 1}. ${itemName}`;
+                        if (displayName.length > 28) {
+                            displayName = displayName.substring(0, 25) + '...';
+                        }
+                        pdf.text(displayName, leftMargin, yPosition);
+                        yPosition += 5;
+
+                        // Second line: Quantity x @ Unit Price = Amount
+                        pdf.setFont('courier', 'normal');
+                        pdf.setFontSize(9);
+                        
+                        pdf.text(`${quantity}x @ Rs. ${unitPrice}`, leftMargin + 3, yPosition);
+                        pdf.text(subtotal, pageWidth - rightMargin, yPosition, { align: 'right' });
+                        yPosition += 5;
+
+                        // Print modifiers (portion sizes, extras)
+                        if (modifiers.length > 0) {
+                            pdf.setFontSize(8);
+                            modifiers.forEach(modifier => {
+                                const modName = modifier.name || 'Modifier';
+                                const modPrice = parseFloat(modifier.price_adjustment || 0).toFixed(2);
+                                pdf.text(`  + ${modName} (+Rs. ${modPrice})`, leftMargin + 5, yPosition);
+                                yPosition += 4;
+                            });
+                            yPosition += 1;
+                        }
+                        
+                        yPosition += 1;
+                    });
+
+                    // Separator
+                    yPosition += 2;
+                    pdf.setLineDashPattern([1, 1], 0);
+                    pdf.line(leftMargin, yPosition, pageWidth - rightMargin, yPosition);
+                    pdf.setLineDashPattern([], 0);
+                    yPosition += 4;
+
+                    // Subtotal
+                    pdf.setFont('courier', 'normal');
+                    pdf.setFontSize(10);
+                    pdf.text('Sub Total', leftMargin, yPosition);
+                    pdf.text(parseFloat(order.subtotal || 0).toFixed(2), pageWidth - rightMargin, yPosition, { align: 'right' });
+                    yPosition += 5;
+
+                    // Total Separator
+                    pdf.setLineWidth(0.5);
+                    pdf.line(leftMargin, yPosition, pageWidth - rightMargin, yPosition);
+                    pdf.setLineWidth(0.2);
+                    yPosition += 5;
+
+                    // Grand Total
+                    pdf.setFont('courier', 'bold');
+                    pdf.setFontSize(11);
+                    pdf.text('Total', leftMargin, yPosition);
+                    pdf.text(parseFloat(order.total_amount || 0).toFixed(2), pageWidth - rightMargin, yPosition, { align: 'right' });
+                    yPosition += 7;
+
+                    // NO PAYMENT DETAILS - That's the key difference from receipt
+
+                    // Footer
+                    pdf.setFont('courier', 'bold');
+                    pdf.setFontSize(10);
+                    pdf.text('THANK YOU, COME AGAIN.', pageWidth / 2, yPosition, { align: 'center' });
+                    yPosition += 6;
+
+                    pdf.setLineDashPattern([1, 1], 0);
+                    pdf.line(leftMargin, yPosition, pageWidth - rightMargin, yPosition);
+                    pdf.setLineDashPattern([], 0);
+                    yPosition += 4;
+
+                    pdf.setFont('courier', 'normal');
+                    pdf.setFontSize(8);
+                    pdf.text('Software By SKM Labs', pageWidth / 2, yPosition, { align: 'center' });
+
+                    // Generate Base64 and Print
+                    const pdfBase64 = pdf.output('datauristring').split(',')[1];
+                    const invoicePrinterName = "Microsoft Print to PDF";
+                    await printPDFwithQZ(pdfBase64, invoicePrinterName, "Invoice", false);
+                    console.log('Invoice (without payment) sent to printer successfully');
+
+                } catch (error) {
+                    console.error('Invoice Generation Error:', error);
                     throw error;
                 }
             }

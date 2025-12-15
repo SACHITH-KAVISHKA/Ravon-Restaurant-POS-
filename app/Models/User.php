@@ -19,10 +19,8 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'username',
-        'email',
         'password',
-        'phone',
-        'employee_id',
+        'pin',
         'is_active',
         'last_login_at',
     ];
@@ -130,5 +128,13 @@ class User extends Authenticatable
     public function isKitchen(): bool
     {
         return $this->hasRole('kitchen');
+    }
+
+    /**
+     * Check if user is supervisor.
+     */
+    public function isSupervisor(): bool
+    {
+        return $this->hasRole('supervisor');
     }
 }
