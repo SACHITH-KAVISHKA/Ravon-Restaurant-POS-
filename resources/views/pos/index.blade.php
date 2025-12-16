@@ -755,6 +755,125 @@
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
         <script>
+            // --- QZ TRAY SECURITY CONFIGURATION (START) ---
+
+            // 1. Given Certificate
+            qz.security.setCertificatePromise(function(resolve, reject) {
+                resolve(`-----BEGIN CERTIFICATE-----
+                    MIIDozCCAougAwIBAgIUWJpvpJOkleU6lWsqrMKfsq9u6OowDQYJKoZIhvcNAQEL
+                    BQAwYTELMAkGA1UEBhMCTEsxEDAOBgNVBAgMB1dlc3Rlcm4xEDAOBgNVBAcMB0Nv
+                    bG9tYm8xFTATBgNVBAoMDFJhdm9uIEJha2VyczEXMBUGA1UEAwwOMTI3LjAuMC4x
+                    OjgwMDAwHhcNMjUxMTE3MTgwNzI0WhcNMzUxMTE1MTgwNzI0WjBhMQswCQYDVQQG
+                    EwJMSzEQMA4GA1UECAwHV2VzdGVybjEQMA4GA1UEBwwHQ29sb21ibzEVMBMGA1UE
+                    CgwMUmF2b24gQmFrZXJzMRcwFQYDVQQDDA4xMjcuMC4wLjE6ODAwMDCCASIwDQYJ
+                    KoZIhvcNAQEBBQADggEPADCCAQoCggEBANF0JduabBoiZ1M7R28FmCmvUEDYy+2z
+                    uz+zQZiBGT3pm3gD2HgZfvhooGywwX2lmEn5Q5wvq3dodcqpd+Nr7xDE6U2QEcGS
+                    UEi0aDbTCBY2VIRP5HNP33hDqNOq06akEtJRxGQ43hOLxoSWZjYxe7hIstVfp2fU
+                    4j+uycPv9E8Cxo6eIM6NCFfRN1mIbkIIjgVfAmOaJb1y+TbD8z5NxXAfPf31GvXi
+                    7AJ3gnr6khs6XyW5umcesBeOijBL+lUyTRU26GQWiduoaeoTToN9UkX3ZEvfPlR7
+                    YLYqfRHnT4RJxRs+BcTDMsy0JHI5MGD/Ur/u8uXNgK2mqrfPLado9y0CAwEAAaNT
+                    MFEwHQYDVR0OBBYEFMSl/4RhhGD0mRYBD2bH4n+t/cNBMB8GA1UdIwQYMBaAFMSl
+                    /4RhhGD0mRYBD2bH4n+t/cNBMA8GA1UdEwEB/wQFMAMBAf8wDQYJKoZIhvcNAQEL
+                    BQADggEBADlwDYAu7LGzj+pGROVavOeVczrb8RibbIbXrIViV31iKC1uwXRmtTY1
+                    amAX+oEfMry3TIy//BHsJzGkAd6ozfosez33G4bbN8/y1Q9ZvcuaaHPT4DIBYrdR
+                    GX/B6TtAm63VxXyjfwrV4OUbbqwdgMtKuviRprB9A+oCE1QPa74p33hgy8UHYOCK
+                    g9lFgnRkyrLOb4fh2SmtjHhRV4aZf5CM+UbqBQAMiiuhHLAbqbmhBP3BYzVVZ066
+                    9moVkpDvvNADqW3FH6epeBDL8RyQXj2yikCyD3xXJIAih815xLJMh/pOmuqEjHdd
+                    NESCtDma6uLcth74mGaBwU3G3KsOCP4=
+                -----END CERTIFICATE-----`);
+            });
+
+            // 2. Retrieve Signature from the Server
+            qz.security.setSignaturePromise(function(toSign) {
+                return function(resolve, reject) {
+                    // CSRF Token
+                    var tokenMeta = document.querySelector('meta[name="csrf-token"]');
+                    var token = tokenMeta ? tokenMeta.content : "";
+
+                    fetch('/qz/sign', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': token
+                            },
+                            body: JSON.stringify({
+                                data: toSign
+                            })
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.signature) {
+                                resolve(data.signature);
+                            } else {
+                                console.error("Signature Error:", data);
+                                reject(data.error || "No signature returned");
+                            }
+                        })
+                        .catch(err => {
+                            console.error("Signing Failed:", err);
+                            reject(err);
+                        });
+                };
+            });
+
+            /**
+             * Use QZ Tray to print a PDF blob.
+             * @param {string} pdfBase64 - Base64 encoded PDF data
+             * @param {string|null} printerName - Printer name or null for default printer
+             * @param {string} jobType - Print job type description
+             * @param {boolean} showErrorOnFail - Whether to show error notification on failure
+             */
+            async function printPDFwithQZ(pdfBase64, printerName = null, jobType = "POS Print", showErrorOnFail = true) {
+                try {
+                    // 1. Connect to QZ Tray websocket
+                    if (!qz.websocket.isActive()) {
+                        await qz.websocket.connect();
+                    }
+
+                    // 2. Select printer
+                    let printer = printerName;
+                    if (!printer) {
+                        printer = await qz.printers.getDefault();
+                        if (!printer) {
+                            throw new Error("Cannot find a default printer.");
+                        }
+                    }
+
+                    // 3. Prepare the print configuration
+                    const config = qz.configs.create(printer, {
+                        // Important: Specify that we are sending a PDF
+                    });
+
+                    // 4. Printing data preparation
+                    const data = [{
+                        type: 'pdf',
+                        format: 'base64',
+                        data: pdfBase64
+                    }];
+
+                    // 5. Print the document
+                    await qz.print(config, data);
+
+                    console.log(`${jobType} Sent to printer: ${printer}`);
+
+                } catch (err) {
+                    console.error('QZ Tray Error:', err);
+                    if (showErrorOnFail) {
+                        let errorMessage = 'Printing failed. Is QZ Tray running?\n\n' + err.message;
+                        if (err.message && err.message.includes('default printer')) {
+                            errorMessage = 'Printing failed. A default printer cannot be found. Please set it in the OS.';
+                        } else if (err.message && err.message.includes('Failed to get signature')) {
+                            errorMessage = 'Printing failed. Server signature error. Check the backend.';
+                        }
+                        showNotification(errorMessage, 'Print Error');
+                    } else {
+                        console.warn("Silent Print Failed (Ignored): " + err.message);
+                    }
+                    throw err;
+                }
+            }
+            // --- END QZ TRAY INTEGRATION ---
+
             // Global variables
             let billItems = [];
             let currentOrderType = null;
