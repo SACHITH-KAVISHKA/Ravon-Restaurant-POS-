@@ -156,7 +156,7 @@ class POSController extends Controller
     public function getOrder($orderId)
     {
         $order = Order::with([
-            'orderItems' => function($query) {
+            'orderItems' => function ($query) {
                 $query->where('status', '!=', 'deleted')
                     ->with(['item', 'modifiers.modifier']);
             },
@@ -251,7 +251,7 @@ class POSController extends Controller
 
             if ($isNewOrder) {
                 // Filter out items with quantity 0 for new orders
-                $validated['items'] = array_filter($validated['items'], function($item) {
+                $validated['items'] = array_filter($validated['items'], function ($item) {
                     return $item['quantity'] > 0;
                 });
 
@@ -683,7 +683,7 @@ class POSController extends Controller
                     // For mixed payments: store full amounts given
                     $cashAmount = $validated['cash_amount'] ?? 0;
                     $cardAmount = $validated['card_amount'] ?? 0;
-                    
+
                     // Card is applied first (exact, no change), cash pays the rest
                     $remainingAfterCard = $totalAmount - $cardAmount;
                     // Change only comes from excess cash (cash given minus what's needed after card)
@@ -810,7 +810,7 @@ class POSController extends Controller
     public function printReceipt($orderId)
     {
         $order = Order::with([
-            'orderItems' => function($query) {
+            'orderItems' => function ($query) {
                 $query->where('status', '!=', 'deleted')
                     ->with(['item', 'modifiers.modifier']);
             },
@@ -820,5 +820,235 @@ class POSController extends Controller
         ])->findOrFail($orderId);
 
         return view('pos.receipt', compact('order'));
+    }
+
+    /**
+     * Verify supervisor PIN for void operations
+     */
+    public function verifySupervisorPin(Request $request)
+    {
+        $validated = $request->validate([
+            'pin' => 'required|string|size:4',
+        ]);
+
+        // Find a supervisor with this PIN
+        $supervisor = \App\Models\User::where('pin', $validated['pin'])
+            ->whereHas('roles', function ($query) {
+                $query->where('name', 'supervisor');
+            })
+            ->first();
+
+        if ($supervisor) {
+            return response()->json([
+                'success' => true,
+                'message' => 'PIN verified successfully',
+                'supervisor_name' => $supervisor->name
+            ]);
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Invalid supervisor PIN'
+        ], 401);
+    }
+
+    /**
+     * Void items from an order (reduce quantity)
+     */
+    public function voidItems(Request $request)
+    {
+        $validated = $request->validate([
+            'order_id' => 'required|exists:orders,id',
+            'void_items' => 'required|array|min:1',
+            'void_items.*.item_id' => 'required|exists:items,id',
+            'void_items.*.item_name' => 'required|string',
+            'void_items.*.void_quantity' => 'required|integer|min:1',
+            'supervisor_pin' => 'required|string|size:4',
+        ]);
+
+        // Verify supervisor PIN again
+        $supervisor = \App\Models\User::where('pin', $validated['supervisor_pin'])
+            ->whereHas('roles', function ($query) {
+                $query->where('name', 'supervisor');
+            })
+            ->first();
+
+        if (!$supervisor) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid supervisor PIN'
+            ], 401);
+        }
+
+        DB::beginTransaction();
+        try {
+            $order = Order::with('orderItems.item')->findOrFail($validated['order_id']);
+
+            $voidedItems = [];
+            $cancelKotItems = []; // Items to print on cancel KOT
+
+            foreach ($validated['void_items'] as $voidItem) {
+                // Find the matching order item using filter for complex matching
+                $orderItem = $order->orderItems->filter(function ($item) use ($voidItem) {
+                    // Match by item_id
+                    if ($item->item_id != $voidItem['item_id']) {
+                        return false;
+                    }
+                    // Match by name
+                    $itemName = $item->item_display_name ?? ($item->item->name ?? '');
+                    if ($itemName !== $voidItem['item_name']) {
+                        return false;
+                    }
+                    // Exclude cancelled/deleted items
+                    if (in_array($item->status, ['cancelled', 'deleted'])) {
+                        return false;
+                    }
+                    return true;
+                })->first();
+
+                if (!$orderItem) {
+                    continue; // Skip if item not found
+                }
+
+                $currentQty = $orderItem->quantity;
+                $voidQty = min($voidItem['void_quantity'], $currentQty);
+                $newQty = $currentQty - $voidQty;
+
+                if ($newQty <= 0) {
+                    // Mark as cancelled
+                    $orderItem->update([
+                        'status' => 'cancelled',
+                        'quantity' => 0,
+                        'subtotal' => 0
+                    ]);
+                } else {
+                    // Reduce quantity
+                    $orderItem->update([
+                        'quantity' => $newQty,
+                        'subtotal' => $orderItem->unit_price * $newQty
+                    ]);
+                }
+
+                $voidedItems[] = [
+                    'item_id' => $voidItem['item_id'],
+                    'item_name' => $voidItem['item_name'],
+                    'voided_quantity' => $voidQty,
+                    'new_quantity' => $newQty
+                ];
+
+                // Add to cancel KOT items
+                $cancelKotItems[] = [
+                    'name' => $voidItem['item_name'],
+                    'quantity' => $voidQty,
+                    'item_id' => $voidItem['item_id'],
+                    'is_cancelled' => true
+                ];
+            }
+
+            // Recalculate order totals
+            $order->refresh();
+            $subtotalFromAllItems = $order->orderItems()
+                ->whereNotIn('status', ['cancelled', 'deleted'])
+                ->sum('subtotal');
+
+            $order->update([
+                'subtotal' => $subtotalFromAllItems,
+                'total_amount' => $subtotalFromAllItems,
+            ]);
+
+            // Create a Cancel KOT for voided items
+            $cancelKotNumber = null;
+            $cancelBotNumber = null;
+
+            if (!empty($cancelKotItems)) {
+                // Separate kitchen and bar items
+                $kitchenCancelItems = [];
+                $barCancelItems = [];
+
+                foreach ($cancelKotItems as $cancelItem) {
+                    $item = Item::with('category')->find($cancelItem['item_id']);
+                    if ($item) {
+                        $isBeverage = false;
+                        if ($item->category_id == 3) {
+                            $isBeverage = true;
+                        } elseif ($item->category) {
+                            $categorySlug = strtolower($item->category->slug);
+                            $categoryName = strtoupper($item->category->name);
+                            $isBeverage = ($categorySlug === 'beverages' || $categoryName === 'BEVERAGES');
+                        }
+
+                        if ($isBeverage) {
+                            $barCancelItems[] = $cancelItem;
+                        } else {
+                            $kitchenCancelItems[] = $cancelItem;
+                        }
+                    }
+                }
+
+                // Create Cancel KOT for kitchen items
+                if (!empty($kitchenCancelItems)) {
+                    $cancelKot = Kot::create([
+                        'order_id' => $order->id,
+                        'table_id' => $order->table_id,
+                        'waiter_id' => Auth::id(),
+                        'kitchen_station_id' => 1,
+                        'status' => 'cancelled',
+                        'printed_at' => now(),
+                        'print_count' => 1,
+                    ]);
+                    $cancelKotNumber = 'CANCEL-' . $cancelKot->kot_number;
+                }
+
+                // Create Cancel BOT for bar items
+                if (!empty($barCancelItems)) {
+                    $cancelBot = Kot::create([
+                        'order_id' => $order->id,
+                        'table_id' => $order->table_id,
+                        'waiter_id' => Auth::id(),
+                        'kitchen_station_id' => 2,
+                        'status' => 'cancelled',
+                        'printed_at' => now(),
+                        'print_count' => 1,
+                    ]);
+                    $cancelBotNumber = 'CANCEL-' . $cancelBot->kot_number;
+                }
+            }
+
+            // Load updated items for frontend
+            $updatedItems = $order->orderItems()
+                ->whereNotIn('status', ['cancelled', 'deleted'])
+                ->with('item')
+                ->get()
+                ->map(function ($orderItem) {
+                    return [
+                        'item_id' => $orderItem->item_id,
+                        'name' => $orderItem->item_display_name ?? $orderItem->item->name ?? 'Unknown Item',
+                        'price' => $orderItem->unit_price,
+                        'quantity' => $orderItem->quantity,
+                        'subtotal' => $orderItem->subtotal,
+                    ];
+                })->values();
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Items voided successfully',
+                'voided_items' => $voidedItems,
+                'updated_items' => $updatedItems,
+                'new_total' => $order->total_amount,
+                'cancel_kot_number' => $cancelKotNumber,
+                'cancel_bot_number' => $cancelBotNumber,
+                'cancel_kot_items' => $kitchenCancelItems ?? [],
+                'cancel_bot_items' => $barCancelItems ?? [],
+                'supervisor_name' => $supervisor->name
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Error voiding items: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }

@@ -128,6 +128,8 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/place-order', [App\Http\Controllers\POSController::class, 'placeOrder'])->name('placeOrder');
         Route::post('/payment', [App\Http\Controllers\POSController::class, 'processPayment'])->name('payment');
         Route::get('/receipt/{orderId}', [App\Http\Controllers\POSController::class, 'printReceipt'])->name('receipt');
+        Route::post('/verify-supervisor-pin', [App\Http\Controllers\POSController::class, 'verifySupervisorPin'])->name('verifySupervisorPin');
+        Route::post('/void-items', [App\Http\Controllers\POSController::class, 'voidItems'])->name('voidItems');
     });
 
     // QZ Tray Signature Route (for thermal printing)

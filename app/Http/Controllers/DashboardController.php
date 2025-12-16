@@ -14,7 +14,7 @@ class DashboardController extends Controller
     public function index()
     {
         $today = now()->toDateString();
-        
+
         // Get today's statistics
         $stats = [
             'total_sales' => Payment::whereDate('created_at', $today)->sum('total_amount'),
@@ -22,13 +22,13 @@ class DashboardController extends Controller
             'active_tables' => Table::whereIn('status', ['ordered', 'serving', 'bill_requested'])->count(),
             'pending_kots' => Kot::where('status', 'pending')->count(),
         ];
-        
+
         // Recent orders
         $recentOrders = Order::with(['table', 'waiter'])
             ->latest()
             ->take(10)
             ->get();
-        
+
         // Top selling items today
         $topItems = DB::table('order_items')
             ->join('items', 'order_items.item_id', '=', 'items.id')
@@ -39,14 +39,14 @@ class DashboardController extends Controller
             ->orderByDesc('total_quantity')
             ->limit(5)
             ->get();
-        
+
         // Hourly sales for chart
         $hourlySales = Payment::whereDate('created_at', $today)
             ->select(DB::raw('HOUR(created_at) as hour'), DB::raw('SUM(total_amount) as total'))
             ->groupBy('hour')
             ->orderBy('hour')
             ->get();
-        
+
         return view('dashboard', compact('stats', 'recentOrders', 'topItems', 'hourlySales'));
     }
 }

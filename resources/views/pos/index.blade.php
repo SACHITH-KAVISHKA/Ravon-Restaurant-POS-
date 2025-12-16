@@ -61,16 +61,16 @@
                         <span id="total">0.00</span>
                     </div>
                 </div>
-                
+
                 <!-- VOID and Print Invoice Buttons -->
                 <div class="mt-4 space-y-2">
-                    <button onclick="voidCurrentOrder()" class="w-full bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-lg transition duration-200 shadow-md flex items-center justify-center gap-2">
+                    <button id="voidButton" onclick="openVoidPinModal()" disabled class="w-full bg-gray-700 text-gray-500 font-bold py-3 px-4 rounded-lg transition duration-200 shadow-md flex items-center justify-center gap-2 cursor-not-allowed disabled:opacity-50">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
                         </svg>
                         Void
                     </button>
-                    
+
                     <button onclick="printCurrentInvoice()" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 px-4 rounded-lg transition duration-200 shadow-md flex items-center justify-center gap-2">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
@@ -628,6 +628,127 @@
             </div>
         </div>
 
+        <!-- Supervisor PIN Modal (for VOID authorization) -->
+        <div id="supervisorPinModal" class="hidden fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center">
+            <div class="bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold text-white">Supervisor Authorization</h2>
+                    <button onclick="closeModal('supervisorPinModal')" class="text-gray-400 hover:text-white">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-300 mb-2">
+                            <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                            </svg>
+                            Enter Supervisor PIN *
+                        </label>
+                        <input
+                            type="password"
+                            id="supervisorPinInput"
+                            placeholder="Enter 4-digit PIN"
+                            maxlength="4"
+                            class="w-full px-4 py-3 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:border-orange-500 text-lg font-semibold text-center tracking-widest"
+                            autocomplete="off"
+                            onkeypress="if(event.key === 'Enter') verifySupervisorPin()">
+                        <p id="supervisorPinError" class="text-red-400 text-sm mt-2 hidden">Invalid PIN. Please try again.</p>
+                    </div>
+
+                    <button
+                        onclick="verifySupervisorPin()"
+                        class="w-full px-4 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition font-bold text-lg flex items-center justify-center space-x-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span>Verify PIN</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- VOID Items Modal -->
+        <div id="voidItemsModal" class="hidden fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center">
+            <div class="bg-gray-800 rounded-xl p-6 max-w-2xl w-full mx-4" style="max-height: 90vh; overflow-y: auto;">
+                <div class="flex justify-between items-center mb-4">
+                    <div class="flex items-center gap-3">
+                        <div class="bg-orange-500 p-2 rounded-lg">
+                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                            </svg>
+                        </div>
+                        <h2 class="text-2xl font-bold text-white">Void Items</h2>
+                    </div>
+                    <button onclick="closeVoidItemsModal()" class="text-gray-400 hover:text-white">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+
+                <p class="text-gray-400 text-sm mb-4">Select items to void (reduce quantity). Only previously ordered items can be voided.</p>
+
+                <!-- Add Void Item Row -->
+                <div class="bg-gray-700 rounded-lg p-4 mb-4">
+                    <div class="grid grid-cols-12 gap-3 items-end">
+                        <div class="col-span-6">
+                            <label class="block text-sm font-semibold text-gray-300 mb-2">Select Item</label>
+                            <select id="voidItemDropdown" class="w-full px-4 py-2 bg-gray-600 text-white rounded-lg border border-gray-500 focus:outline-none focus:border-orange-500">
+                                <option value="">-- Select an item --</option>
+                            </select>
+                        </div>
+                        <div class="col-span-3">
+                            <label class="block text-sm font-semibold text-gray-300 mb-2">Void Qty</label>
+                            <input type="number" id="voidQuantityInput" min="1" value="1" class="w-full px-4 py-2 bg-gray-600 text-white rounded-lg border border-gray-500 focus:outline-none focus:border-orange-500 text-center">
+                        </div>
+                        <div class="col-span-3">
+                            <button onclick="addVoidItem()" class="w-full px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-semibold transition">
+                                + Add
+                            </button>
+                        </div>
+                    </div>
+                    <p id="voidItemMaxQty" class="text-gray-400 text-xs mt-2"></p>
+                </div>
+
+                <!-- Void Items Table -->
+                <div class="bg-gray-700 rounded-lg overflow-hidden mb-4">
+                    <table class="w-full">
+                        <thead class="bg-gray-600">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-200">Item Name</th>
+                                <th class="px-4 py-3 text-center text-sm font-semibold text-gray-200">Current Qty</th>
+                                <th class="px-4 py-3 text-center text-sm font-semibold text-gray-200">Void Qty</th>
+                                <th class="px-4 py-3 text-center text-sm font-semibold text-gray-200">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="voidItemsTableBody">
+                            <tr id="noVoidItemsRow">
+                                <td colspan="4" class="px-4 py-6 text-center text-gray-400">
+                                    No items added to void. Select items above.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex gap-3">
+                    <button onclick="closeVoidItemsModal()" class="flex-1 px-4 py-3 bg-gray-600 hover:bg-gray-500 text-white rounded-lg font-bold transition">
+                        Cancel
+                    </button>
+                    <button onclick="processVoidItems()" id="confirmVoidBtn" class="flex-1 px-4 py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-bold transition flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Confirm Void
+                    </button>
+                </div>
+            </div>
+        </div>
+
         {{-- QZ Tray for Thermal Printing --}}
         <script src="https://cdn.jsdelivr.net/npm/qz-tray@2.2/qz-tray.js"></script>
         {{-- jsPDF for PDF generation --}}
@@ -643,6 +764,11 @@
 
             // Track items that have already been sent to kitchen/bar
             let printedItems = []; // Stores items that have been printed with their quantities
+
+            // VOID functionality variables
+            let originalOrderItems = []; // Items loaded from existing order (can be voided)
+            let voidItemsList = []; // Items selected to void
+            let verifiedSupervisorPin = null; // Store verified PIN for void operation
 
             // Payment Modal Variables
             let selectedPaymentMethod = null;
@@ -1612,16 +1738,38 @@
                     return;
                 }
 
-                billItemsDiv.innerHTML = billItems.map((item, index) => `
-                    <div class="bg-gray-700 rounded-lg p-3 border border-gray-600">
+                billItemsDiv.innerHTML = billItems.map((item, index) => {
+                    // Check if this item is from the original order (previously ordered)
+                    const originalItem = originalOrderItems.find(o =>
+                        o.item_id === item.item_id && o.name === item.name
+                    );
+                    const isOriginalItem = !!originalItem;
+                    const originalQty = originalItem ? originalItem.quantity : 0;
+
+                    // Determine if the minus button should be disabled
+                    // Only allow reducing if current qty is greater than original qty (newly added qty)
+                    const canDecrement = !isOriginalItem || item.quantity > originalQty;
+
+                    // Disable button styling
+                    const decrementBtnClass = canDecrement ?
+                        'w-6 h-6 bg-red-600 text-white rounded hover:bg-red-700 cursor-pointer' :
+                        'w-6 h-6 bg-gray-600 text-gray-400 rounded cursor-not-allowed opacity-50';
+
+                    const decrementOnclick = canDecrement ?
+                        `onclick="decrementQuantity(${index})"` :
+                        'disabled title="Use VOID to reduce previously ordered items"';
+
+                    return `
+                    <div class="bg-gray-700 rounded-lg p-3 border border-gray-600 ${isOriginalItem && item.quantity <= originalQty ? 'border-l-4 border-l-orange-500' : ''}">
                         <div class="grid grid-cols-3 gap-2 text-sm">
                             <div class="col-span-2">
                                 <div class="font-semibold text-white">${index + 1}. ${item.name}</div>
                                 <div class="text-xs text-gray-400">Rs. ${item.price.toFixed(2)} each</div>
+                                ${isOriginalItem && item.quantity <= originalQty ? '<div class="text-xs text-orange-400 mt-1"></div>' : ''}
                             </div>
                             <div class="text-center">
                                 <div class="flex items-center justify-center space-x-2">
-                                    <button onclick="decrementQuantity(${index})" class="w-6 h-6 bg-red-600 text-white rounded hover:bg-red-700">-</button>
+                                    <button ${decrementOnclick} class="${decrementBtnClass}">-</button>
                                     <span class="text-white font-semibold">${item.quantity}</span>
                                     <button onclick="incrementQuantity(${index})" class="w-6 h-6 bg-green-600 text-white rounded hover:bg-green-700">+</button>
                                 </div>
@@ -1631,7 +1779,8 @@
                             Rs. ${(item.price * item.quantity).toFixed(2)}
                         </div>
                     </div>
-                `).join('');
+                `
+                }).join('');
             }
 
             // Increment/Decrement quantity
@@ -1642,13 +1791,33 @@
             }
 
             function decrementQuantity(index) {
-                if (billItems[index].quantity > 1) {
-                    billItems[index].quantity--;
+                const item = billItems[index];
+
+                // Check if this item is from the original order
+                const originalItem = originalOrderItems.find(o =>
+                    o.item_id === item.item_id && o.name === item.name
+                );
+
+                if (originalItem) {
+                    // This is a previously ordered item - only allow decrementing additional qty
+                    if (item.quantity > originalItem.quantity) {
+                        item.quantity--;
+                        renderBill();
+                        calculateTotals();
+                    } else {
+                        // Cannot decrement - must use VOID
+                        showNotification('Use the VOID button to reduce previously ordered items', 'Cannot Reduce');
+                    }
                 } else {
-                    billItems.splice(index, 1);
+                    // This is a newly added item - allow normal decrement/removal
+                    if (item.quantity > 1) {
+                        item.quantity--;
+                    } else {
+                        billItems.splice(index, 1);
+                    }
+                    renderBill();
+                    calculateTotals();
                 }
-                renderBill();
-                calculateTotals();
             }
 
             // Calculate totals
@@ -1991,7 +2160,7 @@
                                 } else {
                                     typeDisplay = order.order_type || 'N/A';
                                 }
-                                
+
                                 return `
                                 <div class="bg-gray-700 rounded-lg p-4 hover:bg-gray-600 cursor-pointer transition"
                                      onclick="loadOrder(${order.id})">
@@ -2069,6 +2238,17 @@
 
                         // Convert to array
                         billItems = Object.values(mergedItems);
+
+                        // Store original items for VOID functionality (deep copy)
+                        originalOrderItems = JSON.parse(JSON.stringify(billItems));
+
+                        // Enable VOID button since this is an existing order with items
+                        const voidBtn = document.getElementById('voidButton');
+                        if (voidBtn && originalOrderItems.length > 0) {
+                            voidBtn.disabled = false;
+                            voidBtn.classList.remove('text-gray-500', 'cursor-not-allowed', 'disabled:opacity-50');
+                            voidBtn.classList.add('text-white', 'hover:bg-gray-600', 'cursor-pointer');
+                        }
 
                         renderBill();
                         calculateTotals();
@@ -2277,14 +2457,554 @@
                 showNotification('Select an item to void', 'Void Item');
             }
 
-            // VOID current order (placeholder for future functionality)
-            function voidCurrentOrder() {
+            // ==================== VOID FUNCTIONALITY ====================
+
+            // Open Supervisor PIN Modal for VOID authorization
+            function openVoidPinModal() {
                 if (!currentOrderId) {
                     showNotification('No active order to void', 'Error');
                     return;
                 }
-                showNotification('VOID functionality will be implemented soon', 'Feature Unavailable');
+
+                if (originalOrderItems.length === 0) {
+                    showNotification('No items available to void. Only previously ordered items can be voided.', 'Error');
+                    return;
+                }
+
+                // Reset PIN input and error
+                document.getElementById('supervisorPinInput').value = '';
+                document.getElementById('supervisorPinError').classList.add('hidden');
+                verifiedSupervisorPin = null;
+
+                // Show PIN modal
+                document.getElementById('supervisorPinModal').classList.remove('hidden');
+
+                // Focus on PIN input
+                setTimeout(() => {
+                    document.getElementById('supervisorPinInput').focus();
+                }, 100);
             }
+
+            // Verify Supervisor PIN
+            async function verifySupervisorPin() {
+                const pin = document.getElementById('supervisorPinInput').value.trim();
+
+                if (pin.length !== 4) {
+                    document.getElementById('supervisorPinError').textContent = 'PIN must be 4 digits.';
+                    document.getElementById('supervisorPinError').classList.remove('hidden');
+                    return;
+                }
+
+                try {
+                    const response = await fetch('{{ route("pos.verifySupervisorPin") }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify({
+                            pin: pin
+                        })
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        verifiedSupervisorPin = pin;
+                        closeModal('supervisorPinModal');
+                        openVoidItemsModal();
+                        showNotification('PIN verified. Welcome, ' + result.supervisor_name, 'Authorization Success');
+                    } else {
+                        document.getElementById('supervisorPinError').textContent = result.message || 'Invalid PIN. Please try again.';
+                        document.getElementById('supervisorPinError').classList.remove('hidden');
+                        document.getElementById('supervisorPinInput').value = '';
+                        document.getElementById('supervisorPinInput').focus();
+                    }
+                } catch (error) {
+                    document.getElementById('supervisorPinError').textContent = 'Error verifying PIN. Please try again.';
+                    document.getElementById('supervisorPinError').classList.remove('hidden');
+                }
+            }
+
+            // Open VOID Items Modal
+            function openVoidItemsModal() {
+                // Reset void items list
+                voidItemsList = [];
+
+                // Populate dropdown with original order items
+                populateVoidItemDropdown();
+
+                // Clear void items table
+                renderVoidItemsTable();
+
+                // Show modal
+                document.getElementById('voidItemsModal').classList.remove('hidden');
+            }
+
+            // Close VOID Items Modal
+            function closeVoidItemsModal() {
+                document.getElementById('voidItemsModal').classList.add('hidden');
+                voidItemsList = [];
+                verifiedSupervisorPin = null;
+            }
+
+            // Populate VOID Item Dropdown
+            function populateVoidItemDropdown() {
+                const dropdown = document.getElementById('voidItemDropdown');
+                dropdown.innerHTML = '<option value="">-- Select an item --</option>';
+
+                originalOrderItems.forEach((item, index) => {
+                    // Check how much has already been added to void list
+                    const alreadyVoided = voidItemsList
+                        .filter(v => v.item_id === item.item_id && v.item_name === item.name)
+                        .reduce((sum, v) => sum + v.void_quantity, 0);
+
+                    const remainingQty = item.quantity - alreadyVoided;
+
+                    if (remainingQty > 0) {
+                        const option = document.createElement('option');
+                        option.value = JSON.stringify({
+                            item_id: item.item_id,
+                            item_name: item.name,
+                            price: item.price,
+                            current_quantity: item.quantity,
+                            remaining_quantity: remainingQty
+                        });
+                        option.textContent = `${item.name} (Qty: ${remainingQty})`;
+                        dropdown.appendChild(option);
+                    }
+                });
+
+                // Update max quantity hint
+                updateVoidQtyHint();
+            }
+
+            // Update void quantity hint when dropdown changes
+            document.addEventListener('DOMContentLoaded', function() {
+                const dropdown = document.getElementById('voidItemDropdown');
+                if (dropdown) {
+                    dropdown.addEventListener('change', updateVoidQtyHint);
+                }
+            });
+
+            function updateVoidQtyHint() {
+                const dropdown = document.getElementById('voidItemDropdown');
+                const hintEl = document.getElementById('voidItemMaxQty');
+                const qtyInput = document.getElementById('voidQuantityInput');
+
+                if (dropdown.value) {
+                    const itemData = JSON.parse(dropdown.value);
+                    hintEl.textContent = `Max quantity to void: ${itemData.remaining_quantity}`;
+                    qtyInput.max = itemData.remaining_quantity;
+                    qtyInput.value = 1;
+                } else {
+                    hintEl.textContent = '';
+                    qtyInput.max = '';
+                }
+            }
+
+            // Add item to void list
+            function addVoidItem() {
+                const dropdown = document.getElementById('voidItemDropdown');
+                const qtyInput = document.getElementById('voidQuantityInput');
+
+                if (!dropdown.value) {
+                    showNotification('Please select an item to void', 'Error');
+                    return;
+                }
+
+                const itemData = JSON.parse(dropdown.value);
+                const voidQty = parseInt(qtyInput.value) || 1;
+
+                if (voidQty <= 0) {
+                    showNotification('Void quantity must be at least 1', 'Error');
+                    return;
+                }
+
+                if (voidQty > itemData.remaining_quantity) {
+                    showNotification(`Maximum void quantity is ${itemData.remaining_quantity}`, 'Error');
+                    return;
+                }
+
+                // Check if item already exists in void list
+                const existingIndex = voidItemsList.findIndex(
+                    v => v.item_id === itemData.item_id && v.item_name === itemData.item_name
+                );
+
+                if (existingIndex >= 0) {
+                    // Update existing
+                    const newTotal = voidItemsList[existingIndex].void_quantity + voidQty;
+                    if (newTotal > itemData.current_quantity) {
+                        showNotification(`Total void quantity cannot exceed ${itemData.current_quantity}`, 'Error');
+                        return;
+                    }
+                    voidItemsList[existingIndex].void_quantity = newTotal;
+                } else {
+                    // Add new
+                    voidItemsList.push({
+                        item_id: itemData.item_id,
+                        item_name: itemData.item_name,
+                        price: itemData.price,
+                        current_quantity: itemData.current_quantity,
+                        void_quantity: voidQty
+                    });
+                }
+
+                // Refresh UI
+                populateVoidItemDropdown();
+                renderVoidItemsTable();
+                qtyInput.value = 1;
+            }
+
+            // Remove item from void list
+            function removeVoidItem(index) {
+                voidItemsList.splice(index, 1);
+                populateVoidItemDropdown();
+                renderVoidItemsTable();
+            }
+
+            // Render void items table
+            function renderVoidItemsTable() {
+                const tbody = document.getElementById('voidItemsTableBody');
+
+                if (voidItemsList.length === 0) {
+                    tbody.innerHTML = `
+                        <tr id="noVoidItemsRow">
+                            <td colspan="4" class="px-4 py-6 text-center text-gray-400">
+                                No items added to void. Select items above.
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+
+                tbody.innerHTML = voidItemsList.map((item, index) => `
+                    <tr class="border-t border-gray-600">
+                        <td class="px-4 py-3 text-white">${item.item_name}</td>
+                        <td class="px-4 py-3 text-center text-gray-300">${item.current_quantity}</td>
+                        <td class="px-4 py-3 text-center text-orange-400 font-bold">-${item.void_quantity}</td>
+                        <td class="px-4 py-3 text-center">
+                            <button onclick="removeVoidItem(${index})" class="text-red-400 hover:text-red-300 transition">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+
+            // Process void items - send to server and print cancel KOT
+            async function processVoidItems() {
+                console.log('=== PROCESS VOID ITEMS ===');
+                console.log('voidItemsList:', voidItemsList);
+                console.log('currentOrderId:', currentOrderId);
+                console.log('verifiedSupervisorPin:', verifiedSupervisorPin ? '****' : 'null');
+
+                if (voidItemsList.length === 0) {
+                    showNotification('Please add items to void', 'Error');
+                    return;
+                }
+
+                if (!verifiedSupervisorPin) {
+                    showNotification('Supervisor authorization required', 'Error');
+                    closeVoidItemsModal();
+                    openVoidPinModal();
+                    return;
+                }
+
+                try {
+                    console.log('Sending void request...');
+                    const requestBody = {
+                        order_id: currentOrderId,
+                        void_items: voidItemsList,
+                        supervisor_pin: verifiedSupervisorPin
+                    };
+                    console.log('Request body:', requestBody);
+
+                    const response = await fetch('{{ route("pos.voidItems") }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify(requestBody)
+                    });
+
+                    console.log('Response status:', response.status);
+                    const result = await response.json();
+                    console.log('Response result:', result);
+
+                    if (result.success) {
+                        // Update billItems with the new quantities
+                        billItems = result.updated_items.map(item => ({
+                            item_id: item.item_id,
+                            name: item.name,
+                            price: parseFloat(item.price) || 0,
+                            quantity: parseInt(item.quantity) || 0,
+                            modifiers: []
+                        }));
+
+                        // Update original items as well
+                        originalOrderItems = JSON.parse(JSON.stringify(billItems));
+
+                        // Re-render bill
+                        renderBill();
+                        calculateTotals();
+
+                        // Close modal
+                        closeVoidItemsModal();
+
+                        // Prepare order info for cancel KOT printing
+                        const orderInfo = {
+                            table_number: selectedTableId ? document.getElementById('orderTypeDisplay').textContent.replace('Table: ', '') : null,
+                            pickme_ref: pickMeRefNumber,
+                            order_type: currentOrderType
+                        };
+
+                        // Print Cancel KOT and Cancel BOT separately (with delay between)
+                        // Similar to regular KOT/BOT printing in place order section
+                        if (result.cancel_kot_items && result.cancel_kot_items.length > 0) {
+                            console.log('Printing Cancel KOT for kitchen items:', result.cancel_kot_items);
+                            await printCancelKOT(result.cancel_kot_number, result.cancel_kot_items, 'KITCHEN', orderInfo);
+                        }
+
+                        // Add delay between prints to prevent printer queue issues
+                        if (result.cancel_kot_items && result.cancel_kot_items.length > 0 &&
+                            result.cancel_bot_items && result.cancel_bot_items.length > 0) {
+                            await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second delay
+                        }
+
+                        if (result.cancel_bot_items && result.cancel_bot_items.length > 0) {
+                            console.log('Printing Cancel BOT for bar items:', result.cancel_bot_items);
+                            await printCancelKOT(result.cancel_bot_number, result.cancel_bot_items, 'BAR', orderInfo);
+                        }
+
+                        showNotification(
+                            `${result.voided_items.length} item(s) voided successfully by ${result.supervisor_name}. New total: Rs. ${parseFloat(result.new_total).toFixed(2)}`,
+                            'Void Successful'
+                        );
+
+                        // Disable VOID button if no more original items
+                        if (originalOrderItems.length === 0) {
+                            const voidBtn = document.getElementById('voidButton');
+                            if (voidBtn) {
+                                voidBtn.disabled = true;
+                                voidBtn.classList.remove('text-white', 'hover:bg-gray-600', 'cursor-pointer');
+                                voidBtn.classList.add('text-gray-500', 'cursor-not-allowed', 'disabled:opacity-50');
+                            }
+                        }
+
+                        // Scroll to bill section to show updated items
+                        const billSection = document.getElementById('billItems');
+                        if (billSection) {
+                            billSection.scrollIntoView({
+                                behavior: 'smooth',
+                                block: 'start'
+                            });
+                        }
+                    } else {
+                        console.error('Void failed:', result.message);
+                        showNotification(result.message || 'Error voiding items', 'Error');
+                    }
+                } catch (error) {
+                    console.error('Error processing void:', error);
+                    showNotification('Error processing void: ' + error.message, 'Error');
+                }
+            }
+
+            /**
+             * Print Cancel KOT/BOT with proper PDF structure matching regular KOT/BOT
+             * @param {string} kotNumber - Cancel KOT number
+             * @param {Array} items - Items to cancel
+             * @param {string} station - 'KITCHEN' or 'BAR'
+             * @param {Object} orderInfo - Order information for printing
+             */
+            async function printCancelKOT(kotNumber, items, station, orderInfo = {}) {
+                if (!items || items.length === 0) {
+                    console.log('No items to print on Cancel KOT');
+                    return;
+                }
+
+                try {
+                    const {
+                        jsPDF
+                    } = window.jspdf;
+                    const pdf = new jsPDF({
+                        orientation: 'portrait',
+                        unit: 'mm',
+                        format: [80, 297]
+                    });
+
+                    let yPosition = 10;
+                    const pageWidth = 80;
+                    const leftMargin = 5;
+                    const rightMargin = 5;
+
+                    // Header - CANCEL banner
+                    pdf.setFont('courier', 'bold');
+                    pdf.setFontSize(20);
+                    pdf.setTextColor(255, 0, 0); // Red text
+                    pdf.text('*** CANCEL ***', pageWidth / 2, yPosition, {
+                        align: 'center'
+                    });
+                    yPosition += 8;
+
+                    pdf.setTextColor(0, 0, 0); // Back to black
+                    pdf.setFontSize(16);
+                    const ticketType = station === 'KITCHEN' ? 'KITCHEN CANCEL' : 'BAR CANCEL';
+                    pdf.text(ticketType, pageWidth / 2, yPosition, {
+                        align: 'center'
+                    });
+                    yPosition += 6;
+
+                    pdf.setFontSize(12);
+                    pdf.text(station === 'KITCHEN' ? '(CANCEL KOT)' : '(CANCEL BOT)', pageWidth / 2, yPosition, {
+                        align: 'center'
+                    });
+                    yPosition += 8;
+
+                    // Restaurant Info
+                    pdf.setFontSize(11);
+                    pdf.text('Ravon Restaurant', pageWidth / 2, yPosition, {
+                        align: 'center'
+                    });
+                    yPosition += 6;
+
+                    // Separator
+                    pdf.setLineWidth(0.5);
+                    pdf.line(leftMargin, yPosition, pageWidth - rightMargin, yPosition);
+                    yPosition += 6;
+
+                    // Cancel Order Information
+                    pdf.setFontSize(11);
+                    pdf.setFont('courier', 'bold');
+
+                    pdf.text('NO #:', leftMargin, yPosition);
+                    pdf.text(String(kotNumber || 'N/A'), pageWidth - rightMargin, yPosition, {
+                        align: 'right'
+                    });
+                    yPosition += 6;
+
+                    // Order Type
+                    pdf.text('TYPE:', leftMargin, yPosition);
+                    let typeText = '';
+                    if (currentOrderType === 'dine_in' && orderInfo.table_number) {
+                        typeText = 'Table ' + String(orderInfo.table_number);
+                    } else if (currentOrderType === 'takeaway') {
+                        typeText = 'Take Away';
+                    } else if (currentOrderType === 'pickme' && orderInfo.pickme_ref) {
+                        typeText = 'PickMe - ' + String(orderInfo.pickme_ref);
+                    } else if (orderInfo.table_number) {
+                        typeText = 'Table ' + String(orderInfo.table_number);
+                    } else {
+                        typeText = currentOrderType || 'N/A';
+                    }
+                    pdf.text(typeText, pageWidth - rightMargin, yPosition, {
+                        align: 'right'
+                    });
+                    yPosition += 6;
+
+                    pdf.text('CASHIER:', leftMargin, yPosition);
+                    pdf.text('{{ Auth::user()->name }}', pageWidth - rightMargin, yPosition, {
+                        align: 'right'
+                    });
+                    yPosition += 6;
+
+                    pdf.text('DATE:', leftMargin, yPosition);
+                    pdf.text(new Date().toLocaleDateString('en-GB'), pageWidth - rightMargin, yPosition, {
+                        align: 'right'
+                    });
+                    yPosition += 6;
+
+                    pdf.text('TIME:', leftMargin, yPosition);
+                    pdf.text(new Date().toLocaleTimeString('en-GB', {
+                        hour12: false
+                    }), pageWidth - rightMargin, yPosition, {
+                        align: 'right'
+                    });
+                    yPosition += 6;
+
+                    // Items separator
+                    pdf.setLineWidth(0.5);
+                    pdf.line(leftMargin, yPosition, pageWidth - rightMargin, yPosition);
+                    yPosition += 6;
+
+                    // CANCELLED ITEMS header
+                    pdf.setFontSize(14);
+                    pdf.setTextColor(255, 0, 0); // Red
+                    pdf.text('CANCELLED ITEMS:', leftMargin, yPosition);
+                    pdf.setTextColor(0, 0, 0); // Back to black
+                    yPosition += 8;
+
+                    // Print Cancelled Items
+                    items.forEach((item, index) => {
+                        pdf.setFont('courier', 'bold');
+                        pdf.setFontSize(12);
+
+                        let itemName = item.name || item.item_name;
+
+                        // Word wrap for long item names
+                        const maxWidth = pageWidth - leftMargin - rightMargin;
+                        const lines = pdf.splitTextToSize(itemName, maxWidth);
+
+                        lines.forEach(line => {
+                            pdf.text(line, leftMargin, yPosition);
+                            yPosition += 5;
+                        });
+
+                        // Cancelled Quantity (with minus sign)
+                        pdf.setFontSize(14);
+                        pdf.setTextColor(255, 0, 0); // Red for cancelled qty
+                        pdf.text(`CANCEL x ${item.quantity}`, leftMargin + 2, yPosition);
+                        pdf.setTextColor(0, 0, 0); // Back to black
+                        yPosition += 6;
+
+                        // Add spacing between items
+                        if (index < items.length - 1) {
+                            pdf.setLineDashPattern([0.5, 0.5], 0);
+                            pdf.setLineWidth(0.2);
+                            pdf.line(leftMargin, yPosition, pageWidth - rightMargin, yPosition);
+                            pdf.setLineDashPattern([], 0);
+                            yPosition += 4;
+                        }
+                    });
+
+                    // Footer
+                    yPosition += 4;
+                    pdf.setLineWidth(0.5);
+                    pdf.line(leftMargin, yPosition, pageWidth - rightMargin, yPosition);
+                    yPosition += 8;
+
+                    pdf.setFontSize(12);
+                    pdf.setTextColor(255, 0, 0); // Red
+                    pdf.text('** ITEMS CANCELLED **', pageWidth / 2, yPosition, {
+                        align: 'center'
+                    });
+                    pdf.setTextColor(0, 0, 0);
+                    yPosition += 6;
+
+                    pdf.setFontSize(10);
+                    pdf.text('Authorized by Supervisor', pageWidth / 2, yPosition, {
+                        align: 'center'
+                    });
+
+                    // Generate Base64 and Print
+                    const pdfBase64 = pdf.output('datauristring').split(',')[1];
+                    const printerName = "Microsoft Print to PDF"; // Default printer for Cancel KOT/BOT
+
+                    // Use same print method as regular KOT/BOT
+                    await printPDFwithQZ(pdfBase64, printerName, `Cancel ${station === 'KITCHEN' ? 'KOT' : 'BOT'}`, false);
+                    console.log(`Cancel ${station === 'KITCHEN' ? 'KOT' : 'BOT'} sent to printer successfully`);
+
+                } catch (error) {
+                    console.error('Cancel KOT Generation Error:', error);
+                    // Still show notification even if printing fails
+                    showNotification(`Cancel ${station} order generated (check printer)`, 'Print Info');
+                }
+            }
+
+            // ==================== END VOID FUNCTIONALITY ====================
 
             // Print Invoice for current order (without payment details)
             async function printCurrentInvoice() {
@@ -2838,7 +3558,9 @@
                 }
 
                 try {
-                    const { jsPDF } = window.jspdf;
+                    const {
+                        jsPDF
+                    } = window.jspdf;
                     const pdf = new jsPDF({
                         orientation: 'portrait',
                         unit: 'mm',
@@ -2854,28 +3576,42 @@
                     // Header - Restaurant Name
                     pdf.setFont('courier', 'bold');
                     pdf.setFontSize(16);
-                    pdf.text('RAVON RESTAURANT', pageWidth / 2, yPosition, { align: 'center' });
+                    pdf.text('RAVON RESTAURANT', pageWidth / 2, yPosition, {
+                        align: 'center'
+                    });
                     yPosition += 5;
 
                     pdf.setFontSize(10);
                     pdf.setFont('courier', 'normal');
-                    pdf.text('Ravon Restaurant (Pvt) Ltd', pageWidth / 2, yPosition, { align: 'center' });
+                    pdf.text('Ravon Restaurant (Pvt) Ltd', pageWidth / 2, yPosition, {
+                        align: 'center'
+                    });
                     yPosition += 4;
 
                     pdf.setFontSize(9);
-                    pdf.text('NO 282/A/2, KCTHALAWALA,', pageWidth / 2, yPosition, { align: 'center' });
+                    pdf.text('NO 282/A/2, KCTHALAWALA,', pageWidth / 2, yPosition, {
+                        align: 'center'
+                    });
                     yPosition += 4;
-                    pdf.text('KADUWELA.', pageWidth / 2, yPosition, { align: 'center' });
+                    pdf.text('KADUWELA.', pageWidth / 2, yPosition, {
+                        align: 'center'
+                    });
                     yPosition += 4;
-                    pdf.text('TEL.016-2006007', pageWidth / 2, yPosition, { align: 'center' });
+                    pdf.text('TEL.016-2006007', pageWidth / 2, yPosition, {
+                        align: 'center'
+                    });
                     yPosition += 4;
-                    pdf.text('Email-ravonrestaurant@gmail.com', pageWidth / 2, yPosition, { align: 'center' });
+                    pdf.text('Email-ravonrestaurant@gmail.com', pageWidth / 2, yPosition, {
+                        align: 'center'
+                    });
                     yPosition += 8;
 
                     // Invoice Title
                     pdf.setFont('courier', 'bold');
                     pdf.setFontSize(14);
-                    pdf.text('INVOICE', pageWidth / 2, yPosition, { align: 'center' });
+                    pdf.text('INVOICE', pageWidth / 2, yPosition, {
+                        align: 'center'
+                    });
                     yPosition += 8;
 
                     // Order Information
@@ -2883,19 +3619,27 @@
                     pdf.setFontSize(9);
 
                     pdf.text('Invoice #', leftMargin, yPosition);
-                    pdf.text(String(order.order_number || order.id), pageWidth - rightMargin, yPosition, { align: 'right' });
+                    pdf.text(String(order.order_number || order.id), pageWidth - rightMargin, yPosition, {
+                        align: 'right'
+                    });
                     yPosition += 4;
 
                     const now = new Date();
                     const dateStr = now.toLocaleDateString('en-GB');
-                    const timeStr = now.toLocaleTimeString('en-GB', { hour12: false });
+                    const timeStr = now.toLocaleTimeString('en-GB', {
+                        hour12: false
+                    });
 
                     pdf.text('Date', leftMargin, yPosition);
-                    pdf.text(`:${dateStr} Time ${timeStr}`, pageWidth - rightMargin, yPosition, { align: 'right' });
+                    pdf.text(`:${dateStr} Time ${timeStr}`, pageWidth - rightMargin, yPosition, {
+                        align: 'right'
+                    });
                     yPosition += 4;
 
                     pdf.text('Terminal:', leftMargin, yPosition);
-                    pdf.text('01', pageWidth - rightMargin, yPosition, { align: 'right' });
+                    pdf.text('01', pageWidth - rightMargin, yPosition, {
+                        align: 'right'
+                    });
                     yPosition += 4;
 
                     // Determine table/order type display
@@ -2921,12 +3665,16 @@
                     }
 
                     pdf.text('Table # :', leftMargin, yPosition);
-                    pdf.text(tableDisplay, pageWidth - rightMargin, yPosition, { align: 'right' });
+                    pdf.text(tableDisplay, pageWidth - rightMargin, yPosition, {
+                        align: 'right'
+                    });
                     yPosition += 4;
 
                     const cashier = order.waiter ? order.waiter.name : 'Cashier User';
                     pdf.text('Cashier :', leftMargin, yPosition);
-                    pdf.text(String(cashier), pageWidth - rightMargin, yPosition, { align: 'right' });
+                    pdf.text(String(cashier), pageWidth - rightMargin, yPosition, {
+                        align: 'right'
+                    });
                     yPosition += 6;
 
                     // Separator
@@ -2939,7 +3687,9 @@
                     pdf.setFont('courier', 'bold');
                     pdf.setFontSize(9);
                     pdf.text('Item', leftMargin, yPosition);
-                    pdf.text('Qty   Amount', pageWidth - rightMargin, yPosition, { align: 'right' });
+                    pdf.text('Qty   Amount', pageWidth - rightMargin, yPosition, {
+                        align: 'right'
+                    });
                     yPosition += 4;
 
                     pdf.setLineDashPattern([1, 1], 0);
@@ -2977,7 +3727,9 @@
                         pdf.text(`${quantity}x @ Rs. ${unitPrice}`, leftMargin + 3, yPosition);
 
                         // Amount on the right side
-                        pdf.text(subtotal, pageWidth - rightMargin, yPosition, { align: 'right' });
+                        pdf.text(subtotal, pageWidth - rightMargin, yPosition, {
+                            align: 'right'
+                        });
                         yPosition += 5;
 
                         // Print modifiers (portion sizes, extras)
@@ -3007,7 +3759,9 @@
                     pdf.setFont('courier', 'normal');
                     pdf.setFontSize(10);
                     pdf.text('Sub Total', leftMargin, yPosition);
-                    pdf.text(parseFloat(order.subtotal || 0).toFixed(2), pageWidth - rightMargin, yPosition, { align: 'right' });
+                    pdf.text(parseFloat(order.subtotal || 0).toFixed(2), pageWidth - rightMargin, yPosition, {
+                        align: 'right'
+                    });
                     yPosition += 5;
 
                     // Total Separator (thick line)
@@ -3020,7 +3774,9 @@
                     pdf.setFont('courier', 'bold');
                     pdf.setFontSize(11);
                     pdf.text('Total', leftMargin, yPosition);
-                    pdf.text(parseFloat(order.total_amount || 0).toFixed(2), pageWidth - rightMargin, yPosition, { align: 'right' });
+                    pdf.text(parseFloat(order.total_amount || 0).toFixed(2), pageWidth - rightMargin, yPosition, {
+                        align: 'right'
+                    });
                     yPosition += 7;
 
                     // Payment Information
@@ -3029,7 +3785,9 @@
 
                     const paymentMethod = order.payment?.payment_method?.toUpperCase() || 'CASH';
                     pdf.text('Payment Method', leftMargin, yPosition);
-                    pdf.text(paymentMethod, pageWidth - rightMargin, yPosition, { align: 'right' });
+                    pdf.text(paymentMethod, pageWidth - rightMargin, yPosition, {
+                        align: 'right'
+                    });
                     yPosition += 4;
 
                     const cashAmount = order.payment?.cash_amount || 0;
@@ -3039,25 +3797,33 @@
 
                     if (cashAmount > 0) {
                         pdf.text('Cash', leftMargin, yPosition);
-                        pdf.text(parseFloat(cashAmount).toFixed(2), pageWidth - rightMargin, yPosition, { align: 'right' });
+                        pdf.text(parseFloat(cashAmount).toFixed(2), pageWidth - rightMargin, yPosition, {
+                            align: 'right'
+                        });
                         yPosition += 4;
                     }
 
                     if (cardAmount > 0) {
                         pdf.text('Card', leftMargin, yPosition);
-                        pdf.text(parseFloat(cardAmount).toFixed(2), pageWidth - rightMargin, yPosition, { align: 'right' });
+                        pdf.text(parseFloat(cardAmount).toFixed(2), pageWidth - rightMargin, yPosition, {
+                            align: 'right'
+                        });
                         yPosition += 4;
                     }
 
                     if (creditAmount > 0) {
                         pdf.text('Credit', leftMargin, yPosition);
-                        pdf.text(parseFloat(creditAmount).toFixed(2), pageWidth - rightMargin, yPosition, { align: 'right' });
+                        pdf.text(parseFloat(creditAmount).toFixed(2), pageWidth - rightMargin, yPosition, {
+                            align: 'right'
+                        });
                         yPosition += 4;
                     }
 
                     if (changeAmount > 0) {
                         pdf.text('Change', leftMargin, yPosition);
-                        pdf.text(parseFloat(changeAmount).toFixed(2), pageWidth - rightMargin, yPosition, { align: 'right' });
+                        pdf.text(parseFloat(changeAmount).toFixed(2), pageWidth - rightMargin, yPosition, {
+                            align: 'right'
+                        });
                         yPosition += 4;
                     }
 
@@ -3066,7 +3832,9 @@
                     // Footer
                     pdf.setFont('courier', 'bold');
                     pdf.setFontSize(10);
-                    pdf.text('THANK YOU, COME AGAIN.', pageWidth / 2, yPosition, { align: 'center' });
+                    pdf.text('THANK YOU, COME AGAIN.', pageWidth / 2, yPosition, {
+                        align: 'center'
+                    });
                     yPosition += 6;
 
                     pdf.setLineDashPattern([1, 1], 0);
@@ -3076,7 +3844,9 @@
 
                     pdf.setFont('courier', 'normal');
                     pdf.setFontSize(8);
-                    pdf.text('Software By SKM Labs', pageWidth / 2, yPosition, { align: 'center' });
+                    pdf.text('Software By SKM Labs', pageWidth / 2, yPosition, {
+                        align: 'center'
+                    });
 
                     // Generate Base64 and Print
                     const pdfBase64 = pdf.output('datauristring').split(',')[1];
@@ -3101,7 +3871,9 @@
                 }
 
                 try {
-                    const { jsPDF } = window.jspdf;
+                    const {
+                        jsPDF
+                    } = window.jspdf;
                     const pdf = new jsPDF({
                         orientation: 'portrait',
                         unit: 'mm',
@@ -3116,48 +3888,70 @@
                     // Header - Restaurant Name
                     pdf.setFont('courier', 'bold');
                     pdf.setFontSize(16);
-                    pdf.text('RAVON RESTAURANT', pageWidth / 2, yPosition, { align: 'center' });
+                    pdf.text('RAVON RESTAURANT', pageWidth / 2, yPosition, {
+                        align: 'center'
+                    });
                     yPosition += 5;
 
                     pdf.setFontSize(10);
                     pdf.setFont('courier', 'normal');
-                    pdf.text('Ravon Restaurant (Pvt) Ltd', pageWidth / 2, yPosition, { align: 'center' });
+                    pdf.text('Ravon Restaurant (Pvt) Ltd', pageWidth / 2, yPosition, {
+                        align: 'center'
+                    });
                     yPosition += 4;
-                    
+
                     pdf.setFontSize(9);
-                    pdf.text('NO 282/A/2, KCTHALAWALA,', pageWidth / 2, yPosition, { align: 'center' });
+                    pdf.text('NO 282/A/2, KCTHALAWALA,', pageWidth / 2, yPosition, {
+                        align: 'center'
+                    });
                     yPosition += 4;
-                    pdf.text('KADUWELA.', pageWidth / 2, yPosition, { align: 'center' });
+                    pdf.text('KADUWELA.', pageWidth / 2, yPosition, {
+                        align: 'center'
+                    });
                     yPosition += 4;
-                    pdf.text('TEL.016-2006007', pageWidth / 2, yPosition, { align: 'center' });
+                    pdf.text('TEL.016-2006007', pageWidth / 2, yPosition, {
+                        align: 'center'
+                    });
                     yPosition += 4;
-                    pdf.text('Email-ravonrestaurant@gmail.com', pageWidth / 2, yPosition, { align: 'center' });
+                    pdf.text('Email-ravonrestaurant@gmail.com', pageWidth / 2, yPosition, {
+                        align: 'center'
+                    });
                     yPosition += 8;
 
                     // Invoice Title
                     pdf.setFont('courier', 'bold');
                     pdf.setFontSize(14);
-                    pdf.text('INVOICE', pageWidth / 2, yPosition, { align: 'center' });
+                    pdf.text('INVOICE', pageWidth / 2, yPosition, {
+                        align: 'center'
+                    });
                     yPosition += 8;
 
                     // Order Information
                     pdf.setFont('courier', 'normal');
                     pdf.setFontSize(9);
-                    
+
                     pdf.text('Invoice #', leftMargin, yPosition);
-                    pdf.text(String(order.order_number || order.id), pageWidth - rightMargin, yPosition, { align: 'right' });
+                    pdf.text(String(order.order_number || order.id), pageWidth - rightMargin, yPosition, {
+                        align: 'right'
+                    });
                     yPosition += 4;
 
                     const now = new Date();
                     const dateStr = now.toLocaleDateString('en-GB');
-                    const timeStr = now.toLocaleTimeString('en-GB', { hour12: false });
-                    
+                    const timeStr = now.toLocaleTimeString('en-GB', {
+                        hour12: false
+                    });
+
                     pdf.text('Date', leftMargin, yPosition);
-                    pdf.text(`:${dateStr} Time ${timeStr}`, pageWidth - rightMargin, yPosition, { align: 'right' });
+                    pdf.text(`:${dateStr} Time ${timeStr}`, pageWidth - rightMargin, yPosition, {
+                        align: 'right'
+                    });
                     yPosition += 4;
 
                     pdf.text('Terminal:', leftMargin, yPosition);
-                    pdf.text('01', pageWidth - rightMargin, yPosition, { align: 'right' });
+                    pdf.text('01', pageWidth - rightMargin, yPosition, {
+                        align: 'right'
+                    });
                     yPosition += 4;
 
                     // Determine table/order type display
@@ -3176,14 +3970,18 @@
                             tableDisplay = 'Take Away';
                         }
                     }
-                    
+
                     pdf.text('Table # :', leftMargin, yPosition);
-                    pdf.text(tableDisplay, pageWidth - rightMargin, yPosition, { align: 'right' });
+                    pdf.text(tableDisplay, pageWidth - rightMargin, yPosition, {
+                        align: 'right'
+                    });
                     yPosition += 4;
 
                     const cashier = order.waiter ? order.waiter.name : '{{ Auth::user()->name }}';
                     pdf.text('Cashier :', leftMargin, yPosition);
-                    pdf.text(String(cashier), pageWidth - rightMargin, yPosition, { align: 'right' });
+                    pdf.text(String(cashier), pageWidth - rightMargin, yPosition, {
+                        align: 'right'
+                    });
                     yPosition += 6;
 
                     // Separator
@@ -3196,7 +3994,9 @@
                     pdf.setFont('courier', 'bold');
                     pdf.setFontSize(9);
                     pdf.text('Item', leftMargin, yPosition);
-                    pdf.text('Qty   Amount', pageWidth - rightMargin, yPosition, { align: 'right' });
+                    pdf.text('Qty   Amount', pageWidth - rightMargin, yPosition, {
+                        align: 'right'
+                    });
                     yPosition += 4;
 
                     pdf.setLineDashPattern([1, 1], 0);
@@ -3229,9 +4029,11 @@
                         // Second line: Quantity x @ Unit Price = Amount
                         pdf.setFont('courier', 'normal');
                         pdf.setFontSize(9);
-                        
+
                         pdf.text(`${quantity}x @ Rs. ${unitPrice}`, leftMargin + 3, yPosition);
-                        pdf.text(subtotal, pageWidth - rightMargin, yPosition, { align: 'right' });
+                        pdf.text(subtotal, pageWidth - rightMargin, yPosition, {
+                            align: 'right'
+                        });
                         yPosition += 5;
 
                         // Print modifiers (portion sizes, extras)
@@ -3245,7 +4047,7 @@
                             });
                             yPosition += 1;
                         }
-                        
+
                         yPosition += 1;
                     });
 
@@ -3260,7 +4062,9 @@
                     pdf.setFont('courier', 'normal');
                     pdf.setFontSize(10);
                     pdf.text('Sub Total', leftMargin, yPosition);
-                    pdf.text(parseFloat(order.subtotal || 0).toFixed(2), pageWidth - rightMargin, yPosition, { align: 'right' });
+                    pdf.text(parseFloat(order.subtotal || 0).toFixed(2), pageWidth - rightMargin, yPosition, {
+                        align: 'right'
+                    });
                     yPosition += 5;
 
                     // Total Separator
@@ -3273,7 +4077,9 @@
                     pdf.setFont('courier', 'bold');
                     pdf.setFontSize(11);
                     pdf.text('Total', leftMargin, yPosition);
-                    pdf.text(parseFloat(order.total_amount || 0).toFixed(2), pageWidth - rightMargin, yPosition, { align: 'right' });
+                    pdf.text(parseFloat(order.total_amount || 0).toFixed(2), pageWidth - rightMargin, yPosition, {
+                        align: 'right'
+                    });
                     yPosition += 7;
 
                     // NO PAYMENT DETAILS - That's the key difference from receipt
@@ -3281,7 +4087,9 @@
                     // Footer
                     pdf.setFont('courier', 'bold');
                     pdf.setFontSize(10);
-                    pdf.text('THANK YOU, COME AGAIN.', pageWidth / 2, yPosition, { align: 'center' });
+                    pdf.text('THANK YOU, COME AGAIN.', pageWidth / 2, yPosition, {
+                        align: 'center'
+                    });
                     yPosition += 6;
 
                     pdf.setLineDashPattern([1, 1], 0);
@@ -3291,7 +4099,9 @@
 
                     pdf.setFont('courier', 'normal');
                     pdf.setFontSize(8);
-                    pdf.text('Software By SKM Labs', pageWidth / 2, yPosition, { align: 'center' });
+                    pdf.text('Software By SKM Labs', pageWidth / 2, yPosition, {
+                        align: 'center'
+                    });
 
                     // Generate Base64 and Print
                     const pdfBase64 = pdf.output('datauristring').split(',')[1];
@@ -3692,7 +4502,7 @@
                                 } else {
                                     typeDisplay = order.order_type || 'N/A';
                                 }
-                                
+
                                 return `
                                 <div class="bg-gray-700 rounded-lg p-4 mb-2 flex justify-between items-center hover:bg-gray-650 transition">
                                     <div>
@@ -3740,7 +4550,7 @@
                             orderItems: result.order.items || result.order.orderItems || result.order.order_items,
                             order_items: result.order.items || result.order.orderItems || result.order.order_items
                         };
-                        
+
                         // Use the same PDF printing function as POS payment flow
                         await printReceiptWithQZ(orderData);
                         showNotification('Receipt sent to printer', 'Success');

@@ -16,7 +16,7 @@ return new class extends Migration
             $table->decimal('cash_amount', 10, 2)->default(0.00)->after('paid_amount');
             $table->decimal('card_amount', 10, 2)->default(0.00)->after('cash_amount');
             $table->decimal('credit_amount', 10, 2)->default(0.00)->after('card_amount');
-            
+
             // Remove reference_number and notes columns
             $table->dropColumn(['reference_number', 'notes']);
         });
@@ -36,7 +36,7 @@ return new class extends Migration
             // Add back reference_number and notes
             $table->string('reference_number', 100)->nullable();
             $table->text('notes')->nullable();
-            
+
             // Remove new columns
             $table->dropColumn(['cash_amount', 'card_amount', 'credit_amount']);
         });

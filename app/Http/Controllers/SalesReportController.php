@@ -20,11 +20,11 @@ class SalesReportController extends Controller
     public function index(Request $request)
     {
         $query = Order::query();
-        
+
         // Only completed and paid orders that are not deleted
         $query->where('status', 'completed')
-              ->where('is_paid', true)
-              ->where('is_deleted', false);
+            ->where('is_paid', true)
+            ->where('is_deleted', false);
 
         // Date filters (default to today)
         $startDate = $request->get('start_date', Carbon::today()->format('Y-m-d'));
@@ -46,9 +46,9 @@ class SalesReportController extends Controller
 
         // Get paginated orders with relationships
         $orders = $query->with(['payment.splits', 'waiter'])
-                        ->orderBy('completed_at', 'desc')
-                        ->paginate(100)
-                        ->withQueryString();
+            ->orderBy('completed_at', 'desc')
+            ->paginate(100)
+            ->withQueryString();
 
         // Calculate totals for all filtered orders (not just current page)
         $totalsQuery = Order::query()
@@ -91,7 +91,7 @@ class SalesReportController extends Controller
                 $cardAmt = $order->payment->card_amount ?? 0;
                 $creditAmt = $order->payment->credit_amount ?? 0;
                 $changeAmt = $order->payment->change_amount ?? 0;
-                
+
                 // Subtract change from cash amount only
                 $totalCash += max(0, $cashAmt - $changeAmt);
                 $totalCard += $cardAmt;
@@ -180,7 +180,7 @@ class SalesReportController extends Controller
     public function receipt(Order $order)
     {
         $order->load([
-            'orderItems' => function($query) {
+            'orderItems' => function ($query) {
                 $query->where('status', '!=', 'deleted')
                     ->with(['item', 'modifiers']);
             },
@@ -217,11 +217,11 @@ class SalesReportController extends Controller
             ->where('status', 'completed')
             ->where('is_paid', true)
             ->where('is_deleted', false);
-        
+
         if ($startDate) {
             $query->whereDate('completed_at', '>=', $startDate);
         }
-        
+
         if ($endDate) {
             $query->whereDate('completed_at', '<=', $endDate);
         }
@@ -231,8 +231,8 @@ class SalesReportController extends Controller
         }
 
         $orders = $query->with(['payment.splits', 'waiter'])
-                        ->orderBy('completed_at', 'desc')
-                        ->get();
+            ->orderBy('completed_at', 'desc')
+            ->get();
 
         // Calculate totals
         $totalSubtotal = 0;
@@ -282,7 +282,7 @@ class SalesReportController extends Controller
             $cardAmount = $order->payment ? $order->payment->card_amount : 0;
             $creditAmount = $order->payment ? $order->payment->credit_amount : 0;
             $changeAmount = $order->payment ? $order->payment->change_amount : 0;
-            
+
             // Subtract change from cash (net cash received)
             $displayCashAmount = max(0, $cashAmount - $changeAmount);
 
@@ -375,10 +375,9 @@ class SalesReportController extends Controller
                 'success' => true,
                 'message' => 'Order deleted successfully'
             ]);
-
         } catch (\Exception $e) {
             DB::rollBack();
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to delete order: ' . $e->getMessage()

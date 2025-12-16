@@ -17,7 +17,7 @@ class PaymentController extends Controller
             ->whereIn('status', ['pending', 'served'])
             ->orderBy('created_at', 'desc')
             ->get();
-        
+
         return view('payments.index', compact('orders'));
     }
 
@@ -25,7 +25,7 @@ class PaymentController extends Controller
     {
         $order = Order::with(['table', 'waiter', 'items.item'])
             ->findOrFail($orderId);
-        
+
         return view('payments.show', compact('order'));
     }
 
@@ -40,7 +40,7 @@ class PaymentController extends Controller
             DB::beginTransaction();
 
             $order = Order::with('table')->findOrFail($orderId);
-            
+
             if ($order->status === 'completed') {
                 return response()->json([
                     'success' => false,
@@ -105,7 +105,6 @@ class PaymentController extends Controller
                 'payment' => $payment,
                 'change_amount' => $changeAmount
             ]);
-
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([

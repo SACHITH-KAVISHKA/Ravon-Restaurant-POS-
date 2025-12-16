@@ -26,10 +26,10 @@ class OrderController extends Controller
             DB::beginTransaction();
 
             $table = Table::findOrFail($validated['table_id']);
-            
+
             // Create or get existing order
             $order = $table->currentOrder;
-            
+
             if (!$order) {
                 $order = Order::create([
                     'order_number' => 'ORD-' . date('Ymd') . '-' . str_pad(Order::whereDate('created_at', today())->count() + 1, 4, '0', STR_PAD_LEFT),
@@ -50,9 +50,9 @@ class OrderController extends Controller
             // Add items to order
             foreach ($validated['items'] as $itemData) {
                 $item = Item::findOrFail($itemData['item_id']);
-                
+
                 $subtotal = $item->price * $itemData['quantity'];
-                
+
                 OrderItem::create([
                     'order_id' => $order->id,
                     'item_id' => $item->id,
@@ -73,7 +73,6 @@ class OrderController extends Controller
                 'message' => 'Items added to order successfully',
                 'order' => $order->load('items.item')
             ]);
-
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
@@ -112,7 +111,6 @@ class OrderController extends Controller
                 'message' => 'Order updated successfully',
                 'order' => $order->load('items.item')
             ]);
-
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
@@ -129,7 +127,7 @@ class OrderController extends Controller
 
             $orderItem = OrderItem::findOrFail($id);
             $order = $orderItem->order;
-            
+
             // Mark item as deleted instead of hard delete
             $orderItem->update(['status' => 'deleted']);
 
@@ -153,7 +151,6 @@ class OrderController extends Controller
                 'success' => true,
                 'message' => 'Item removed successfully'
             ]);
-
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
