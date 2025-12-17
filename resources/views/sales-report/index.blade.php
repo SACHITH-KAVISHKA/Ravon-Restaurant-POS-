@@ -141,7 +141,7 @@
                             $creditAmount = $order->payment->credit_amount ?? 0;
                             $changeAmount = $order->payment->change_amount ?? 0;
                             $paymentMethod = $order->payment ? $order->payment->payment_method : null;
-                            
+
                             // Subtract change from cash amount only (change is given back, so net cash received is less)
                             $displayCashAmount = max(0, $cashAmount - $changeAmount);
                             @endphp
@@ -398,8 +398,87 @@
         </div>
 
         @push('scripts')
+        {{-- QZ Tray for Thermal Printing --}}
+        <script src="https://cdn.jsdelivr.net/npm/qz-tray@2.2/qz-tray.js"></script>
+        {{-- jsPDF for PDF generation --}}
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
         <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
         <script>
+            // --- QZ TRAY SECURITY CONFIGURATION ---
+            qz.security.setCertificatePromise(function(resolve, reject) {
+                resolve(`-----BEGIN CERTIFICATE-----
+                    MIIDozCCAougAwIBAgIUWJpvpJOkleU6lWsqrMKfsq9u6OowDQYJKoZIhvcNAQEL
+                    BQAwYTELMAkGA1UEBhMCTEsxEDAOBgNVBAgMB1dlc3Rlcm4xEDAOBgNVBAcMB0Nv
+                    bG9tYm8xFTATBgNVBAoMDFJhdm9uIEJha2VyczEXMBUGA1UEAwwOMTI3LjAuMC4x
+                    OjgwMDAwHhcNMjUxMTE3MTgwNzI0WhcNMzUxMTE1MTgwNzI0WjBhMQswCQYDVQQG
+                    EwJMSzEQMA4GA1UECAwHV2VzdGVybjEQMA4GA1UEBwwHQ29sb21ibzEVMBMGA1UE
+                    CgwMUmF2b24gQmFrZXJzMRcwFQYDVQQDDA4xMjcuMC4wLjE6ODAwMDCCASIwDQYJ
+                    KoZIhvcNAQEBBQADggEPADCCAQoCggEBANF0JduabBoiZ1M7R28FmCmvUEDYy+2z
+                    uz+zQZiBGT3pm3gD2HgZfvhooGywwX2lmEn5Q5wvq3dodcqpd+Nr7xDE6U2QEcGS
+                    UEi0aDbTCBY2VIRP5HNP33hDqNOq06akEtJRxGQ43hOLxoSWZjYxe7hIstVfp2fU
+                    4j+uycPv9E8Cxo6eIM6NCFfRN1mIbkIIjgVfAmOaJb1y+TbD8z5NxXAfPf31GvXi
+                    7AJ3gnr6khs6XyW5umcesBeOijBL+lUyTRU26GQWiduoaeoTToN9UkX3ZEvfPlR7
+                    YLYqfRHnT4RJxRs+BcTDMsy0JHI5MGD/Ur/u8uXNgK2mqrfPLado9y0CAwEAAaNT
+                    MFEwHQYDVR0OBBYEFMSl/4RhhGD0mRYBD2bH4n+t/cNBMB8GA1UdIwQYMBaAFMSl
+                    /4RhhGD0mRYBD2bH4n+t/cNBMA8GA1UdEwEB/wQFMAMBAf8wDQYJKoZIhvcNAQEL
+                    BQADggEBADlwDYAu7LGzj+pGROVavOeVczrb8RibbIbXrIViV31iKC1uwXRmtTY1
+                    amAX+oEfMry3TIy//BHsJzGkAd6ozfosez33G4bbN8/y1Q9ZvcuaaHPT4DIBYrdR
+                    GX/B6TtAm63VxXyjfwrV4OUbbqwdgMtKuviRprB9A+oCE1QPa74p33hgy8UHYOCK
+                    g9lFgnRkyrLOb4fh2SmtjHhRV4aZf5CM+UbqBQAMiiuhHLAbqbmhBP3BYzVVZ066
+                    9moVkpDvvNADqW3FH6epeBDL8RyQXj2yikCyD3xXJIAih815xLJMh/pOmuqEjHdd
+                    NESCtDma6uLcth74mGaBwU3G3KsOCP4=
+                -----END CERTIFICATE-----`);
+            });
+
+            qz.security.setSignaturePromise(function(toSign) {
+                return function(resolve, reject) {
+                    var tokenMeta = document.querySelector('meta[name="csrf-token"]');
+                    var token = tokenMeta ? tokenMeta.content : "";
+
+                    fetch('/qz/sign', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': token
+                            },
+                            body: JSON.stringify({
+                                data: toSign
+                            })
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.signature) {
+                                resolve(data.signature);
+                            } else {
+                                reject(data.error || "No signature returned");
+                            }
+                        })
+                        .catch(err => reject(err));
+                };
+            });
+
+            async function printPDFwithQZ(pdfBase64, printerName = null, jobType = "Receipt") {
+                try {
+                    if (!qz.websocket.isActive()) {
+                        await qz.websocket.connect();
+                    }
+                    let printer = printerName || await qz.printers.getDefault();
+                    const config = qz.configs.create(printer);
+                    const data = [{
+                        type: 'pdf',
+                        format: 'base64',
+                        data: pdfBase64
+                    }];
+                    await qz.print(config, data);
+                    console.log(`${jobType} sent to printer: ${printer}`);
+                    return true;
+                } catch (err) {
+                    console.error('QZ Tray Error:', err);
+                    throw err;
+                }
+            }
+            // --- END QZ TRAY ---
+
             $(document).ready(function() {
                 // CSRF Token setup
                 $.ajaxSetup({
@@ -438,14 +517,14 @@
                             let itemsHtml = '';
                             items.forEach(function(item) {
                                 itemsHtml += `
-                        <tr>
-                            <td class="px-4 py-3 text-white">
+                        <tr class="bg-white hover:bg-gray-50">
+                            <td class="px-4 py-3 text-gray-800">
                                 ${item.item_name}
-                                ${item.modifiers ? '<br><span class="text-xs text-gray-400">' + item.modifiers + '</span>' : ''}
+                                ${item.modifiers ? '<br><span class="text-xs text-gray-500">' + item.modifiers + '</span>' : ''}
                             </td>
-                            <td class="px-4 py-3 text-center text-white">${item.quantity}</td>
-                            <td class="px-4 py-3 text-right text-white">LKR ${parseFloat(item.unit_price).toFixed(2)}</td>
-                            <td class="px-4 py-3 text-right text-white font-semibold">LKR ${parseFloat(item.subtotal).toFixed(2)}</td>
+                            <td class="px-4 py-3 text-center text-gray-800">${item.quantity}</td>
+                            <td class="px-4 py-3 text-right text-gray-800">LKR ${parseFloat(item.unit_price).toFixed(2)}</td>
+                            <td class="px-4 py-3 text-right text-gray-800 font-semibold">LKR ${parseFloat(item.subtotal).toFixed(2)}</td>
                         </tr>
                     `;
                             });
@@ -519,36 +598,197 @@
                     currentOrderId = null;
                 });
 
-                // Print Receipt Button
-                $('.print-receipt-btn').on('click', function(e) {
+                // Print Receipt Button - Using QZ Tray like POS
+                $('.print-receipt-btn').on('click', async function(e) {
                     e.preventDefault();
-                    const receiptUrl = $(this).data('receipt-url');
+                    const btn = $(this);
+                    const orderId = btn.closest('tr').data('order-id');
 
-                    // Create hidden iframe for printing
-                    let printFrame = $('<iframe>', {
-                        name: 'print_frame',
-                        style: 'position:absolute;top:-1000px;left:-1000px;'
-                    });
+                    btn.prop('disabled', true);
 
-                    $('body').append(printFrame);
+                    try {
+                        // Fetch order details
+                        const response = await $.get(`/sales-report/sale-details/${orderId}`);
+                        const order = response.order;
+                        const items = response.items;
 
-                    // Load receipt content and trigger print
-                    printFrame.on('load', function() {
-                        try {
-                            this.contentWindow.focus();
-                            this.contentWindow.print();
+                        // Generate PDF receipt using jsPDF
+                        const {
+                            jsPDF
+                        } = window.jspdf;
+                        const pdf = new jsPDF({
+                            orientation: 'portrait',
+                            unit: 'mm',
+                            format: [80, 297]
+                        });
 
-                            // Remove iframe after printing
-                            setTimeout(() => {
-                                printFrame.remove();
-                            }, 1000);
-                        } catch (e) {
-                            console.error('Print failed:', e);
-                            printFrame.remove();
+                        let yPosition = 10;
+                        const pageWidth = 80;
+                        const leftMargin = 5;
+                        const rightMargin = 5;
+
+                        // Header
+                        pdf.setFont('courier', 'bold');
+                        pdf.setFontSize(14);
+                        pdf.text('RAVON RESTAURANT', pageWidth / 2, yPosition, {
+                            align: 'center'
+                        });
+                        yPosition += 5;
+
+                        pdf.setFontSize(8);
+                        pdf.setFont('courier', 'normal');
+                        pdf.text('Kaduwela', pageWidth / 2, yPosition, {
+                            align: 'center'
+                        });
+                        yPosition += 4;
+                        pdf.text('Tel: 076 200 6007', pageWidth / 2, yPosition, {
+                            align: 'center'
+                        });
+                        yPosition += 6;
+
+                        // Separator
+                        pdf.setLineWidth(0.5);
+                        pdf.line(leftMargin, yPosition, pageWidth - rightMargin, yPosition);
+                        yPosition += 6;
+
+                        // Order Info
+                        pdf.setFontSize(9);
+                        pdf.text('ORDER NO:', leftMargin, yPosition);
+                        pdf.text(order.order_number, pageWidth - rightMargin, yPosition, {
+                            align: 'right'
+                        });
+                        yPosition += 5;
+
+                        pdf.text('WAITER:', leftMargin, yPosition);
+                        pdf.text(order.waiter_name, pageWidth - rightMargin, yPosition, {
+                            align: 'right'
+                        });
+                        yPosition += 5;
+
+                        pdf.text('DATE:', leftMargin, yPosition);
+                        pdf.text(order.completed_at, pageWidth - rightMargin, yPosition, {
+                            align: 'right'
+                        });
+                        yPosition += 8;
+
+                        // Items separator
+                        pdf.setLineWidth(0.3);
+                        pdf.line(leftMargin, yPosition, pageWidth - rightMargin, yPosition);
+                        yPosition += 6;
+
+                        // Items
+                        items.forEach(item => {
+                            pdf.setFont('courier', 'bold');
+                            pdf.setFontSize(9);
+
+                            let itemName = item.item_name;
+                            if (itemName.length > 22) {
+                                itemName = itemName.substring(0, 19) + '...';
+                            }
+
+                            pdf.text(itemName, leftMargin, yPosition);
+                            pdf.text(`LKR ${parseFloat(item.subtotal).toFixed(2)}`, pageWidth - rightMargin, yPosition, {
+                                align: 'right'
+                            });
+                            yPosition += 4;
+
+                            pdf.setFont('courier', 'normal');
+                            pdf.setFontSize(8);
+                            pdf.text(`${item.quantity} x LKR ${parseFloat(item.unit_price).toFixed(2)}`, leftMargin + 2, yPosition);
+                            yPosition += 6;
+                        });
+
+                        // Totals
+                        yPosition += 2;
+                        pdf.setLineDashPattern([1, 1], 0);
+                        pdf.line(leftMargin, yPosition, pageWidth - rightMargin, yPosition);
+                        pdf.setLineDashPattern([], 0);
+                        yPosition += 6;
+
+                        pdf.setFont('courier', 'normal');
+                        pdf.setFontSize(9);
+                        pdf.text('Sub Total:', leftMargin, yPosition);
+                        pdf.text(`LKR ${parseFloat(order.subtotal || order.total_amount).toFixed(2)}`, pageWidth - rightMargin, yPosition, {
+                            align: 'right'
+                        });
+                        yPosition += 6;
+
+                        pdf.setFont('courier', 'bold');
+                        pdf.setFontSize(11);
+                        pdf.text('TOTAL:', leftMargin, yPosition);
+                        pdf.text(`LKR ${parseFloat(order.total_amount).toFixed(2)}`, pageWidth - rightMargin, yPosition, {
+                            align: 'right'
+                        });
+                        yPosition += 8;
+
+                        // Payment
+                        pdf.setFontSize(9);
+                        pdf.setFont('courier', 'normal');
+                        pdf.text('Payment:', leftMargin, yPosition);
+                        pdf.text(order.payment_method, pageWidth - rightMargin, yPosition, {
+                            align: 'right'
+                        });
+                        yPosition += 5;
+
+                        if (parseFloat(order.cash_amount) > 0) {
+                            pdf.text('Cash:', leftMargin, yPosition);
+                            pdf.text(`LKR ${parseFloat(order.cash_amount).toFixed(2)}`, pageWidth - rightMargin, yPosition, {
+                                align: 'right'
+                            });
+                            yPosition += 5;
                         }
-                    });
 
-                    printFrame.attr('src', receiptUrl);
+                        if (parseFloat(order.card_amount) > 0) {
+                            pdf.text('Card:', leftMargin, yPosition);
+                            pdf.text(`LKR ${parseFloat(order.card_amount).toFixed(2)}`, pageWidth - rightMargin, yPosition, {
+                                align: 'right'
+                            });
+                            yPosition += 5;
+                        }
+
+                        if (parseFloat(order.change_amount) > 0) {
+                            pdf.text('Change:', leftMargin, yPosition);
+                            pdf.text(`LKR ${parseFloat(order.change_amount).toFixed(2)}`, pageWidth - rightMargin, yPosition, {
+                                align: 'right'
+                            });
+                            yPosition += 5;
+                        }
+
+                        // Footer
+                        yPosition += 4;
+                        pdf.setLineDashPattern([1, 1], 0);
+                        pdf.line(leftMargin, yPosition, pageWidth - rightMargin, yPosition);
+                        pdf.setLineDashPattern([], 0);
+                        yPosition += 8;
+
+                        pdf.setFontSize(8);
+                        pdf.text('Thank you for visiting', pageWidth / 2, yPosition, {
+                            align: 'center'
+                        });
+                        yPosition += 4;
+                        pdf.setFont('courier', 'bold');
+                        pdf.text('RAVON RESTAURANT', pageWidth / 2, yPosition, {
+                            align: 'center'
+                        });
+                        yPosition += 4;
+                        pdf.setFont('courier', 'normal');
+                        pdf.text('Come again!', pageWidth / 2, yPosition, {
+                            align: 'center'
+                        });
+
+                        // Print via QZ Tray
+                        const pdfBase64 = pdf.output('datauristring').split(',')[1];
+                        const printerName = "Microsoft Print to PDF"; // Change to your receipt printer
+                        await printPDFwithQZ(pdfBase64, printerName, "Receipt Copy");
+
+                        showNotification('Receipt printed successfully!', 'success');
+
+                    } catch (err) {
+                        console.error('Print Error:', err);
+                        showNotification('Print failed: ' + err.message, 'error');
+                    } finally {
+                        btn.prop('disabled', false);
+                    }
                 });
 
                 // Simple notification function

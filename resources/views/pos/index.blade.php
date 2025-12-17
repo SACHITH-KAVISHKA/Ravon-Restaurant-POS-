@@ -1574,7 +1574,7 @@
 
                     // Generate Base64 and Print
                     const pdfBase64 = pdf.output('datauristring').split(',')[1];
-                    const kotPrinterName = "XP-80C";
+                    const kotPrinterName = "Microsoft Print to PDF";
                     await printPDFwithQZ(pdfBase64, kotPrinterName, "KOT", false);
                     console.log('KOT sent to printer successfully');
 
@@ -1732,7 +1732,7 @@
 
                     // Generate Base64 and Print
                     const pdfBase64 = pdf.output('datauristring').split(',')[1];
-                    const botPrinterName = "XP-80C";
+                    const botPrinterName = "Microsoft Print to PDF";
                     await printPDFwithQZ(pdfBase64, botPrinterName, "BOT", false);
                     console.log('BOT sent to printer successfully');
 
@@ -3110,7 +3110,7 @@
 
                     // Generate Base64 and Print
                     const pdfBase64 = pdf.output('datauristring').split(',')[1];
-                    const printerName = "XP-80C"; // Default printer for Cancel KOT/BOT
+                    const printerName = "Microsoft Print to PDF"; // Default printer for Cancel KOT/BOT
 
                     // Use same print method as regular KOT/BOT
                     await printPDFwithQZ(pdfBase64, printerName, `Cancel ${station === 'KITCHEN' ? 'KOT' : 'BOT'}`, false);
@@ -3969,7 +3969,7 @@
 
                     // Generate Base64 and Print
                     const pdfBase64 = pdf.output('datauristring').split(',')[1];
-                    const receiptPrinterName = "XP-80C"; // Configure printer name
+                    const receiptPrinterName = "Microsoft Print to PDF"; // Configure printer name
                     await printPDFwithQZ(pdfBase64, receiptPrinterName, "Receipt", false);
                     console.log('Receipt sent to printer successfully');
 
@@ -4224,7 +4224,7 @@
 
                     // Generate Base64 and Print
                     const pdfBase64 = pdf.output('datauristring').split(',')[1];
-                    const invoicePrinterName = "XP-80C";
+                    const invoicePrinterName = "Microsoft Print to PDF";
                     await printPDFwithQZ(pdfBase64, invoicePrinterName, "Invoice", false);
                     console.log('Invoice (without payment) sent to printer successfully');
 

@@ -158,7 +158,10 @@ class SalesReportController extends Controller
                 'credit_amount' => $creditAmount,
                 'completed_at' => $order->completed_at ? $order->completed_at->format('Y-m-d H:i:s') : 'N/A',
             ],
-            'items' => $order->activeItems->map(function ($item) {
+            'items' => $order->activeItems->filter(function ($item) {
+                // Filter out items with 0 quantity
+                return $item->quantity > 0;
+            })->map(function ($item) {
                 $modifiersText = $item->modifiers->map(function ($modifier) {
                     return $modifier->modifier_name . ' (+' . number_format($modifier->price_adjustment, 2) . ')';
                 })->join(', ');
@@ -170,7 +173,7 @@ class SalesReportController extends Controller
                     'modifiers' => $modifiersText,
                     'subtotal' => $item->subtotal,
                 ];
-            })
+            })->values()
         ]);
     }
 
