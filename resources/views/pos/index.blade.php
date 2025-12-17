@@ -3643,6 +3643,9 @@
                     if (result.success) {
                         showNotification('Payment completed!', 'Success');
 
+                        // Store order type before clearing (for conditional receipt printing)
+                        const orderTypeBeforeClear = currentOrderType;
+
                         // Clear order state immediately
                         billItems = [];
                         currentOrderId = null;
@@ -3655,6 +3658,21 @@
                         document.getElementById('orderTypeDisplay').textContent = 'Select Order Type';
                         document.getElementById('menuSelectionContainer').classList.replace('flex', 'hidden');
                         document.getElementById('initialStateMessage')?.classList.remove('hidden');
+
+                        // Auto-print receipt ONLY for Takeaway orders
+                        if (orderTypeBeforeClear === 'takeaway' && result.order) {
+                            console.log('Takeaway order detected - Auto-printing receipt...');
+                            try {
+                                await printReceiptWithQZ(result.order);
+                                console.log('Takeaway receipt printed successfully');
+                            } catch (printError) {
+                                console.error('Failed to auto-print takeaway receipt:', printError);
+                                // Fallback: offer manual print option
+                                showConfirmation('Auto-print failed. Open receipt in new window?', 'Print Receipt', () => {
+                                    window.open('/pos/receipt/' + result.order.id, '_blank');
+                                });
+                            }
+                        }
                     } else {
                         showNotification('Error: ' + (result.message || 'Unknown error'), 'Payment Error');
                     }
