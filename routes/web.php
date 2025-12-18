@@ -132,6 +132,27 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/void-items', [App\Http\Controllers\POSController::class, 'voidItems'])->name('voidItems');
     });
 
+    // Stock Management Routes
+    Route::prefix('stock')->name('stock.')->group(function () {
+        // Cashier routes
+        Route::middleware(['role:cashier'])->group(function () {
+            Route::get('/cashier', [App\Http\Controllers\StockRequestController::class, 'cashierIndex'])->name('cashier.index');
+            Route::post('/', [App\Http\Controllers\StockRequestController::class, 'store'])->name('store');
+            Route::get('/my-requests', [App\Http\Controllers\StockRequestController::class, 'getCashierRequests'])->name('my-requests');
+            Route::post('/{stockRequest}/cashier-respond', [App\Http\Controllers\StockRequestController::class, 'cashierRespond'])->name('cashier.respond');
+        });
+
+        // Supervisor routes (only supervisors can approve/reject stock requests)
+        Route::middleware(['role:supervisor'])->group(function () {
+            Route::get('/supervisor', [App\Http\Controllers\StockRequestController::class, 'supervisorIndex'])->name('supervisor.index');
+            Route::post('/{stockRequest}/supervisor-respond', [App\Http\Controllers\StockRequestController::class, 'supervisorRespond'])->name('supervisor.respond');
+        });
+
+        // Shared routes (accessible by both)
+        Route::get('/{stockRequest}', [App\Http\Controllers\StockRequestController::class, 'show'])->name('show');
+        Route::get('/items/list', [App\Http\Controllers\StockRequestController::class, 'getItems'])->name('items');
+    });
+
     // QZ Tray Signature Route (for thermal printing)
     Route::post('/qz/sign', [App\Http\Controllers\QZTrayController::class, 'signQzRequest'])->name('qz.sign');
 });

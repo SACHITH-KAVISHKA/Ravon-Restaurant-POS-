@@ -86,5 +86,25 @@
             <span class="font-medium">User Management</span>
         </a>
         @endrole
+
+        <!-- Stock Management (Supervisor view - for approving stock requests) -->
+        @role('supervisor')
+        <a href="{{ route('stock.supervisor.index') }}" class="flex items-center gap-3 px-4 py-3 {{ request()->routeIs('stock.supervisor.*') ? 'bg-white/25 text-white border-l-4 border-white font-semibold' : 'text-white/80 hover:bg-white/15 hover:text-white' }} rounded-lg transition">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+            </svg>
+            <span class="font-medium">Stock Transfers</span>
+        </a>
+        @endrole
+
+        <!-- Stock Requests (Cashier view) -->
+        @role('cashier')
+        <a href="{{ route('stock.cashier.index') }}" class="flex items-center gap-3 px-4 py-3 {{ request()->routeIs('stock.cashier.*') ? 'bg-white/25 text-white border-l-4 border-white font-semibold' : 'text-white/80 hover:bg-white/15 hover:text-white' }} rounded-lg transition">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+            </svg>
+            <span class="font-medium">Stock Requests</span>
+        </a>
+        @endrole
     </nav>
 </aside>
