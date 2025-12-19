@@ -108,9 +108,13 @@ class RestaurantStock extends Model
         $restaurantStock = self::getOrCreateForItem($itemId, $modifierId);
 
         // Get main stock
-        $mainStock = MainStock::where('item_id', $itemId)
-            ->where('item_modifier_id', $modifierId)
-            ->first();
+        $mainStockQuery = MainStock::where('item_id', $itemId);
+        if ($modifierId) {
+            $mainStockQuery->where('item_modifier_id', $modifierId);
+        } else {
+            $mainStockQuery->whereNull('item_modifier_id');
+        }
+        $mainStock = $mainStockQuery->first();
 
         if (!$mainStock || $mainStock->quantity < $quantity) {
             return false; // Main stock doesn't have enough

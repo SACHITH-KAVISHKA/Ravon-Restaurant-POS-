@@ -100,58 +100,6 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                 </svg>
                 Create Request
-            </button>
-        </div>
-
-        <!-- My Restaurant Stock -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-6">
-            <div class="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-green-500 to-green-600">
-                <div class="flex justify-between items-center">
-                    <div>
-                        <h2 class="text-lg font-bold text-white">My Restaurant Stock</h2>
-                        <p class="text-green-100 text-sm">Available stock at your restaurant</p>
-                    </div>
-                    <div class="bg-white/20 px-3 py-1 rounded-full">
-                        <span class="text-white font-medium">{{ $restaurantStock->count() }} Items</span>
-                    </div>
-                </div>
-            </div>
-            <div class="p-6">
-                @if($restaurantStock->isEmpty())
-                <div class="text-center py-8">
-                    <svg class="w-16 h-16 mx-auto text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                    </svg>
-                    <h3 class="mt-3 text-gray-600 font-medium">No Stock Available</h3>
-                    <p class="text-gray-400 text-sm mt-1">Request stock from supervisor to get started</p>
-                </div>
-                @else
-                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    @foreach($restaurantStock as $stock)
-                    <div class="bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg p-4 border border-gray-200 hover:shadow-md transition">
-                        <div class="flex items-start justify-between">
-                            <div class="flex-1">
-                                <h4 class="font-semibold text-gray-800 text-sm">{{ $stock->item->name }}</h4>
-                                @if($stock->itemModifier)
-                                <span class="text-xs text-purple-600 font-medium">{{ $stock->itemModifier->name }}</span>
-                                @endif
-                                <p class="text-xs text-gray-500 mt-1">{{ $stock->item->category->name ?? '' }}</p>
-                            </div>
-                        </div>
-                        <div class="mt-3 flex items-end justify-between">
-                            <div>
-                                <span class="text-2xl font-bold text-green-600">{{ number_format($stock->quantity, 0) }}</span>
-                                <span class="text-gray-500 text-xs ml-1">{{ $stock->unit }}</span>
-                            </div>
-                            @if($stock->quantity <= 10)
-                                <span class="px-2 py-0.5 bg-red-100 text-red-600 text-xs rounded-full font-medium">Low</span>
-                                @endif
-                        </div>
-                    </div>
-                    @endforeach
-                </div>
-                @endif
-            </div>
         </div>
 
         <!-- Tabs -->
@@ -187,39 +135,51 @@
                         <p class="text-gray-400 mt-1">Create your first stock request to get started</p>
                     </div>
                     @else
-                    <div class="space-y-4" id="requests-list">
-                        @foreach($myRequests as $request)
-                        <div class="request-card {{ $request->status }} bg-white rounded-lg border border-gray-200 p-4 cursor-pointer hover:bg-gray-50" onclick="viewRequestDetails({{ $request->id }})">
-                            <div class="flex justify-between items-start">
-                                <div>
-                                    <div class="flex items-center gap-3">
-                                        <span class="font-bold text-gray-800">{{ $request->request_number }}</span>
-                                        <span class="px-2.5 py-1 rounded-full text-xs font-medium
-                                                    @if($request->status === 'pending') bg-yellow-100 text-yellow-700
-                                                    @elseif($request->status === 'accepted') bg-green-100 text-green-700
-                                                    @elseif($request->status === 'rejected') bg-red-100 text-red-700
-                                                    @else bg-blue-100 text-blue-700
-                                                    @endif">
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gradient-to-r from-[#667eea] to-[#764ba2]">
+                                <tr>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">Request #</th>
+                                    <th class="px-6 py-4 text-center text-xs font-semibold text-white uppercase tracking-wider">Items</th>
+                                    <th class="px-6 py-4 text-center text-xs font-semibold text-white uppercase tracking-wider">Status</th>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">Date</th>
+                                    <th class="px-6 py-4 text-center text-xs font-semibold text-white uppercase tracking-wider">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200">
+                                @foreach($myRequests as $request)
+                                <tr class="hover:bg-purple-50 transition-colors">
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="text-purple-600 font-mono font-semibold">{{ $request->request_number }}</span>
+                                    </td>
+                                    <td class="px-6 py-4 text-center whitespace-nowrap">
+                                        <span class="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-medium">{{ $request->items->count() }} items</span>
+                                    </td>
+                                    <td class="px-6 py-4 text-center whitespace-nowrap">
+                                        <span class="px-3 py-1 rounded-full text-sm font-medium
+                                            @if($request->status === 'pending') bg-yellow-100 text-yellow-700
+                                            @elseif($request->status === 'accepted') bg-green-100 text-green-700
+                                            @elseif($request->status === 'rejected') bg-red-100 text-red-700
+                                            @else bg-blue-100 text-blue-700
+                                            @endif">
                                             {{ ucfirst(str_replace('_', ' ', $request->status)) }}
                                         </span>
-                                    </div>
-                                    <p class="text-sm text-gray-500 mt-1">{{ $request->items->count() }} items requested</p>
-                                </div>
-                                <div class="text-right">
-                                    <p class="text-sm text-gray-400">{{ $request->created_at->format('M d, Y') }}</p>
-                                    <p class="text-xs text-gray-400">{{ $request->created_at->format('h:i A') }}</p>
-                                </div>
-                            </div>
-                            <div class="mt-3 flex flex-wrap gap-2">
-                                @foreach($request->items->take(3) as $item)
-                                <span class="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded">{{ $item->item_name }}</span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-gray-600 text-sm">
+                                        {{ $request->created_at->format('M d, Y h:i A') }}
+                                    </td>
+                                    <td class="px-6 py-4 text-center whitespace-nowrap">
+                                        <button onclick="viewRequestDetails({{ $request->id }})" class="p-2 bg-gradient-to-r from-[#667eea] to-[#764ba2] hover:shadow-lg hover:shadow-purple-500/50 text-white rounded-lg transition" title="View Details">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                            </svg>
+                                        </button>
+                                    </td>
+                                </tr>
                                 @endforeach
-                                @if($request->items->count() > 3)
-                                <span class="px-2 py-1 bg-gray-100 text-gray-500 text-xs rounded">+{{ $request->items->count() - 3 }} more</span>
-                                @endif
-                            </div>
-                        </div>
-                        @endforeach
+                            </tbody>
+                        </table>
                     </div>
                     <div class="mt-6">
                         {{ $myRequests->links() }}
@@ -270,16 +230,6 @@
                         <!-- First row will be added automatically -->
                     </tbody>
                 </table>
-            </div>
-
-            <!-- Add Item Button -->
-            <div class="mt-4">
-                <button onclick="addItemRow()" class="px-4 py-2 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 transition flex items-center gap-2">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                    </svg>
-                    Add Item
-                </button>
             </div>
 
             <!-- Notes -->
@@ -408,6 +358,7 @@
             <td class="px-4 py-3 text-center">
                 <input type="number" id="transfer-qty-${rowId}" value="0" min="0" step="0.01"
                     onchange="validateQuantity(${rowId})"
+                    onkeydown="handleTransferQtyKeydown(event, ${rowId})"
                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-center">
             </td>
             <td class="px-4 py-3 text-center">
@@ -471,6 +422,33 @@
             document.getElementById(`transfer-qty-${rowId}`).value = 0;
         }
         updateSubmitButton();
+    }
+
+    // Handle TAB key on transfer quantity field - auto add new row
+    function handleTransferQtyKeydown(event, rowId) {
+        if (event.key === 'Tab' && !event.shiftKey) {
+            const currentRow = document.getElementById(`item-row-${rowId}`);
+            const allRows = document.querySelectorAll('.item-row');
+            const lastRow = allRows[allRows.length - 1];
+
+            // Only add new row if this is the last row and has a valid quantity
+            if (currentRow === lastRow) {
+                const qty = parseFloat(document.getElementById(`transfer-qty-${rowId}`).value) || 0;
+                if (qty > 0) {
+                    event.preventDefault(); // Prevent default tab behavior
+                    addItemRow();
+
+                    // Focus on the new row's item select after a short delay
+                    setTimeout(() => {
+                        const newRowId = rowCounter - 1;
+                        const newSelect = document.getElementById(`item-select-${newRowId}`);
+                        if (newSelect) {
+                            newSelect.focus();
+                        }
+                    }, 50);
+                }
+            }
+        }
     }
 
     // Remove an item row
@@ -715,24 +693,49 @@
                         </div>
                     `;
                 } else {
-                    container.innerHTML = responsesNeeded.map(req => `
-                        <div class="request-card ${req.status} bg-white rounded-lg border border-gray-200 p-4 mb-4 cursor-pointer hover:bg-gray-50" onclick="viewRequestDetails(${req.id})">
-                            <div class="flex justify-between items-start">
-                                <div>
-                                    <div class="flex items-center gap-3">
-                                        <span class="font-bold text-gray-800">${req.request_number}</span>
-                                        <span class="px-2.5 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-700">
-                                            Response Needed
-                                        </span>
-                                    </div>
-                                    <p class="text-sm text-gray-500 mt-1">${req.items.length} items</p>
-                                </div>
-                                <div class="text-right">
-                                    <p class="text-sm text-gray-400">${new Date(req.responded_at).toLocaleDateString()}</p>
-                                </div>
-                            </div>
-                        </div>
+                    let tableRows = responsesNeeded.map(req => `
+                        <tr class="hover:bg-purple-50 transition-colors">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="text-purple-600 font-mono font-semibold">${req.request_number}</span>
+                            </td>
+                            <td class="px-6 py-4 text-center whitespace-nowrap">
+                                <span class="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-medium">${req.items.length} items</span>
+                            </td>
+                            <td class="px-6 py-4 text-center whitespace-nowrap">
+                                <span class="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm font-medium">Response Needed</span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-gray-600 text-sm">
+                                ${new Date(req.responded_at).toLocaleString()}
+                            </td>
+                            <td class="px-6 py-4 text-center whitespace-nowrap">
+                                <button onclick="viewRequestDetails(${req.id})" class="p-2 bg-gradient-to-r from-[#667eea] to-[#764ba2] hover:shadow-lg hover:shadow-purple-500/50 text-white rounded-lg transition" title="View Details">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                    </svg>
+                                </button>
+                            </td>
+                        </tr>
                     `).join('');
+
+                    container.innerHTML = `
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead class="bg-gradient-to-r from-[#667eea] to-[#764ba2]">
+                                    <tr>
+                                        <th class="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">Request #</th>
+                                        <th class="px-6 py-4 text-center text-xs font-semibold text-white uppercase tracking-wider">Items</th>
+                                        <th class="px-6 py-4 text-center text-xs font-semibold text-white uppercase tracking-wider">Status</th>
+                                        <th class="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">Date</th>
+                                        <th class="px-6 py-4 text-center text-xs font-semibold text-white uppercase tracking-wider">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-200">
+                                    ${tableRows}
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
 
                     // Update badge
                     document.getElementById('new-responses-badge').textContent = responsesNeeded.length;

@@ -115,40 +115,44 @@
                         <p class="text-gray-400 mt-1">There are no pending transfers at the moment.</p>
                     </div>
                     @else
-                    <div class="space-y-4">
-                        @foreach($pendingRequests as $request)
-                        <div class="request-card bg-white rounded-lg border border-gray-200 p-5 hover:shadow-lg cursor-pointer" onclick="viewRequest({{ $request->id }})">
-                            <div class="flex justify-between items-start mb-4">
-                                <div class="flex items-center gap-4">
-                                    <div class="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
-                                        <svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                    </div>
-                                    <div>
-                                        <h3 class="font-bold text-gray-800">{{ $request->request_number }}</h3>
-                                        <p class="text-sm text-gray-500">From: {{ $request->cashier->name }}</p>
-                                    </div>
-                                </div>
-                                <div class="text-right">
-                                    <span class="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm font-medium">Pending</span>
-                                    <p class="text-xs text-gray-400 mt-2">{{ $request->created_at->diffForHumans() }}</p>
-                                </div>
-                            </div>
-                            <div class="flex flex-wrap gap-2">
-                                @foreach($request->items->take(4) as $item)
-                                <span class="px-3 py-1 bg-gray-100 text-gray-600 text-sm rounded-full">
-                                    {{ $item->item_name }} ({{ $item->requested_quantity }})
-                                </span>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gradient-to-r from-[#667eea] to-[#764ba2]">
+                                <tr>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">Request #</th>
+                                    <th class="px-6 py-4 text-center text-xs font-semibold text-white uppercase tracking-wider">Items</th>
+                                    <th class="px-6 py-4 text-center text-xs font-semibold text-white uppercase tracking-wider">Status</th>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">Date</th>
+                                    <th class="px-6 py-4 text-center text-xs font-semibold text-white uppercase tracking-wider">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200">
+                                @foreach($pendingRequests as $request)
+                                <tr class="hover:bg-purple-50 transition-colors">
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="text-purple-600 font-mono font-semibold">{{ $request->request_number }}</span>
+                                    </td>
+                                    <td class="px-6 py-4 text-center whitespace-nowrap">
+                                        <span class="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-medium">{{ $request->items->count() }} items</span>
+                                    </td>
+                                    <td class="px-6 py-4 text-center whitespace-nowrap">
+                                        <span class="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm font-medium">Pending</span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-gray-600 text-sm">
+                                        {{ $request->created_at->format('M d, Y') }}
+                                    </td>
+                                    <td class="px-6 py-4 text-center whitespace-nowrap">
+                                        <button onclick="viewRequest({{ $request->id }})" class="p-2 bg-gradient-to-r from-[#667eea] to-[#764ba2] hover:shadow-lg hover:shadow-purple-500/50 text-white rounded-lg transition" title="View Details">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                            </svg>
+                                        </button>
+                                    </td>
+                                </tr>
                                 @endforeach
-                                @if($request->items->count() > 4)
-                                <span class="px-3 py-1 bg-purple-100 text-purple-600 text-sm rounded-full font-medium">
-                                    +{{ $request->items->count() - 4 }} more
-                                </span>
-                                @endif
-                            </div>
-                        </div>
-                        @endforeach
+                            </tbody>
+                        </table>
                     </div>
                     @endif
                 </div>
@@ -164,42 +168,46 @@
                         <p class="text-gray-400 mt-1">No transfers have been accepted yet.</p>
                     </div>
                     @else
-                    <div class="space-y-4">
-                        @foreach($acceptedRequests as $request)
-                        <div class="request-card bg-white rounded-lg border border-gray-200 p-5 hover:shadow-lg cursor-pointer" onclick="viewRequest({{ $request->id }})">
-                            <div class="flex justify-between items-start mb-4">
-                                <div class="flex items-center gap-4">
-                                    <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                                        <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                                        </svg>
-                                    </div>
-                                    <div>
-                                        <h3 class="font-bold text-gray-800">{{ $request->request_number }}</h3>
-                                        <p class="text-sm text-gray-500">From: {{ $request->cashier->name }}</p>
-                                    </div>
-                                </div>
-                                <div class="text-right">
-                                    <span class="px-3 py-1 {{ $request->status === 'partially_accepted' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700' }} rounded-full text-sm font-medium">
-                                        {{ $request->status === 'partially_accepted' ? 'Partially Accepted' : 'Accepted' }}
-                                    </span>
-                                    <p class="text-xs text-gray-400 mt-2">{{ $request->responded_at ? $request->responded_at->diffForHumans() : '' }}</p>
-                                </div>
-                            </div>
-                            <div class="flex flex-wrap gap-2">
-                                @foreach($request->items->take(4) as $item)
-                                <span class="px-3 py-1 bg-gray-100 text-gray-600 text-sm rounded-full">
-                                    {{ $item->item_name }} ({{ $item->approved_quantity ?? $item->requested_quantity }})
-                                </span>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gradient-to-r from-[#667eea] to-[#764ba2]">
+                                <tr>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">Request #</th>
+                                    <th class="px-6 py-4 text-center text-xs font-semibold text-white uppercase tracking-wider">Items</th>
+                                    <th class="px-6 py-4 text-center text-xs font-semibold text-white uppercase tracking-wider">Status</th>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">Date</th>
+                                    <th class="px-6 py-4 text-center text-xs font-semibold text-white uppercase tracking-wider">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200">
+                                @foreach($acceptedRequests as $request)
+                                <tr class="hover:bg-purple-50 transition-colors">
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="text-purple-600 font-mono font-semibold">{{ $request->request_number }}</span>
+                                    </td>
+                                    <td class="px-6 py-4 text-center whitespace-nowrap">
+                                        <span class="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-medium">{{ $request->items->count() }} items</span>
+                                    </td>
+                                    <td class="px-6 py-4 text-center whitespace-nowrap">
+                                        <span class="px-3 py-1 {{ $request->status === 'partially_accepted' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700' }} rounded-full text-sm font-medium">
+                                            {{ $request->status === 'partially_accepted' ? 'Partially Accepted' : 'Accepted' }}
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-gray-600 text-sm">
+                                        {{ $request->responded_at ? $request->responded_at->format('M d, Y') : '' }}
+                                    </td>
+                                    <td class="px-6 py-4 text-center whitespace-nowrap">
+                                        <button onclick="viewRequest({{ $request->id }})" class="p-2 bg-gradient-to-r from-[#667eea] to-[#764ba2] hover:shadow-lg hover:shadow-purple-500/50 text-white rounded-lg transition" title="View Details">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                            </svg>
+                                        </button>
+                                    </td>
+                                </tr>
                                 @endforeach
-                                @if($request->items->count() > 4)
-                                <span class="px-3 py-1 bg-purple-100 text-purple-600 text-sm rounded-full font-medium">
-                                    +{{ $request->items->count() - 4 }} more
-                                </span>
-                                @endif
-                            </div>
-                        </div>
-                        @endforeach
+                            </tbody>
+                        </table>
                     </div>
                     @endif
                 </div>
@@ -215,31 +223,44 @@
                         <p class="text-gray-400 mt-1">No transfers have been rejected.</p>
                     </div>
                     @else
-                    <div class="space-y-4">
-                        @foreach($rejectedRequests as $request)
-                        <div class="request-card bg-white rounded-lg border border-gray-200 p-5 hover:shadow-lg cursor-pointer" onclick="viewRequest({{ $request->id }})">
-                            <div class="flex justify-between items-start mb-4">
-                                <div class="flex items-center gap-4">
-                                    <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-                                        <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                                        </svg>
-                                    </div>
-                                    <div>
-                                        <h3 class="font-bold text-gray-800">{{ $request->request_number }}</h3>
-                                        <p class="text-sm text-gray-500">From: {{ $request->cashier->name }}</p>
-                                    </div>
-                                </div>
-                                <div class="text-right">
-                                    <span class="px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-medium">Rejected</span>
-                                    <p class="text-xs text-gray-400 mt-2">{{ $request->responded_at ? $request->responded_at->diffForHumans() : '' }}</p>
-                                </div>
-                            </div>
-                            @if($request->supervisor_notes)
-                            <p class="text-sm text-gray-500 italic">{{ Str::limit($request->supervisor_notes, 100) }}</p>
-                            @endif
-                        </div>
-                        @endforeach
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gradient-to-r from-[#667eea] to-[#764ba2]">
+                                <tr>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">Request #</th>
+                                    <th class="px-6 py-4 text-center text-xs font-semibold text-white uppercase tracking-wider">Items</th>
+                                    <th class="px-6 py-4 text-center text-xs font-semibold text-white uppercase tracking-wider">Status</th>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">Date</th>
+                                    <th class="px-6 py-4 text-center text-xs font-semibold text-white uppercase tracking-wider">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200">
+                                @foreach($rejectedRequests as $request)
+                                <tr class="hover:bg-purple-50 transition-colors">
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="text-purple-600 font-mono font-semibold">{{ $request->request_number }}</span>
+                                    </td>
+                                    <td class="px-6 py-4 text-center whitespace-nowrap">
+                                        <span class="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-medium">{{ $request->items->count() }} items</span>
+                                    </td>
+                                    <td class="px-6 py-4 text-center whitespace-nowrap">
+                                        <span class="px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-medium">Rejected</span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-gray-600 text-sm">
+                                        {{ $request->responded_at ? $request->responded_at->format('M d, Y') : '' }}
+                                    </td>
+                                    <td class="px-6 py-4 text-center whitespace-nowrap">
+                                        <button onclick="viewRequest({{ $request->id }})" class="p-2 bg-gradient-to-r from-[#667eea] to-[#764ba2] hover:shadow-lg hover:shadow-purple-500/50 text-white rounded-lg transition" title="View Details">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                            </svg>
+                                        </button>
+                                    </td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
                     </div>
                     @endif
                 </div>

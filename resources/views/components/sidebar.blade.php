@@ -97,11 +97,17 @@
         </a>
         @endrole
 
-        <!-- Stock Requests (Cashier view) -->
+        <!-- Cashier Stock Section -->
         @role('cashier')
-        <a href="{{ route('stock.cashier.index') }}" class="flex items-center gap-3 px-4 py-3 {{ request()->routeIs('stock.cashier.*') ? 'bg-white/25 text-white border-l-4 border-white font-semibold' : 'text-white/80 hover:bg-white/15 hover:text-white' }} rounded-lg transition">
+        <a href="{{ route('stock.cashier.stock') }}" class="flex items-center gap-3 px-4 py-3 {{ request()->routeIs('stock.cashier.stock') ? 'bg-white/25 text-white border-l-4 border-white font-semibold' : 'text-white/80 hover:bg-white/15 hover:text-white' }} rounded-lg transition">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+            </svg>
+            <span class="font-medium">My Stock</span>
+        </a>
+        <a href="{{ route('stock.cashier.index') }}" class="flex items-center gap-3 px-4 py-3 {{ request()->routeIs('stock.cashier.index') ? 'bg-white/25 text-white border-l-4 border-white font-semibold' : 'text-white/80 hover:bg-white/15 hover:text-white' }} rounded-lg transition">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
             </svg>
             <span class="font-medium">Stock Requests</span>
         </a>

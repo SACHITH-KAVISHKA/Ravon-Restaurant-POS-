@@ -137,6 +137,7 @@ Route::middleware(['auth'])->group(function () {
         // Cashier routes
         Route::middleware(['role:cashier'])->group(function () {
             Route::get('/cashier', [App\Http\Controllers\StockRequestController::class, 'cashierIndex'])->name('cashier.index');
+            Route::get('/my-stock', [App\Http\Controllers\StockRequestController::class, 'cashierStock'])->name('cashier.stock');
             Route::post('/', [App\Http\Controllers\StockRequestController::class, 'store'])->name('store');
             Route::get('/my-requests', [App\Http\Controllers\StockRequestController::class, 'getCashierRequests'])->name('my-requests');
             Route::post('/{stockRequest}/cashier-respond', [App\Http\Controllers\StockRequestController::class, 'cashierRespond'])->name('cashier.respond');

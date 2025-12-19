@@ -29,30 +29,45 @@ class StockRequestController extends Controller
             })
             ->get();
 
-        // Get main stock with item and modifier info for display (for requesting new stock)
+        // Get restaurant stock quantities for lookup (what cashier has at restaurant)
+        $restaurantStockQty = RestaurantStock::whereHas('item', function ($query) use ($categories) {
+            $query->whereIn('category_id', $categories->pluck('id'));
+        })
+            ->get()
+            ->keyBy(function ($stock) {
+                return $stock->item_id . '-' . ($stock->item_modifier_id ?? 'null');
+            });
+
+        // Get main stock items with restaurant stock qty for display (items available to request)
         $stockItems = MainStock::with(['item', 'item.category', 'itemModifier'])
             ->whereHas('item', function ($query) use ($categories) {
                 $query->whereIn('category_id', $categories->pluck('id'));
             })
             ->orderBy('item_id')
             ->get()
-            ->map(function ($stock) {
+            ->map(function ($stock) use ($restaurantStockQty) {
                 $displayName = $stock->item->name;
                 if ($stock->itemModifier) {
                     $displayName .= ' (' . $stock->itemModifier->name . ')';
                 }
+
+                // Get restaurant stock qty for this item+modifier combination
+                $key = $stock->item_id . '-' . ($stock->item_modifier_id ?? 'null');
+                $restStock = $restaurantStockQty->get($key);
+                $availableQty = $restStock ? $restStock->quantity : 0;
+
                 return [
                     'id' => $stock->id,
                     'item_id' => $stock->item_id,
                     'modifier_id' => $stock->item_modifier_id,
                     'name' => $displayName,
                     'category' => $stock->item->category->name ?? 'Unknown',
-                    'available_qty' => $stock->quantity,
+                    'available_qty' => $availableQty,
                     'unit' => $stock->unit,
                 ];
             });
 
-        // Get restaurant stock (cashier's available stock at the restaurant)
+        // Get restaurant stock (cashier's available stock at the restaurant) for display section
         $restaurantStock = RestaurantStock::with(['item', 'item.category', 'itemModifier'])
             ->whereHas('item', function ($query) use ($categories) {
                 $query->whereIn('category_id', $categories->pluck('id'));
@@ -67,6 +82,29 @@ class StockRequestController extends Controller
             ->paginate(10);
 
         return view('stock.cashier.index', compact('categories', 'myRequests', 'stockItems', 'restaurantStock'));
+    }
+
+    /**
+     * Display the cashier's restaurant stock page (table view).
+     */
+    public function cashierStock()
+    {
+        // Get all restaurant stock for beverages and desserts
+        $categories = Category::active()
+            ->where(function ($query) {
+                $query->whereIn('slug', ['beverages', 'desserts'])
+                    ->orWhereIn('name', ['Beverages', 'Desserts', 'Beverage', 'Dessert', 'BEVERAGES', 'DESSERTS']);
+            })
+            ->pluck('id');
+
+        $stocks = RestaurantStock::with(['item', 'item.category', 'itemModifier'])
+            ->whereHas('item', function ($query) use ($categories) {
+                $query->whereIn('category_id', $categories);
+            })
+            ->orderBy('item_id')
+            ->get();
+
+        return view('stock.cashier.stock', compact('stocks'));
     }
 
     /**
@@ -290,16 +328,26 @@ class StockRequestController extends Controller
                         $approvedQty = $item->approved_quantity ?? $item->requested_quantity;
 
                         if ($approvedQty > 0) {
-                            // Get or create MainStock record
-                            $mainStock = MainStock::where('item_id', $item->item_id)->first();
+                            // Get MainStock record with correct item and modifier
+                            $mainStockQuery = MainStock::where('item_id', $item->item_id);
+                            if ($item->item_modifier_id) {
+                                $mainStockQuery->where('item_modifier_id', $item->item_modifier_id);
+                            } else {
+                                $mainStockQuery->whereNull('item_modifier_id');
+                            }
+                            $mainStock = $mainStockQuery->first();
 
                             // Deduct from MainStock if it exists and has sufficient quantity
                             if ($mainStock && $mainStock->quantity >= $approvedQty) {
                                 $mainStock->deductStock($approvedQty, Auth::id());
                             }
 
-                            // Get or create RestaurantStock record and add quantity
-                            $restaurantStock = RestaurantStock::getOrCreateForItem($item->item_id);
+                            // Get or create RestaurantStock record with modifier and add quantity
+                            $restaurantStock = RestaurantStock::getOrCreateForItem(
+                                $item->item_id,
+                                $item->item_modifier_id,
+                                $mainStock ? $mainStock->unit : 'pcs'
+                            );
                             $restaurantStock->addStock($approvedQty, Auth::id());
                         }
                     }
