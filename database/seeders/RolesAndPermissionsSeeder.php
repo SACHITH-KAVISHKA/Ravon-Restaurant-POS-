@@ -25,39 +25,39 @@ class RolesAndPermissionsSeeder extends Seeder
             'create-menu',
             'edit-menu',
             'delete-menu',
-            
+
             // Order Management
             'view-orders',
             'create-orders',
             'edit-orders',
             'cancel-orders',
-            
+
             // Table Management
             'view-tables',
             'manage-tables',
             'merge-tables',
             'transfer-tables',
-            
+
             // Payment Management
             'process-payments',
             'refund-payments',
             'view-payments',
-            
+
             // KOT Management
             'view-kot',
             'update-kot',
             'reprint-kot',
-            
+
             // Reports
             'view-reports',
             'export-reports',
-            
+
             // User Management
             'view-users',
             'create-users',
             'edit-users',
             'delete-users',
-            
+
             // System Settings
             'view-settings',
             'edit-settings',
@@ -108,7 +108,6 @@ class RolesAndPermissionsSeeder extends Seeder
         $adminUser = User::create([
             'name' => 'Admin User',
             'username' => 'admin',
-            'email' => 'admin@ravon.com',
             'password' => Hash::make('password'),
             'employee_id' => 'EMP001',
             'phone' => '+94771234567',
@@ -119,7 +118,6 @@ class RolesAndPermissionsSeeder extends Seeder
         $cashierUser = User::create([
             'name' => 'Cashier User',
             'username' => 'cashier',
-            'email' => 'cashier@ravon.com',
             'password' => Hash::make('password'),
             'employee_id' => 'EMP002',
             'phone' => '+94771234568',
@@ -130,7 +128,6 @@ class RolesAndPermissionsSeeder extends Seeder
         $waiterUser = User::create([
             'name' => 'Waiter User',
             'username' => 'waiter',
-            'email' => 'waiter@ravon.com',
             'password' => Hash::make('password'),
             'employee_id' => 'EMP003',
             'phone' => '+94771234569',
@@ -141,7 +138,6 @@ class RolesAndPermissionsSeeder extends Seeder
         $kitchenUser = User::create([
             'name' => 'Kitchen User',
             'username' => 'kitchen',
-            'email' => 'kitchen@ravon.com',
             'password' => Hash::make('password'),
             'employee_id' => 'EMP004',
             'phone' => '+94771234570',
