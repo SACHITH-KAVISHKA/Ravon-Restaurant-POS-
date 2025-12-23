@@ -13,10 +13,11 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             RolesAndPermissionsSeeder::class,
-            FloorAndTableSeeder::class,
             KitchenStationSeeder::class,
-            MenuSeeder::class,
-            ItemModifiersSeeder::class,
+            TableSeeder::class,
+            CategorySeeder::class,
+            ItemSeeder::class,
+            
         ]);
     }
 }

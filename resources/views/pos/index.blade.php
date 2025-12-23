@@ -82,23 +82,38 @@
         </div>
 
         <!-- Right Side - Menu and Actions -->
-        <div class="flex-1 flex flex-col">
+        <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
             <!-- Menu Tabs -->
-            <div id="menuSelectionContainer" class="hidden flex-col h-full">
-                <div class="bg-gray-800 border-b border-gray-700">
-                    <div class="flex overflow-x-auto whitespace-nowrap px-4" id="categoryTabs" style="scrollbar-width: none; -ms-overflow-style: none;">
+            <div id="menuSelectionContainer" class="hidden flex-col h-full min-w-0">
+                <div class="bg-gray-800 border-b border-gray-700 w-full overflow-hidden">
+                    <div class="w-full overflow-x-auto" id="categoryTabs" style="scrollbar-width: thin; scrollbar-color: #4B5563 #1F2937;">
                         <style>
                             #categoryTabs::-webkit-scrollbar {
-                                display: none;
+                                height: 6px;
+                            }
+
+                            #categoryTabs::-webkit-scrollbar-track {
+                                background: #1F2937;
+                            }
+
+                            #categoryTabs::-webkit-scrollbar-thumb {
+                                background: #4B5563;
+                                border-radius: 3px;
+                            }
+
+                            #categoryTabs::-webkit-scrollbar-thumb:hover {
+                                background: #6B7280;
                             }
                         </style>
-                        @foreach($categories as $category)
-                        <button class="category-tab px-6 py-3 {{ $loop->first ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white' }} transition font-semibold rounded-t-lg"
-                            onclick="filterByCategory({{ $category->id }})"
-                            data-id="{{ $category->id }}">
-                            {{ strtoupper($category->name) }}
-                        </button>
-                        @endforeach
+                        <div class="inline-flex whitespace-nowrap px-2 py-1">
+                            @foreach($categories as $category)
+                            <button class="category-tab px-6 py-3 {{ $loop->first ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white' }} transition font-semibold rounded-t-lg flex-shrink-0 mr-1"
+                                onclick="filterByCategory({{ $category->id }})"
+                                data-id="{{ $category->id }}">
+                                {{ strtoupper($category->name) }}
+                            </button>
+                            @endforeach
+                        </div>
                     </div>
                 </div>
 
@@ -2566,6 +2581,74 @@
                     behavior: 'smooth'
                 });
             }
+
+            // Category bar scroll functions
+            function scrollCategoriesLeft() {
+                const categoryTabs = document.getElementById('categoryTabs');
+                if (categoryTabs) {
+                    categoryTabs.scrollBy({
+                        left: -200,
+                        behavior: 'smooth'
+                    });
+                }
+            }
+
+            function scrollCategoriesRight() {
+                const categoryTabs = document.getElementById('categoryTabs');
+                if (categoryTabs) {
+                    categoryTabs.scrollBy({
+                        left: 200,
+                        behavior: 'smooth'
+                    });
+                }
+            }
+
+            function updateCategoryScrollButtons() {
+                const categoryTabs = document.getElementById('categoryTabs');
+                const leftBtn = document.getElementById('scrollLeftBtn');
+                const rightBtn = document.getElementById('scrollRightBtn');
+
+                if (!categoryTabs || !leftBtn || !rightBtn) return;
+
+                const isScrollable = categoryTabs.scrollWidth > categoryTabs.clientWidth;
+                const isAtStart = categoryTabs.scrollLeft <= 5;
+                const isAtEnd = categoryTabs.scrollLeft + categoryTabs.clientWidth >= categoryTabs.scrollWidth - 5;
+
+                if (isScrollable) {
+                    // Show/hide left button
+                    if (isAtStart) {
+                        leftBtn.style.display = 'none';
+                    } else {
+                        leftBtn.style.display = 'block';
+                        leftBtn.classList.remove('opacity-0', 'pointer-events-none');
+                    }
+
+                    // Show/hide right button
+                    if (isAtEnd) {
+                        rightBtn.style.display = 'none';
+                    } else {
+                        rightBtn.style.display = 'block';
+                    }
+                } else {
+                    leftBtn.style.display = 'none';
+                    rightBtn.style.display = 'none';
+                }
+            }
+
+            // Initialize category scroll buttons
+            document.addEventListener('DOMContentLoaded', () => {
+                const categoryTabs = document.getElementById('categoryTabs');
+                if (categoryTabs) {
+                    // Update buttons on scroll
+                    categoryTabs.addEventListener('scroll', updateCategoryScrollButtons);
+
+                    // Initial update (delayed to ensure DOM is ready)
+                    setTimeout(updateCategoryScrollButtons, 100);
+
+                    // Update on window resize
+                    window.addEventListener('resize', updateCategoryScrollButtons);
+                }
+            });
 
             // Placeholder functions
             function showModifiersModal() {

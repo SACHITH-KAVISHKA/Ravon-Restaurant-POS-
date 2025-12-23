@@ -13,19 +13,15 @@ return new class extends Migration
     {
         Schema::create('tables', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('floor_id')->constrained()->onDelete('cascade');
             $table->string('table_number', 20);
             $table->integer('capacity')->default(4);
             $table->enum('status', ['available', 'ordered', 'serving', 'bill_requested'])->default('available');
             $table->unsignedBigInteger('current_order_id')->nullable();
-            $table->integer('position_x')->nullable();
-            $table->integer('position_y')->nullable();
             $table->boolean('is_active')->default(true);
             $table->timestamps();
 
             // Indexes
-            $table->unique(['floor_id', 'table_number'], 'unique_floor_table');
-            $table->index(['floor_id', 'status'], 'idx_floor_status');
+            $table->unique('table_number');
             $table->index('current_order_id');
         });
     }
