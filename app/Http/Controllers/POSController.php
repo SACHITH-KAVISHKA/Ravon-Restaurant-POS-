@@ -28,7 +28,7 @@ class POSController extends Controller
             }])
             ->get();
 
-        $tables = Table::orderBy('table_number')->get();
+        $tables = Table::orderByRaw("CAST(SUBSTRING(table_number, 2) AS UNSIGNED)")->get();
 
         return view('pos.index', compact('categories', 'tables'));
     }
@@ -54,7 +54,7 @@ class POSController extends Controller
     public function getAvailableTables()
     {
         $tables = Table::with('currentOrder')
-            ->orderBy('table_number')
+            ->orderByRaw("CAST(SUBSTRING(table_number, 2) AS UNSIGNED)")
             ->get()
             ->map(function ($table) {
                 return [
