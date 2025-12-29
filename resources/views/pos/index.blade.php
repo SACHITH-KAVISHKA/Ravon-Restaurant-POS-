@@ -3484,6 +3484,11 @@
                     cardInputGroup.style.display = 'block';
                     if (cardAmountRow) cardAmountRow.style.display = 'flex';
                     activePaymentField = 'card';
+                    
+                    // Auto-fill card amount with total (editable)
+                    const total = parseFloat(document.getElementById('paymentTotal').textContent) || 0;
+                    cardInputValue = total.toString();
+                    document.getElementById('paymentCardInput').value = total.toFixed(2);
                 } else if (type === 'card_cash') {
                     // CARD & CASH: Show BOTH inputs
                     cashInputGroup.style.display = 'block';
@@ -3682,7 +3687,15 @@
                         return;
                     }
                 } else if (paymentMethod === 'card') {
-                    amountPaid = total; // Card payment is exact
+                    amountPaid = cardAmount;
+                    if (cardAmount <= 0) {
+                        showNotification('Please enter a valid card amount', 'Payment Error');
+                        return;
+                    }
+                    if (cardAmount < total) {
+                        showNotification('Insufficient card amount. Total: ' + total.toFixed(2), 'Payment Error');
+                        return;
+                    }
                 } else if (paymentMethod === 'card_cash') {
                     amountPaid = cashAmount + cardAmount;
                     if (amountPaid < total) {
