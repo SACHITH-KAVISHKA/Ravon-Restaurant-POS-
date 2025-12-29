@@ -139,8 +139,24 @@
                         <div class="grid grid-cols-4 gap-3" id="itemsGrid">
                             @foreach($categories as $category)
                             @foreach($category->availableItems as $item)
+                            @php
+                                $pickmePrice = $item->itemPrices()->where('price_type', 'pickme')->whereNull('item_modifier_id')->first();
+                                
+                                // Prepare modifiers with their Pick Me prices
+                                $modifiersWithPrices = $item->modifiers->map(function($modifier) {
+                                    $modPickmePrice = $modifier->itemPrices()->where('price_type', 'pickme')->first();
+                                    return [
+                                        'id' => $modifier->id,
+                                        'name' => $modifier->name,
+                                        'type' => $modifier->type,
+                                        'price_adjustment' => $modifier->price_adjustment,
+                                        'pickme_price' => $modPickmePrice ? $modPickmePrice->price : null,
+                                        'is_active' => $modifier->is_active,
+                                    ];
+                                });
+                            @endphp
                             <button class="p-5 bg-gray-700 text-white rounded-lg hover:bg-blue-600 transition border border-gray-600 hover:border-blue-500 text-center flex items-center justify-center h-full"
-                                onclick="selectItem({{ $item->id }}, '{{ $item->name }}', {{ $item->price }}, {{ json_encode($item->modifiers) }})"
+                                onclick="selectItem({{ $item->id }}, '{{ $item->name }}', {{ $item->price }}, {{ json_encode($modifiersWithPrices) }}, {{ $pickmePrice ? $pickmePrice->price : 'null' }})"
                                 data-category="{{ $category->id }}">
                                 <div class="font-semibold text-lg">{{ $item->name }}</div>
                             </button>
@@ -1985,7 +2001,13 @@
             }
 
             // Select Item (Check for Sub-items/Portions)
-            function selectItem(itemId, itemName, itemPrice, modifiers) {
+            function selectItem(itemId, itemName, itemPrice, modifiers, pickmePrice) {
+                // Determine the price to use based on order type
+                let priceToUse = itemPrice;
+                if (currentOrderType === 'pickme' && pickmePrice !== null && pickmePrice !== undefined) {
+                    priceToUse = pickmePrice;
+                }
+
                 const portionModifiers = modifiers.filter(m => {
                     const name = m.name.toLowerCase();
                     const type = (m.type || '').toLowerCase();
@@ -1996,9 +2018,9 @@
                 });
 
                 if (portionModifiers.length > 0) {
-                    showPortionSelection(itemId, itemName, itemPrice, portionModifiers);
+                    showPortionSelection(itemId, itemName, priceToUse, portionModifiers);
                 } else {
-                    addItemToBill(itemId, itemName, itemPrice);
+                    addItemToBill(itemId, itemName, priceToUse);
                     clearPortionSelection();
                 }
             }
@@ -2007,12 +2029,20 @@
                 const optionsDiv = document.getElementById('portionOptions');
                 const closeBtn = document.getElementById('closePortionBtn');
 
-                optionsDiv.innerHTML = portions.map(p => `
+                optionsDiv.innerHTML = portions.map(p => {
+                    // Determine price to use based on order type
+                    let portionPrice = p.price_adjustment;
+                    if (currentOrderType === 'pickme' && p.pickme_price !== null && p.pickme_price !== undefined) {
+                        portionPrice = p.pickme_price;
+                    }
+
+                    return `
                     <button class="p-3 bg-blue-700 text-white rounded-lg hover:bg-blue-600 transition font-semibold"
-                            onclick="addPortionToBill(${itemId}, '${itemName}', ${p.price_adjustment}, '${p.name}')">
+                            onclick="addPortionToBill(${itemId}, '${itemName}', ${portionPrice}, '${p.name}')">
                         ${p.name}
                     </button>
-                `).join('');
+                `;
+                }).join('');
 
                 closeBtn.classList.remove('hidden');
             }

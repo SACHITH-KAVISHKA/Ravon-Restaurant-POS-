@@ -41,6 +41,31 @@ class ItemModifier extends Model
     }
 
     /**
+     * Get the item prices for this modifier.
+     */
+    public function itemPrices(): HasMany
+    {
+        return $this->hasMany(ItemPrice::class);
+    }
+
+    /**
+     * Get price by type for this modifier (pickme, ubereats, etc.).
+     * Returns the special price if exists, otherwise returns the default price_adjustment from item_modifiers table.
+     */
+    public function getPriceByType($type)
+    {
+        if (!$type || $type === 'default') {
+            return $this->price_adjustment;
+        }
+        
+        $itemPrice = $this->itemPrices()
+            ->where('price_type', $type)
+            ->first();
+        
+        return $itemPrice ? $itemPrice->price : $this->price_adjustment;
+    }
+
+    /**
      * Scope to get only active modifiers.
      */
     public function scopeActive($query)

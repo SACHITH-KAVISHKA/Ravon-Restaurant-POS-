@@ -75,6 +75,32 @@ class Item extends Model
     }
 
     /**
+     * Get the item prices.
+     */
+    public function itemPrices(): HasMany
+    {
+        return $this->hasMany(ItemPrice::class);
+    }
+
+    /**
+     * Get price by type (pickme, ubereats, etc.).
+     * Returns the special price if exists, otherwise returns the default price from items table.
+     */
+    public function getPriceByType($type)
+    {
+        if (!$type || $type === 'default') {
+            return $this->price;
+        }
+        
+        $itemPrice = $this->itemPrices()
+            ->where('price_type', $type)
+            ->whereNull('item_modifier_id')
+            ->first();
+        
+        return $itemPrice ? $itemPrice->price : $this->price;
+    }
+
+    /**
      * Get active modifiers.
      */
     public function activeModifiers(): HasMany

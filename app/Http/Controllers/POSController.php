@@ -24,7 +24,8 @@ class POSController extends Controller
         $categories = Category::active()
             ->ordered()
             ->with(['availableItems' => function ($query) {
-                $query->available()->orderBy('display_order')->with('modifiers');
+                $query->available()->orderBy('display_order')
+                    ->with(['modifiers.itemPrices', 'itemPrices']);
             }])
             ->get();
 
@@ -490,7 +491,7 @@ class POSController extends Controller
      */
     private function generateKOT($order, $kotItems)
     {
-        // Group items by category - BEVERAGES go to BOT, everything else to KOT
+        // Group items by category - BEVERAGES and DESSERTS go to BOT, everything else to KOT
         $kitchenItems = [];
         $barItems = [];
 
@@ -502,18 +503,21 @@ class POSController extends Controller
                 $item->load('category');
             }
 
-            // Check by category_id (3 is BEVERAGES) or category slug
-            $isBeverage = false;
+            // Check by category_id or category slug - BEVERAGES (3) or DESSERTS (4) go to BOT
+            $isBarItem = false;
 
-            if ($item->category_id == 3) {
-                $isBeverage = true;
+            if (in_array($item->category_id, [3, 4])) {
+                $isBarItem = true;
             } elseif ($item->category) {
                 $categorySlug = strtolower($item->category->slug);
                 $categoryName = strtoupper($item->category->name);
-                $isBeverage = ($categorySlug === 'beverages' || $categoryName === 'BEVERAGES');
+                $isBarItem = (
+                    $categorySlug === 'beverages' || $categoryName === 'BEVERAGES' ||
+                    $categorySlug === 'desserts' || $categoryName === 'DESSERTS'
+                );
             }
 
-            if ($isBeverage) {
+            if ($isBarItem) {
                 $barItems[] = $kotItem;
             } else {
                 $kitchenItems[] = $kotItem;
@@ -968,16 +972,19 @@ class POSController extends Controller
                 foreach ($cancelKotItems as $cancelItem) {
                     $item = Item::with('category')->find($cancelItem['item_id']);
                     if ($item) {
-                        $isBeverage = false;
-                        if ($item->category_id == 3) {
-                            $isBeverage = true;
+                        $isBarItem = false;
+                        if (in_array($item->category_id, [3, 4])) {
+                            $isBarItem = true;
                         } elseif ($item->category) {
                             $categorySlug = strtolower($item->category->slug);
                             $categoryName = strtoupper($item->category->name);
-                            $isBeverage = ($categorySlug === 'beverages' || $categoryName === 'BEVERAGES');
+                            $isBarItem = (
+                                $categorySlug === 'beverages' || $categoryName === 'BEVERAGES' ||
+                                $categorySlug === 'desserts' || $categoryName === 'DESSERTS'
+                            );
                         }
 
-                        if ($isBeverage) {
+                        if ($isBarItem) {
                             $barCancelItems[] = $cancelItem;
                         } else {
                             $kitchenCancelItems[] = $cancelItem;

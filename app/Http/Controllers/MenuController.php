@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Item;
 use App\Models\Category;
 use App\Models\ItemModifier;
+use App\Models\ItemPrice;
 use App\Models\KitchenStation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -107,10 +108,12 @@ class MenuController extends Controller
             'category_id' => 'required|exists:categories,id',
             'name' => 'required|string|max:255',
             'price' => 'nullable|numeric|min:0',
+            'special_prices' => 'nullable|array',
             'has_portions' => 'nullable|boolean',
             'portions' => 'nullable|array',
             'portions.*.name' => 'required_with:portions|string|max:255',
             'portions.*.price' => 'required_with:portions|numeric|min:0',
+            'portions.*.special_prices' => 'nullable|array',
         ]);
 
         // Set defaults
@@ -123,16 +126,38 @@ class MenuController extends Controller
         // Create the item
         $item = Item::create($validated);
 
+        // Store special prices for the item
+        if ($request->has('special_prices.new')) {
+            foreach ($request->input('special_prices.new') as $priceData) {
+                $item->itemPrices()->create([
+                    'price_type' => $priceData['type'],
+                    'price' => $priceData['price'],
+                    'item_modifier_id' => null,
+                ]);
+            }
+        }
+
         // If has portions, create modifiers with independent prices
         if ($request->has('portions') && is_array($request->portions)) {
-            foreach ($request->portions as $portion) {
+            foreach ($request->portions as $portionIndex => $portion) {
                 if (!empty($portion['name']) && isset($portion['price'])) {
-                    $item->modifiers()->create([
+                    $modifier = $item->modifiers()->create([
                         'name' => $portion['name'],
                         'type' => 'size',
                         'price_adjustment' => $portion['price'], // Store as independent price
                         'is_active' => true,
                     ]);
+
+                    // Store special prices for this portion if provided
+                    if (isset($portion['special_prices']) && is_array($portion['special_prices'])) {
+                        foreach ($portion['special_prices'] as $priceData) {
+                            $item->itemPrices()->create([
+                                'price_type' => $priceData['type'],
+                                'price' => $priceData['price'],
+                                'item_modifier_id' => $modifier->id,
+                            ]);
+                        }
+                    }
                 }
             }
         }
@@ -161,12 +186,44 @@ class MenuController extends Controller
             'category_id' => 'required|exists:categories,id',
             'name' => 'required|string|max:255',
             'price' => 'nullable|numeric|min:0',
+            'special_prices' => 'nullable|array',
         ]);
 
         $validated['slug'] = Str::slug($validated['name']);
         $validated['price'] = $validated['price'] ?? $item->price;
 
         $item->update($validated);
+
+        // Handle special prices deletion
+        if ($request->has('special_prices.delete')) {
+            ItemPrice::whereIn('id', $request->input('special_prices.delete'))->delete();
+        }
+
+        // Handle existing special prices updates
+        if ($request->has('special_prices.existing')) {
+            foreach ($request->input('special_prices.existing') as $priceData) {
+                if (isset($priceData['id'])) {
+                    $itemPrice = ItemPrice::find($priceData['id']);
+                    if ($itemPrice && $itemPrice->item_id === $item->id) {
+                        $itemPrice->update([
+                            'price_type' => $priceData['type'],
+                            'price' => $priceData['price'],
+                        ]);
+                    }
+                }
+            }
+        }
+
+        // Handle new special prices
+        if ($request->has('special_prices.new')) {
+            foreach ($request->input('special_prices.new') as $priceData) {
+                $item->itemPrices()->create([
+                    'price_type' => $priceData['type'],
+                    'price' => $priceData['price'],
+                    'item_modifier_id' => null,
+                ]);
+            }
+        }
 
         return redirect()->route('menu.items.edit', $item)->with('success', 'Item updated successfully!');
     }
@@ -189,14 +246,26 @@ class MenuController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'price' => 'required|numeric|min:0',
+            'portion_special_prices' => 'nullable|array',
         ]);
 
-        $item->modifiers()->create([
+        $modifier = $item->modifiers()->create([
             'name' => $validated['name'],
             'type' => 'size',
-            'price_adjustment' => $validated['price'], // Independent price
+            'price_adjustment' => $validated['price'],
             'is_active' => true,
         ]);
+
+        // Store special prices for this portion
+        if ($request->has('portion_special_prices')) {
+            foreach ($request->input('portion_special_prices') as $priceData) {
+                $item->itemPrices()->create([
+                    'price_type' => $priceData['type'],
+                    'price' => $priceData['price'],
+                    'item_modifier_id' => $modifier->id,
+                ]);
+            }
+        }
 
         return redirect()->route('menu.items.edit', $item)->with('success', 'Portion added successfully!');
     }
@@ -209,12 +278,48 @@ class MenuController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'price' => 'required|numeric|min:0',
+            'modifier_special_prices' => 'nullable|array',
         ]);
 
         $modifier->update([
             'name' => $validated['name'],
             'price_adjustment' => $validated['price'],
         ]);
+
+        // Handle special prices deletion
+        if ($request->has('modifier_special_prices.delete')) {
+            ItemPrice::whereIn('id', $request->input('modifier_special_prices.delete'))->delete();
+        }
+
+        // Handle existing special prices updates
+        if ($request->has('modifier_special_prices.existing')) {
+            foreach ($request->input('modifier_special_prices.existing') as $priceData) {
+                if (isset($priceData['id'])) {
+                    $itemPrice = ItemPrice::find($priceData['id']);
+                    if ($itemPrice && $itemPrice->item_modifier_id === $modifier->id) {
+                        $itemPrice->update([
+                            'price_type' => $priceData['type'],
+                            'price' => $priceData['price'],
+                        ]);
+                    }
+                }
+            }
+        }
+
+        // Handle new special prices
+        if ($request->has('modifier_special_prices.new')) {
+            foreach ($request->input('modifier_special_prices.new') as $modifierId => $prices) {
+                if ($modifierId == $modifier->id) {
+                    foreach ($prices as $priceData) {
+                        $modifier->item->itemPrices()->create([
+                            'price_type' => $priceData['type'],
+                            'price' => $priceData['price'],
+                            'item_modifier_id' => $modifier->id,
+                        ]);
+                    }
+                }
+            }
+        }
 
         return redirect()->route('menu.items.edit', $modifier->item)->with('success', 'Portion updated successfully!');
     }

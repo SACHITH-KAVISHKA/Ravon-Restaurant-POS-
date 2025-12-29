@@ -39,7 +39,7 @@ class Kot extends Model
         static::creating(function ($kot) {
             if (empty($kot->kot_number)) {
                 // Determine if this is a BOT (Bar Order Ticket) based on kitchen_station_id
-                // Kitchen station 2 is typically the bar
+                // Kitchen station 2 is typically the bar (handles beverages and desserts)
                 $isBar = $kot->kitchen_station_id == 2;
                 $kot->kot_number = static::generateKotNumber($isBar);
             }
