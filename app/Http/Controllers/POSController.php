@@ -503,17 +503,21 @@ class POSController extends Controller
                 $item->load('category');
             }
 
-            // Check by category_id or category slug - BEVERAGES (3) or DESSERTS (4) go to BOT
+            // Check by category_id or category slug - BEVERAGES (ID 21) or DESSERTS (ID 20) go to BOT
+            // All other categories go to KOT (Kitchen Order Ticket)
             $isBarItem = false;
 
-            if (in_array($item->category_id, [3, 4])) {
+            if (in_array($item->category_id, [20, 21])) {
+                // Dessert (ID 20) and Beverages (ID 21) go to BOT
                 $isBarItem = true;
             } elseif ($item->category) {
+                // Fallback: check by slug/name for flexibility
                 $categorySlug = strtolower($item->category->slug);
                 $categoryName = strtoupper($item->category->name);
                 $isBarItem = (
                     $categorySlug === 'beverages' || $categoryName === 'BEVERAGES' ||
-                    $categorySlug === 'desserts' || $categoryName === 'DESSERTS'
+                    $categorySlug === 'desserts' || $categoryName === 'DESSERTS' ||
+                    $categorySlug === 'dessert' || $categoryName === 'DESSERT'
                 );
             }
 
@@ -972,15 +976,19 @@ class POSController extends Controller
                 foreach ($cancelKotItems as $cancelItem) {
                     $item = Item::with('category')->find($cancelItem['item_id']);
                     if ($item) {
+                        // Dessert (ID 20) and Beverages (ID 41) go to Cancel BOT
+                        // All other categories go to Cancel KOT
                         $isBarItem = false;
-                        if (in_array($item->category_id, [3, 4])) {
+                        if (in_array($item->category_id, [20, 41])) {
                             $isBarItem = true;
                         } elseif ($item->category) {
+                            // Fallback: check by slug/name for flexibility
                             $categorySlug = strtolower($item->category->slug);
                             $categoryName = strtoupper($item->category->name);
                             $isBarItem = (
                                 $categorySlug === 'beverages' || $categoryName === 'BEVERAGES' ||
-                                $categorySlug === 'desserts' || $categoryName === 'DESSERTS'
+                                $categorySlug === 'desserts' || $categoryName === 'DESSERTS' ||
+                                $categorySlug === 'dessert' || $categoryName === 'DESSERT'
                             );
                         }
 
