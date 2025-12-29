@@ -976,10 +976,10 @@ class POSController extends Controller
                 foreach ($cancelKotItems as $cancelItem) {
                     $item = Item::with('category')->find($cancelItem['item_id']);
                     if ($item) {
-                        // Dessert (ID 20) and Beverages (ID 41) go to Cancel BOT
+                        // Dessert (ID 20) and Beverages (ID 21) go to Cancel BOT
                         // All other categories go to Cancel KOT
                         $isBarItem = false;
-                        if (in_array($item->category_id, [20, 41])) {
+                        if (in_array($item->category_id, [20, 21])) {
                             $isBarItem = true;
                         } elseif ($item->category) {
                             // Fallback: check by slug/name for flexibility
