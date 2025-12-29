@@ -140,20 +140,20 @@
                             @foreach($categories as $category)
                             @foreach($category->availableItems as $item)
                             @php
-                                $pickmePrice = $item->itemPrices()->where('price_type', 'pickme')->whereNull('item_modifier_id')->first();
-                                
-                                // Prepare modifiers with their Pick Me prices
-                                $modifiersWithPrices = $item->modifiers->map(function($modifier) {
-                                    $modPickmePrice = $modifier->itemPrices()->where('price_type', 'pickme')->first();
-                                    return [
-                                        'id' => $modifier->id,
-                                        'name' => $modifier->name,
-                                        'type' => $modifier->type,
-                                        'price_adjustment' => $modifier->price_adjustment,
-                                        'pickme_price' => $modPickmePrice ? $modPickmePrice->price : null,
-                                        'is_active' => $modifier->is_active,
-                                    ];
-                                });
+                            $pickmePrice = $item->itemPrices()->where('price_type', 'pickme')->whereNull('item_modifier_id')->first();
+
+                            // Prepare modifiers with their Pick Me prices
+                            $modifiersWithPrices = $item->modifiers->map(function($modifier) {
+                            $modPickmePrice = $modifier->itemPrices()->where('price_type', 'pickme')->first();
+                            return [
+                            'id' => $modifier->id,
+                            'name' => $modifier->name,
+                            'type' => $modifier->type,
+                            'price_adjustment' => $modifier->price_adjustment,
+                            'pickme_price' => $modPickmePrice ? $modPickmePrice->price : null,
+                            'is_active' => $modifier->is_active,
+                            ];
+                            });
                             @endphp
                             <button class="p-5 bg-gray-700 text-white rounded-lg hover:bg-blue-600 transition border border-gray-600 hover:border-blue-500 text-center flex items-center justify-center h-full"
                                 onclick="selectItem({{ $item->id }}, '{{ $item->name }}', {{ $item->price }}, {{ json_encode($modifiersWithPrices) }}, {{ $pickmePrice ? $pickmePrice->price : 'null' }})"
@@ -1471,10 +1471,19 @@
                     const {
                         jsPDF
                     } = window.jspdf;
+
+                    // Calculate dynamic page height based on content
+                    // Base height: header (40mm) + order info (40mm) + footer (20mm) = 100mm
+                    // Per item: approx 15mm (name lines + quantity + spacing)
+                    const baseHeight = 100;
+                    const perItemHeight = 20; // Generous estimate per item
+                    const calculatedHeight = baseHeight + (foodItems.length * perItemHeight);
+                    const pageHeight = Math.max(150, calculatedHeight); // Minimum 150mm
+
                     const pdf = new jsPDF({
                         orientation: 'portrait',
                         unit: 'mm',
-                        format: [80, 297]
+                        format: [80, pageHeight] // Dynamic height based on items
                     });
 
                     let yPosition = 10;
@@ -1629,10 +1638,19 @@
                     const {
                         jsPDF
                     } = window.jspdf;
+
+                    // Calculate dynamic page height based on content
+                    // Base height: header (40mm) + order info (40mm) + footer (20mm) = 100mm
+                    // Per item: approx 15mm (name lines + quantity + spacing)
+                    const baseHeight = 100;
+                    const perItemHeight = 20; // Generous estimate per item
+                    const calculatedHeight = baseHeight + (beverageItems.length * perItemHeight);
+                    const pageHeight = Math.max(150, calculatedHeight); // Minimum 150mm
+
                     const pdf = new jsPDF({
                         orientation: 'portrait',
                         unit: 'mm',
-                        format: [80, 297]
+                        format: [80, pageHeight] // Dynamic height based on items
                     });
 
                     let yPosition = 10;
@@ -3062,10 +3080,19 @@
                     const {
                         jsPDF
                     } = window.jspdf;
+
+                    // Calculate dynamic page height based on content
+                    // Base height: header (50mm) + order info (50mm) + footer (30mm) = 130mm
+                    // Per item: approx 15mm (name lines + quantity + spacing)
+                    const baseHeight = 130;
+                    const perItemHeight = 20; // Generous estimate per item
+                    const calculatedHeight = baseHeight + (items.length * perItemHeight);
+                    const pageHeight = Math.max(150, calculatedHeight); // Minimum 150mm
+
                     const pdf = new jsPDF({
                         orientation: 'portrait',
                         unit: 'mm',
-                        format: [80, 297]
+                        format: [80, pageHeight] // Dynamic height based on items
                     });
 
                     let yPosition = 10;
@@ -3514,7 +3541,7 @@
                     cardInputGroup.style.display = 'block';
                     if (cardAmountRow) cardAmountRow.style.display = 'flex';
                     activePaymentField = 'card';
-                    
+
                     // Auto-fill card amount with total (editable)
                     const total = parseFloat(document.getElementById('paymentTotal').textContent) || 0;
                     cardInputValue = total.toString();
@@ -3824,10 +3851,21 @@
                     const {
                         jsPDF
                     } = window.jspdf;
+
+                    // Calculate dynamic page height based on content
+                    // Get items count for height calculation
+                    const orderItemsForHeight = order.order_items || order.orderItems || [];
+                    // Base height: header (60mm) + order info (40mm) + payment info (50mm) + footer (40mm) = 190mm
+                    // Per item: approx 15mm (name + price lines)
+                    const baseHeight = 190;
+                    const perItemHeight = 18; // Generous estimate per item
+                    const calculatedHeight = baseHeight + (orderItemsForHeight.length * perItemHeight);
+                    const pageHeight = Math.max(200, calculatedHeight); // Minimum 200mm for receipts
+
                     const pdf = new jsPDF({
                         orientation: 'portrait',
                         unit: 'mm',
-                        format: [80, 297]
+                        format: [80, pageHeight] // Dynamic height based on items
                     });
 
                     let yPosition = 8;
@@ -4137,10 +4175,21 @@
                     const {
                         jsPDF
                     } = window.jspdf;
+
+                    // Calculate dynamic page height based on content
+                    // Get items count for height calculation
+                    const invoiceItemsForHeight = order.order_items || order.orderItems || billItems || [];
+                    // Base height: header (60mm) + order info (40mm) + footer (30mm) = 130mm
+                    // Per item: approx 15mm (name + price lines)
+                    const baseHeight = 160;
+                    const perItemHeight = 18; // Generous estimate per item
+                    const calculatedHeight = baseHeight + (invoiceItemsForHeight.length * perItemHeight);
+                    const pageHeight = Math.max(180, calculatedHeight); // Minimum 180mm
+
                     const pdf = new jsPDF({
                         orientation: 'portrait',
                         unit: 'mm',
-                        format: [80, 297]
+                        format: [80, pageHeight] // Dynamic height based on items
                     });
 
                     let yPosition = 8;
