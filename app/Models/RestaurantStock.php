@@ -89,6 +89,74 @@ class RestaurantStock extends Model
     }
 
     /**
+     * Deduct stock quantity for sales - ALLOWS NEGATIVE STOCK.
+     * This method will deduct stock even if it results in negative quantity.
+     * Used when items are sold through POS.
+     */
+    public function deductStockForSale(float $quantity, ?int $userId = null): void
+    {
+        $this->quantity -= $quantity;
+        if ($userId) {
+            $this->last_updated_by = $userId;
+        }
+        $this->save();
+    }
+
+    /**
+     * Deduct stock for sale - creates stock entry if it doesn't exist.
+     * This is used when selling items through POS for beverages and desserts.
+     * @param int $itemId - The item ID
+     * @param int|null $modifierId - The modifier ID (for portion/size)
+     * @param float $quantity - Quantity to deduct
+     * @param int|null $userId - User who performed the action
+     * @return self - The stock record (newly created or existing)
+     */
+    public static function deductForSale(int $itemId, ?int $modifierId, float $quantity, ?int $userId = null): self
+    {
+        // Get or create the stock record
+        $stock = self::getOrCreateForItem($itemId, $modifierId);
+
+        // Deduct the quantity (allows negative stock)
+        $stock->deductStockForSale($quantity, $userId);
+
+        return $stock;
+    }
+
+    /**
+     * Deduct stock for sale using item ID and display name.
+     * Extracts the modifier name from display name (format: "Item Name (Modifier)") 
+     * and finds the modifier ID.
+     * 
+     * @param int $itemId - The item ID
+     * @param string $displayName - The display name (e.g., "Coca Cola (250ml)")
+     * @param float $quantity - Quantity to deduct
+     * @param int|null $userId - User who performed the action
+     * @return self|null - The stock record or null if unable to process
+     */
+    public static function deductForSaleByDisplayName(int $itemId, string $displayName, float $quantity, ?int $userId = null): ?self
+    {
+        $modifierId = null;
+
+        // Check if display name contains a modifier in parentheses
+        // Format: "Item Name (Modifier Name)" e.g., "Coca Cola (250ml)"
+        if (preg_match('/\(([^)]+)\)$/', $displayName, $matches)) {
+            $modifierName = trim($matches[1]);
+
+            // Find the modifier for this item with this name
+            $modifier = ItemModifier::where('item_id', $itemId)
+                ->where('name', $modifierName)
+                ->first();
+
+            if ($modifier) {
+                $modifierId = $modifier->id;
+            }
+        }
+
+        // Deduct the stock
+        return self::deductForSale($itemId, $modifierId, $quantity, $userId);
+    }
+
+    /**
      * Get or create stock record for an item + modifier combination.
      */
     public static function getOrCreateForItem(int $itemId, ?int $modifierId = null, string $unit = 'pcs'): self

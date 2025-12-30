@@ -10,6 +10,7 @@ use App\Models\OrderItem;
 use App\Models\Payment;
 use App\Models\Kot;
 use App\Models\KotItem;
+use App\Models\RestaurantStock;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -750,6 +751,29 @@ class POSController extends Controller
                         'status' => 'available',
                         'current_order_id' => null,
                     ]);
+                }
+            }
+
+            // Deduct stock for Finished Goods items from RestaurantStock
+            // Stock is deducted even if not present (creates stock entry with negative quantity)
+            $orderItemsForStock = $order->orderItems()
+                ->whereNotIn('status', ['cancelled', 'deleted'])
+                ->with(['item'])
+                ->get();
+
+            foreach ($orderItemsForStock as $orderItem) {
+                if (!$orderItem->item) continue;
+
+                // Only deduct stock for items marked as "Finished Goods"
+                if ($orderItem->item->is_finished_goods && $orderItem->quantity > 0) {
+                    // Use display name to find modifier and deduct stock
+                    $displayName = $orderItem->item_display_name ?? $orderItem->item->name;
+                    RestaurantStock::deductForSaleByDisplayName(
+                        $orderItem->item_id,
+                        $displayName,
+                        $orderItem->quantity,
+                        Auth::id()
+                    );
                 }
             }
 

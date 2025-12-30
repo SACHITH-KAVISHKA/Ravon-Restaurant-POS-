@@ -19,19 +19,46 @@ class StockRequestController extends Controller
      */
     public function cashierIndex()
     {
-        // Only get Beverages and Desserts categories for stock requests
-        $categories = Category::with(['items' => function ($query) {
-            $query->where('is_available', true)->orderBy('name');
-        }])->active()->ordered()
-            ->where(function ($query) {
-                $query->whereIn('slug', ['beverages', 'desserts'])
-                    ->orWhereIn('name', ['Beverages', 'Desserts', 'Beverage', 'Dessert']);
-            })
+        // Get all items marked as Finished Goods (for dropdown selection)
+        $finishedGoodsItems = Item::where('is_available', true)
+            ->where('is_finished_goods', true)
+            ->with(['category', 'modifiers'])
+            ->orderBy('name')
             ->get();
 
+        // Prepare dropdown items for JavaScript
+        $finishedGoodsDropdown = collect();
+        foreach ($finishedGoodsItems as $item) {
+            if ($item->modifiers->count() > 0) {
+                // Item has modifiers - add each as separate option
+                foreach ($item->modifiers as $modifier) {
+                    $finishedGoodsDropdown->push([
+                        'id' => $item->id . '-' . $modifier->id,
+                        'item_id' => $item->id,
+                        'modifier_id' => $modifier->id,
+                        'name' => $item->name . ' (' . $modifier->name . ')',
+                        'category' => $item->category->name ?? 'Unknown',
+                        'available_qty' => 0,
+                        'unit' => 'pcs',
+                    ]);
+                }
+            } else {
+                // Item without modifiers
+                $finishedGoodsDropdown->push([
+                    'id' => $item->id . '-null',
+                    'item_id' => $item->id,
+                    'modifier_id' => null,
+                    'name' => $item->name,
+                    'category' => $item->category->name ?? 'Unknown',
+                    'available_qty' => 0,
+                    'unit' => 'pcs',
+                ]);
+            }
+        }
+
         // Get restaurant stock quantities for lookup (what cashier has at restaurant)
-        $restaurantStockQty = RestaurantStock::whereHas('item', function ($query) use ($categories) {
-            $query->whereIn('category_id', $categories->pluck('id'));
+        $restaurantStockQty = RestaurantStock::whereHas('item', function ($query) {
+            $query->where('is_finished_goods', true);
         })
             ->get()
             ->keyBy(function ($stock) {
@@ -40,8 +67,8 @@ class StockRequestController extends Controller
 
         // Get main stock items with restaurant stock qty for display (items available to request)
         $stockItems = MainStock::with(['item', 'item.category', 'itemModifier'])
-            ->whereHas('item', function ($query) use ($categories) {
-                $query->whereIn('category_id', $categories->pluck('id'));
+            ->whereHas('item', function ($query) {
+                $query->where('is_finished_goods', true);
             })
             ->orderBy('item_id')
             ->get()
@@ -69,8 +96,8 @@ class StockRequestController extends Controller
 
         // Get restaurant stock (cashier's available stock at the restaurant) for display section
         $restaurantStock = RestaurantStock::with(['item', 'item.category', 'itemModifier'])
-            ->whereHas('item', function ($query) use ($categories) {
-                $query->whereIn('category_id', $categories->pluck('id'));
+            ->whereHas('item', function ($query) {
+                $query->where('is_finished_goods', true);
             })
             ->where('quantity', '>', 0)
             ->orderBy('item_id')
@@ -81,7 +108,7 @@ class StockRequestController extends Controller
             ->latest()
             ->paginate(10);
 
-        return view('stock.cashier.index', compact('categories', 'myRequests', 'stockItems', 'restaurantStock'));
+        return view('stock.cashier.index', compact('finishedGoodsDropdown', 'myRequests', 'stockItems', 'restaurantStock'));
     }
 
     /**
@@ -89,17 +116,10 @@ class StockRequestController extends Controller
      */
     public function cashierStock()
     {
-        // Get all restaurant stock for beverages and desserts
-        $categories = Category::active()
-            ->where(function ($query) {
-                $query->whereIn('slug', ['beverages', 'desserts'])
-                    ->orWhereIn('name', ['Beverages', 'Desserts', 'Beverage', 'Dessert', 'BEVERAGES', 'DESSERTS']);
-            })
-            ->pluck('id');
-
+        // Get all restaurant stock for Finished Goods items
         $stocks = RestaurantStock::with(['item', 'item.category', 'itemModifier'])
-            ->whereHas('item', function ($query) use ($categories) {
-                $query->whereIn('category_id', $categories);
+            ->whereHas('item', function ($query) {
+                $query->where('is_finished_goods', true);
             })
             ->orderBy('item_id')
             ->get();

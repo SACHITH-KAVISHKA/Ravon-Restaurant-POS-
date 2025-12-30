@@ -53,12 +53,21 @@
                         @enderror
                     </div>
 
+                    <!-- Finished Goods Checkbox -->
+                    <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                        <label class="flex items-center cursor-pointer">
+                            <input type="checkbox" name="is_finished_goods" value="1" {{ old('is_finished_goods') ? 'checked' : '' }}
+                                class="w-5 h-5 text-blue-600 bg-gray-50 border-gray-300 rounded focus:ring-blue-500">
+                            <span class="ml-3 text-gray-800 font-semibold">Finished Goods</span>
+                        </label>
+                    </div>
+
                     <!-- Default Price (disabled when has portions) -->
                     <div>
                         <label class="block text-sm font-semibold text-gray-800-muted mb-2">Default Price (Rs.) *</label>
                         <input type="number" name="price" id="defaultPrice" value="{{ old('price', 0) }}" step="0.01" min="0" required
                             class="w-full px-4 py-2 bg-gray-50 text-gray-800 rounded-lg border border-gray-300 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500">
-                        <p class="text-gray-800-muted/60 text-sm mt-1">This will be disabled if you add different portions</p>
+                        <p class="text-gray-800-muted/60 text-sm mt-1">This will be disabled if you enable portions below</p>
                     </div>
 
                     <!-- Special Prices Section -->
@@ -133,11 +142,11 @@
     function addSpecialPrice() {
         specialPriceCount++;
         const container = document.getElementById('specialPricesList');
-        
+
         const priceDiv = document.createElement('div');
         priceDiv.id = `specialPrice-${specialPriceCount}`;
         priceDiv.className = 'flex gap-2 items-center bg-white p-2 rounded border border-purple-200 shadow-sm';
-        
+
         priceDiv.innerHTML = `
             <div class="flex-1 grid grid-cols-2 gap-2">
                 <div>
@@ -158,7 +167,7 @@
                 </svg>
             </button>
         `;
-        
+
         container.appendChild(priceDiv);
         updateSpecialPriceInputs();
     }
@@ -174,13 +183,13 @@
     function updateSpecialPriceInputs() {
         const container = document.getElementById('specialPricesList');
         const specialPrices = container.querySelectorAll('[id^="specialPrice-"]');
-        
+
         // Update hidden input for pickme_price based on special prices
         const pickmePrice = Array.from(specialPrices).find(sp => {
             const select = sp.querySelector('select');
             return select && select.value === 'pickme';
         });
-        
+
         // Create/update hidden input for controller
         let hiddenInput = document.getElementById('pickme_price_hidden');
         if (pickmePrice) {
@@ -207,14 +216,14 @@
             portionSpecialPriceCounts[portionId] = 0;
         }
         portionSpecialPriceCounts[portionId]++;
-        
+
         const container = document.getElementById(`portionSpecialPrices-${portionId}`);
         const priceId = portionSpecialPriceCounts[portionId];
-        
+
         const priceDiv = document.createElement('div');
         priceDiv.id = `portionSpecialPrice-${portionId}-${priceId}`;
         priceDiv.className = 'flex gap-2 items-center';
-        
+
         priceDiv.innerHTML = `
             <select name="portions[${portionId}][special_prices][${priceId}][type]" required
                 class="px-3 py-2 bg-purple-50 text-gray-800 rounded-lg border border-purple-200 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 text-sm">
@@ -229,7 +238,7 @@
                 </svg>
             </button>
         `;
-        
+
         container.appendChild(priceDiv);
         updatePortionSpecialPriceInputs(portionId);
     }
@@ -245,13 +254,13 @@
     function updatePortionSpecialPriceInputs(portionId) {
         const container = document.getElementById(`portionSpecialPrices-${portionId}`);
         const specialPrices = container.querySelectorAll('[id^="portionSpecialPrice-"]');
-        
+
         // Find pickme price
         const pickmePrice = Array.from(specialPrices).find(sp => {
             const select = sp.querySelector('select');
             return select && select.value === 'pickme';
         });
-        
+
         // Create/update hidden input for controller
         let hiddenInput = document.getElementById(`portion_pickme_price_hidden_${portionId}`);
         if (pickmePrice) {
@@ -276,12 +285,18 @@
         const hasPortions = document.getElementById('hasPortions').checked;
         const portionsSection = document.getElementById('portionsSection');
         const defaultPriceInput = document.getElementById('defaultPrice');
+        const specialPricesSection = document.getElementById('specialPricesSection');
 
         if (hasPortions) {
             portionsSection.classList.remove('hidden');
             defaultPriceInput.disabled = true;
             defaultPriceInput.classList.add('opacity-50', 'cursor-not-allowed');
             defaultPriceInput.value = 0;
+            
+            // Disable special prices section when portions are enabled
+            if (specialPricesSection) {
+                specialPricesSection.classList.add('opacity-50', 'pointer-events-none');
+            }
 
             // Add first portion field if none exist
             if (portionCount === 0) {
@@ -291,6 +306,11 @@
             portionsSection.classList.add('hidden');
             defaultPriceInput.disabled = false;
             defaultPriceInput.classList.remove('opacity-50', 'cursor-not-allowed');
+            
+            // Re-enable special prices section when portions are disabled
+            if (specialPricesSection) {
+                specialPricesSection.classList.remove('opacity-50', 'pointer-events-none');
+            }
 
             // Clear portion fields
             document.getElementById('portionsList').innerHTML = '';
@@ -299,6 +319,13 @@
     }
 
     function addPortionField() {
+        // Auto-check the portions checkbox when adding portions
+        const hasPortionsCheckbox = document.getElementById('hasPortions');
+        if (!hasPortionsCheckbox.checked) {
+            hasPortionsCheckbox.checked = true;
+            togglePortionFields();
+        }
+        
         portionCount++;
         const portionsList = document.getElementById('portionsList');
 
@@ -348,6 +375,17 @@
         if (portionDiv) {
             portionDiv.remove();
         }
+        
+        // Check if there are any remaining portions
+        const portionsList = document.getElementById('portionsList');
+        const remainingPortions = portionsList.querySelectorAll('[id^="portion-"]');
+        
+        // If no portions left, uncheck the checkbox
+        if (remainingPortions.length === 0) {
+            const hasPortionsCheckbox = document.getElementById('hasPortions');
+            hasPortionsCheckbox.checked = false;
+            togglePortionFields();
+        }
     }
 
     // Initialize on page load
@@ -356,5 +394,3 @@
     });
 </script>
 @endsection
-
-

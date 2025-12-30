@@ -24,6 +24,7 @@ class Item extends Model
         'preparation_time',
         'is_available',
         'is_featured',
+        'is_finished_goods',
         'display_order',
     ];
 
@@ -33,6 +34,7 @@ class Item extends Model
         'preparation_time' => 'integer',
         'is_available' => 'boolean',
         'is_featured' => 'boolean',
+        'is_finished_goods' => 'boolean',
         'display_order' => 'integer',
     ];
 
@@ -91,12 +93,12 @@ class Item extends Model
         if (!$type || $type === 'default') {
             return $this->price;
         }
-        
+
         $itemPrice = $this->itemPrices()
             ->where('price_type', $type)
             ->whereNull('item_modifier_id')
             ->first();
-        
+
         return $itemPrice ? $itemPrice->price : $this->price;
     }
 

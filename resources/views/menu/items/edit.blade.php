@@ -57,6 +57,26 @@
                                 </select>
                             </div>
 
+                            <!-- Finished Goods Checkbox -->
+                            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="checkbox" name="is_finished_goods" value="1" {{ old('is_finished_goods', $item->is_finished_goods) ? 'checked' : '' }}
+                                        class="w-5 h-5 text-blue-600 bg-gray-50 border-gray-300 rounded focus:ring-blue-500">
+                                    <span class="ml-3 text-gray-800 font-semibold">Finished Goods</span>
+                                </label>
+                            </div>
+
+                            <!-- Enable Portions Checkbox -->
+                            <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="checkbox" id="hasPortionsEdit" {{ $item->modifiers->count() > 0 ? 'checked' : '' }}
+                                        class="w-5 h-5 text-purple-600 bg-gray-50 border-gray-300 rounded focus:ring-purple-500"
+                                        onchange="togglePortionSectionEdit()">
+                                    <span class="ml-3 text-gray-800 font-semibold">This item has different portions/sizes</span>
+                                </label>
+                                <p class="text-gray-800-muted text-sm mt-1 ml-8">Check this if the item comes in different sizes (Small, Large, etc.)</p>
+                            </div>
+
                             <!-- Default Price -->
                             <div>
                                 <label class="block text-sm font-semibold text-gray-800-muted mb-2">Default Price (Rs.)</label>
@@ -82,7 +102,7 @@
                                 </div>
                                 <div id="specialPricesList" class="space-y-2">
                                     @php
-                                        $existingPrices = $item->itemPrices()->whereNull('item_modifier_id')->get();
+                                    $existingPrices = $item->itemPrices()->whereNull('item_modifier_id')->get();
                                     @endphp
                                     @foreach($existingPrices as $index => $itemPrice)
                                     <div id="specialPrice-existing-{{ $itemPrice->id }}" class="flex gap-2 items-center bg-white p-2 rounded border border-purple-200 shadow-sm">
@@ -95,15 +115,15 @@
                                                 </select>
                                             </div>
                                             <div>
-                                                <input type="number" name="special_prices[existing][{{ $itemPrice->id }}][price]" 
+                                                <input type="number" name="special_prices[existing][{{ $itemPrice->id }}][price]"
                                                     value="{{ $itemPrice->price }}" step="0.01" min="0" required
-                                                    placeholder="Price" 
+                                                    placeholder="Price"
                                                     class="w-full px-3 py-2 bg-gray-50 text-gray-800 rounded-lg border border-purple-300 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 text-sm"
                                                     {{ $item->modifiers->count() > 0 ? 'disabled' : '' }}>
                                                 <input type="hidden" name="special_prices[existing][{{ $itemPrice->id }}][id]" value="{{ $itemPrice->id }}">
                                             </div>
                                         </div>
-                                        <button type="button" onclick="removeExistingSpecialPrice({{ $itemPrice->id }})" 
+                                        <button type="button" onclick="removeExistingSpecialPrice({{ $itemPrice->id }})"
                                             class="px-2 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition shadow-sm hover:shadow-md"
                                             {{ $item->modifiers->count() > 0 ? 'disabled' : '' }}>
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -131,6 +151,8 @@
                 <div class="bg-white rounded-lg shadow-lg p-6 border border-gray-200">
                     <h2 class="text-xl font-bold text-gray-800 mb-4">Portions / Sizes</h2>
 
+                    <!-- Portions Content (shown when checkbox is checked) -->
+                    <div id="portionsSectionEdit" class="{{ $item->modifiers->count() > 0 ? '' : 'hidden' }}">
                     <!-- Add Portion Form -->
                     <form action="{{ route('menu.modifiers.store', $item) }}" method="POST" class="mb-6">
                         @csrf
@@ -185,7 +207,7 @@
                                             Rs. {{ number_format($modifier->price_adjustment, 2) }}
                                         </span>
                                         @php
-                                            $pickmePrice = $modifier->itemPrices()->where('price_type', 'pickme')->first();
+                                        $pickmePrice = $modifier->itemPrices()->where('price_type', 'pickme')->first();
                                         @endphp
                                         @if($pickmePrice)
                                         <div class="text-xs text-blue-600">
@@ -243,7 +265,7 @@
                                             </div>
                                             <div id="editPortionSpecialPrices-{{ $modifier->id }}" class="space-y-1">
                                                 @php
-                                                    $modifierPrices = $modifier->itemPrices()->get();
+                                                $modifierPrices = $modifier->itemPrices()->get();
                                                 @endphp
                                                 @foreach($modifierPrices as $modPrice)
                                                 <div id="modifierSpecialPrice-existing-{{ $modPrice->id }}" class="flex gap-2 items-center">
@@ -251,12 +273,12 @@
                                                         class="px-3 py-2 bg-purple-50 text-gray-800 rounded-lg border border-purple-200 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 text-sm">
                                                         <option value="pickme" {{ $modPrice->price_type === 'pickme' ? 'selected' : '' }}>Pick Me</option>
                                                     </select>
-                                                    <input type="number" name="modifier_special_prices[existing][{{ $modPrice->id }}][price]" 
+                                                    <input type="number" name="modifier_special_prices[existing][{{ $modPrice->id }}][price]"
                                                         value="{{ $modPrice->price }}" step="0.01" min="0" required
                                                         placeholder="Price" class="flex-1 px-3 py-2 bg-purple-50 text-gray-800 rounded-lg border border-purple-200 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 text-sm">
                                                     <input type="hidden" name="modifier_special_prices[existing][{{ $modPrice->id }}][id]" value="{{ $modPrice->id }}">
                                                     <input type="hidden" name="modifier_special_prices[existing][{{ $modPrice->id }}][modifier_id]" value="{{ $modifier->id }}">
-                                                    <button type="button" onclick="removeExistingModifierSpecialPrice({{ $modPrice->id }})" 
+                                                    <button type="button" onclick="removeExistingModifierSpecialPrice({{ $modPrice->id }})"
                                                         class="px-2 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition shadow-sm">
                                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -284,6 +306,8 @@
                         <p class="text-gray-800-muted/60 text-xs text-center">Add portions if this item comes in different sizes</p>
                         @endforelse
                     </div>
+                    </div>
+                    <!-- End Portions Section -->
                 </div>
             </div>
         </div>
@@ -291,20 +315,53 @@
 </div>
 
 <script>
-let specialPriceCount = {{ $item->itemPrices()->whereNull('item_modifier_id')->count() }};
-let newPortionSpecialPriceCount = 0;
-let editPortionSpecialPriceCounts = {};
+    let specialPriceCount = {{ $item->itemPrices()->whereNull('item_modifier_id')->count() }};
+    let newPortionSpecialPriceCount = 0;
+    let editPortionSpecialPriceCounts = {};
 
-// Special Price Management for Item
-function addSpecialPrice() {
-    specialPriceCount++;
-    const container = document.getElementById('specialPricesList');
-    
-    const priceDiv = document.createElement('div');
-    priceDiv.id = `specialPrice-${specialPriceCount}`;
-    priceDiv.className = 'flex gap-2 items-center bg-white p-2 rounded border border-purple-200 shadow-sm';
-    
-    priceDiv.innerHTML = `
+    // Toggle Portions Section
+    function togglePortionSectionEdit() {
+        const hasPortions = document.getElementById('hasPortionsEdit').checked;
+        const portionsSection = document.getElementById('portionsSectionEdit');
+        const defaultPriceInput = document.querySelector('input[name="price"]');
+        const specialPricesSection = document.getElementById('specialPricesSection');
+
+        if (hasPortions) {
+            portionsSection.classList.remove('hidden');
+            if (defaultPriceInput) {
+                defaultPriceInput.disabled = true;
+                defaultPriceInput.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+            if (specialPricesSection) {
+                specialPricesSection.classList.add('opacity-50', 'pointer-events-none');
+            }
+        } else {
+            portionsSection.classList.add('hidden');
+            if (defaultPriceInput) {
+                defaultPriceInput.disabled = false;
+                defaultPriceInput.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+            if (specialPricesSection) {
+                specialPricesSection.classList.remove('opacity-50', 'pointer-events-none');
+            }
+        }
+    }
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        togglePortionSectionEdit();
+    });
+
+    // Special Price Management for Item
+    function addSpecialPrice() {
+        specialPriceCount++;
+        const container = document.getElementById('specialPricesList');
+
+        const priceDiv = document.createElement('div');
+        priceDiv.id = `specialPrice-${specialPriceCount}`;
+        priceDiv.className = 'flex gap-2 items-center bg-white p-2 rounded border border-purple-200 shadow-sm';
+
+        priceDiv.innerHTML = `
         <div class="flex-1 grid grid-cols-2 gap-2">
             <div>
                 <select name="special_prices[new][${specialPriceCount}][type]" required
@@ -324,73 +381,73 @@ function addSpecialPrice() {
             </svg>
         </button>
     `;
-    
-    container.appendChild(priceDiv);
-    updateItemSpecialPriceInputs();
-}
 
-function removeSpecialPrice(id) {
-    const element = document.getElementById(`specialPrice-${id}`);
-    if (element) {
-        element.remove();
+        container.appendChild(priceDiv);
+        updateItemSpecialPriceInputs();
     }
-    updateItemSpecialPriceInputs();
-}
 
-function removeExistingSpecialPrice(id) {
-    const element = document.getElementById(`specialPrice-existing-${id}`);
-    if (element) {
-        // Add hidden input to mark for deletion
-        const deleteInput = document.createElement('input');
-        deleteInput.type = 'hidden';
-        deleteInput.name = `special_prices[delete][]`;
-        deleteInput.value = id;
-        document.querySelector('form').appendChild(deleteInput);
-        element.remove();
-    }
-    updateItemSpecialPriceInputs();
-}
-
-function updateItemSpecialPriceInputs() {
-    const container = document.getElementById('specialPricesList');
-    const allPrices = container.querySelectorAll('[id^="specialPrice-"]');
-    
-    // Find pickme price (existing or new)
-    const pickmePrice = Array.from(allPrices).find(sp => {
-        const select = sp.querySelector('select');
-        return select && select.value === 'pickme';
-    });
-    
-    // Update hidden input for backward compatibility
-    let hiddenInput = document.getElementById('pickme_price_hidden');
-    if (pickmePrice) {
-        const priceInput = pickmePrice.querySelector('input[type="number"]');
-        if (!hiddenInput) {
-            hiddenInput = document.createElement('input');
-            hiddenInput.type = 'hidden';
-            hiddenInput.id = 'pickme_price_hidden';
-            hiddenInput.name = 'pickme_price';
-            document.querySelector('form').appendChild(hiddenInput);
+    function removeSpecialPrice(id) {
+        const element = document.getElementById(`specialPrice-${id}`);
+        if (element) {
+            element.remove();
         }
-        hiddenInput.value = priceInput.value;
-        priceInput.addEventListener('input', function() {
-            hiddenInput.value = this.value;
-        });
-    } else if (hiddenInput) {
-        hiddenInput.remove();
+        updateItemSpecialPriceInputs();
     }
-}
 
-// Special Price Management for New Portion
-function addNewPortionSpecialPrice() {
-    newPortionSpecialPriceCount++;
-    const container = document.getElementById('newPortionSpecialPrices');
-    
-    const priceDiv = document.createElement('div');
-    priceDiv.id = `newPortionSpecialPrice-${newPortionSpecialPriceCount}`;
-    priceDiv.className = 'flex gap-1 items-center';
-    
-    priceDiv.innerHTML = `
+    function removeExistingSpecialPrice(id) {
+        const element = document.getElementById(`specialPrice-existing-${id}`);
+        if (element) {
+            // Add hidden input to mark for deletion
+            const deleteInput = document.createElement('input');
+            deleteInput.type = 'hidden';
+            deleteInput.name = `special_prices[delete][]`;
+            deleteInput.value = id;
+            document.querySelector('form').appendChild(deleteInput);
+            element.remove();
+        }
+        updateItemSpecialPriceInputs();
+    }
+
+    function updateItemSpecialPriceInputs() {
+        const container = document.getElementById('specialPricesList');
+        const allPrices = container.querySelectorAll('[id^="specialPrice-"]');
+
+        // Find pickme price (existing or new)
+        const pickmePrice = Array.from(allPrices).find(sp => {
+            const select = sp.querySelector('select');
+            return select && select.value === 'pickme';
+        });
+
+        // Update hidden input for backward compatibility
+        let hiddenInput = document.getElementById('pickme_price_hidden');
+        if (pickmePrice) {
+            const priceInput = pickmePrice.querySelector('input[type="number"]');
+            if (!hiddenInput) {
+                hiddenInput = document.createElement('input');
+                hiddenInput.type = 'hidden';
+                hiddenInput.id = 'pickme_price_hidden';
+                hiddenInput.name = 'pickme_price';
+                document.querySelector('form').appendChild(hiddenInput);
+            }
+            hiddenInput.value = priceInput.value;
+            priceInput.addEventListener('input', function() {
+                hiddenInput.value = this.value;
+            });
+        } else if (hiddenInput) {
+            hiddenInput.remove();
+        }
+    }
+
+    // Special Price Management for New Portion
+    function addNewPortionSpecialPrice() {
+        newPortionSpecialPriceCount++;
+        const container = document.getElementById('newPortionSpecialPrices');
+
+        const priceDiv = document.createElement('div');
+        priceDiv.id = `newPortionSpecialPrice-${newPortionSpecialPriceCount}`;
+        priceDiv.className = 'flex gap-1 items-center';
+
+        priceDiv.innerHTML = `
         <select name="portion_special_prices[${newPortionSpecialPriceCount}][type]" required
             class="px-3 py-2 bg-purple-50 text-gray-800 rounded-lg border border-purple-200 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 text-sm">
             <option value="pickme" selected>Pick Me</option>
@@ -404,62 +461,62 @@ function addNewPortionSpecialPrice() {
             </svg>
         </button>
     `;
-    
-    container.appendChild(priceDiv);
-    updateNewPortionSpecialPrices();
-}
 
-function removeNewPortionSpecialPrice(id) {
-    const element = document.getElementById(`newPortionSpecialPrice-${id}`);
-    if (element) {
-        element.remove();
+        container.appendChild(priceDiv);
+        updateNewPortionSpecialPrices();
     }
-    updateNewPortionSpecialPrices();
-}
 
-function updateNewPortionSpecialPrices() {
-    const container = document.getElementById('newPortionSpecialPrices');
-    const specialPrices = container.querySelectorAll('[id^="newPortionSpecialPrice-"]');
-    
-    const pickmePrice = Array.from(specialPrices).find(sp => {
-        const select = sp.querySelector('select');
-        return select && select.value === 'pickme';
-    });
-    
-    let hiddenInput = document.getElementById('new_portion_pickme_price_hidden');
-    if (pickmePrice) {
-        const priceInput = pickmePrice.querySelector('input[type="number"]');
-        if (!hiddenInput) {
-            hiddenInput = document.createElement('input');
-            hiddenInput.type = 'hidden';
-            hiddenInput.id = 'new_portion_pickme_price_hidden';
-            hiddenInput.name = 'pickme_price';
-            document.querySelector('form').appendChild(hiddenInput);
+    function removeNewPortionSpecialPrice(id) {
+        const element = document.getElementById(`newPortionSpecialPrice-${id}`);
+        if (element) {
+            element.remove();
         }
-        hiddenInput.value = priceInput.value;
-        priceInput.addEventListener('input', function() {
-            hiddenInput.value = this.value;
-        });
-    } else if (hiddenInput) {
-        hiddenInput.remove();
+        updateNewPortionSpecialPrices();
     }
-}
 
-// Special Price Management for Edit Portion
-function addEditPortionSpecialPrice(modifierId) {
-    if (!editPortionSpecialPriceCounts[modifierId]) {
-        editPortionSpecialPriceCounts[modifierId] = 0;
+    function updateNewPortionSpecialPrices() {
+        const container = document.getElementById('newPortionSpecialPrices');
+        const specialPrices = container.querySelectorAll('[id^="newPortionSpecialPrice-"]');
+
+        const pickmePrice = Array.from(specialPrices).find(sp => {
+            const select = sp.querySelector('select');
+            return select && select.value === 'pickme';
+        });
+
+        let hiddenInput = document.getElementById('new_portion_pickme_price_hidden');
+        if (pickmePrice) {
+            const priceInput = pickmePrice.querySelector('input[type="number"]');
+            if (!hiddenInput) {
+                hiddenInput = document.createElement('input');
+                hiddenInput.type = 'hidden';
+                hiddenInput.id = 'new_portion_pickme_price_hidden';
+                hiddenInput.name = 'pickme_price';
+                document.querySelector('form').appendChild(hiddenInput);
+            }
+            hiddenInput.value = priceInput.value;
+            priceInput.addEventListener('input', function() {
+                hiddenInput.value = this.value;
+            });
+        } else if (hiddenInput) {
+            hiddenInput.remove();
+        }
     }
-    editPortionSpecialPriceCounts[modifierId]++;
-    
-    const container = document.getElementById(`editPortionSpecialPrices-${modifierId}`);
-    const priceId = editPortionSpecialPriceCounts[modifierId];
-    
-    const priceDiv = document.createElement('div');
-    priceDiv.id = `modifierSpecialPrice-${modifierId}-${priceId}`;
-    priceDiv.className = 'flex gap-1 items-center';
-    
-    priceDiv.innerHTML = `
+
+    // Special Price Management for Edit Portion
+    function addEditPortionSpecialPrice(modifierId) {
+        if (!editPortionSpecialPriceCounts[modifierId]) {
+            editPortionSpecialPriceCounts[modifierId] = 0;
+        }
+        editPortionSpecialPriceCounts[modifierId]++;
+
+        const container = document.getElementById(`editPortionSpecialPrices-${modifierId}`);
+        const priceId = editPortionSpecialPriceCounts[modifierId];
+
+        const priceDiv = document.createElement('div');
+        priceDiv.id = `modifierSpecialPrice-${modifierId}-${priceId}`;
+        priceDiv.className = 'flex gap-1 items-center';
+
+        priceDiv.innerHTML = `
         <select name="modifier_special_prices[new][${modifierId}][${priceId}][type]" required
             class="px-3 py-2 bg-purple-50 text-gray-800 rounded-lg border border-purple-200 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 text-sm">
             <option value="pickme" selected>Pick Me</option>
@@ -474,75 +531,73 @@ function addEditPortionSpecialPrice(modifierId) {
             </svg>
         </button>
     `;
-    
-    container.appendChild(priceDiv);
-    updateEditPortionSpecialPrices(modifierId);
-}
 
-function removeEditPortionSpecialPrice(modifierId, priceId) {
-    const element = document.getElementById(`modifierSpecialPrice-${modifierId}-${priceId}`);
-    if (element) {
-        element.remove();
+        container.appendChild(priceDiv);
+        updateEditPortionSpecialPrices(modifierId);
     }
-    updateEditPortionSpecialPrices(modifierId);
-}
 
-function removeExistingModifierSpecialPrice(id) {
-    const element = document.getElementById(`modifierSpecialPrice-existing-${id}`);
-    if (element) {
-        const deleteInput = document.createElement('input');
-        deleteInput.type = 'hidden';
-        deleteInput.name = `modifier_special_prices[delete][]`;
-        deleteInput.value = id;
-        document.querySelector('form').appendChild(deleteInput);
-        element.remove();
-    }
-}
-
-function updateEditPortionSpecialPrices(modifierId) {
-    const container = document.getElementById(`editPortionSpecialPrices-${modifierId}`);
-    const specialPrices = container.querySelectorAll('[id^="modifierSpecialPrice-"]');
-    
-    const pickmePrice = Array.from(specialPrices).find(sp => {
-        const select = sp.querySelector('select');
-        return select && select.value === 'pickme';
-    });
-    
-    let hiddenInput = document.getElementById(`edit_portion_pickme_price_hidden_${modifierId}`);
-    if (pickmePrice) {
-        const priceInput = pickmePrice.querySelector('input[type="number"]');
-        if (!hiddenInput) {
-            hiddenInput = document.createElement('input');
-            hiddenInput.type = 'hidden';
-            hiddenInput.id = `edit_portion_pickme_price_hidden_${modifierId}`;
-            hiddenInput.name = 'pickme_price';
-            const form = pickmePrice.closest('form');
-            if (form) form.appendChild(hiddenInput);
+    function removeEditPortionSpecialPrice(modifierId, priceId) {
+        const element = document.getElementById(`modifierSpecialPrice-${modifierId}-${priceId}`);
+        if (element) {
+            element.remove();
         }
-        if (hiddenInput) {
-            hiddenInput.value = priceInput.value;
-            priceInput.addEventListener('input', function() {
-                hiddenInput.value = this.value;
-            });
-        }
-    } else if (hiddenInput) {
-        hiddenInput.remove();
+        updateEditPortionSpecialPrices(modifierId);
     }
-}
 
-function toggleEditMode(modifierId) {
-    const viewMode = document.querySelector('.view-mode-' + modifierId);
-    const editMode = document.querySelector('.edit-mode-' + modifierId);
-    
-    if (viewMode.classList.contains('hidden')) {
-        viewMode.classList.remove('hidden');
-        editMode.classList.add('hidden');
-    } else {
-        viewMode.classList.add('hidden');
-        editMode.classList.remove('hidden');
+    function removeExistingModifierSpecialPrice(id) {
+        const element = document.getElementById(`modifierSpecialPrice-existing-${id}`);
+        if (element) {
+            const deleteInput = document.createElement('input');
+            deleteInput.type = 'hidden';
+            deleteInput.name = `modifier_special_prices[delete][]`;
+            deleteInput.value = id;
+            document.querySelector('form').appendChild(deleteInput);
+            element.remove();
+        }
     }
-}
+
+    function updateEditPortionSpecialPrices(modifierId) {
+        const container = document.getElementById(`editPortionSpecialPrices-${modifierId}`);
+        const specialPrices = container.querySelectorAll('[id^="modifierSpecialPrice-"]');
+
+        const pickmePrice = Array.from(specialPrices).find(sp => {
+            const select = sp.querySelector('select');
+            return select && select.value === 'pickme';
+        });
+
+        let hiddenInput = document.getElementById(`edit_portion_pickme_price_hidden_${modifierId}`);
+        if (pickmePrice) {
+            const priceInput = pickmePrice.querySelector('input[type="number"]');
+            if (!hiddenInput) {
+                hiddenInput = document.createElement('input');
+                hiddenInput.type = 'hidden';
+                hiddenInput.id = `edit_portion_pickme_price_hidden_${modifierId}`;
+                hiddenInput.name = 'pickme_price';
+                const form = pickmePrice.closest('form');
+                if (form) form.appendChild(hiddenInput);
+            }
+            if (hiddenInput) {
+                hiddenInput.value = priceInput.value;
+                priceInput.addEventListener('input', function() {
+                    hiddenInput.value = this.value;
+                });
+            }
+        } else if (hiddenInput) {
+            hiddenInput.remove();
+        }
+    }
+
+    function toggleEditMode(modifierId) {
+        const viewMode = document.querySelector('.view-mode-' + modifierId);
+        const editMode = document.querySelector('.edit-mode-' + modifierId);
+
+        if (viewMode.classList.contains('hidden')) {
+            viewMode.classList.remove('hidden');
+            editMode.classList.add('hidden');
+        } else {
+            viewMode.classList.add('hidden');
+            editMode.classList.remove('hidden');
+        }
+    }
 </script>
 @endsection
-
-

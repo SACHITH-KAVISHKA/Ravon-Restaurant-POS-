@@ -292,8 +292,8 @@
 
 @push('scripts')
 <script>
-    // Stock items data from PHP - includes items with portions/sizes
-    const availableItems = @json($stockItems);
+    // Finished Goods items data from PHP - all items marked as finished goods
+    const availableItems = @json($finishedGoodsDropdown);
 
     let rowCounter = 0;
     let currentViewingRequest = null;
