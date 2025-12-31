@@ -150,7 +150,7 @@
                                     <span class="text-purple-600 font-mono font-semibold">{{ $order->order_number }}</span>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
-                                    <span class="badge-status 
+                                    <span class="badge-status
                                     @if($order->order_type == 'dine_in') bg-blue-600/20 text-blue-400
                                     @elseif($order->order_type == 'takeaway') bg-green-600/20 text-green-400
                                     @elseif($order->order_type == 'delivery') bg-purple-600/20 text-purple-400
@@ -239,6 +239,27 @@
                             </tr>
                             @endforelse
                         </tbody>
+                        <tfoot class="bg-gray-100 font-bold text-gray-900 border-t-2 border-gray-300">
+                            <tr>
+                                <td colspan="2" class="px-6 py-4 text-right uppercase tracking-wider">
+                                    Grand Total
+                                </td>
+                                <td class="px-6 py-4 text-right">
+                                    LKR {{ number_format($totals->total_amount, 2) }}
+                                </td>
+                                <td class="px-6 py-4"></td>
+                                <td class="px-6 py-4 text-right text-green-700">
+                                    LKR {{ number_format($totals->total_cash, 2) }}
+                                </td>
+                                <td class="px-6 py-4 text-right text-blue-700">
+                                    LKR {{ number_format($totals->total_card, 2) }}
+                                </td>
+                                <td class="px-6 py-4 text-right text-orange-700">
+                                    LKR {{ number_format($totals->total_credit, 2) }}
+                                </td>
+                                <td colspan="2"></td>
+                            </tr>
+                        </tfoot>
                     </table>
                 </div>
 
