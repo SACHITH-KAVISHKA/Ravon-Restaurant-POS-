@@ -154,6 +154,25 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/items/list', [App\Http\Controllers\StockRequestController::class, 'getItems'])->name('items');
     });
 
+    // Main Stock Management Routes (Supervisor only)
+    Route::middleware(['role:supervisor'])->prefix('main-stock')->name('main-stock.')->group(function () {
+        // Stock Items CRUD
+        Route::get('/', [App\Http\Controllers\MainStockController::class, 'index'])->name('index');
+        Route::get('/create', [App\Http\Controllers\MainStockController::class, 'create'])->name('create');
+        Route::post('/', [App\Http\Controllers\MainStockController::class, 'store'])->name('store');
+        Route::get('/{mainStock}/edit', [App\Http\Controllers\MainStockController::class, 'edit'])->name('edit');
+        Route::put('/{mainStock}', [App\Http\Controllers\MainStockController::class, 'update'])->name('update');
+        Route::delete('/{mainStock}', [App\Http\Controllers\MainStockController::class, 'destroy'])->name('destroy');
+        
+        // Stock Operations
+        Route::get('/stock-update', [App\Http\Controllers\MainStockController::class, 'showStockUpdate'])->name('stock-update');
+        Route::post('/stock-update', [App\Http\Controllers\MainStockController::class, 'processStockUpdate'])->name('process-stock-update');
+        
+        // AJAX endpoints
+        Route::get('/item/{mainStock}', [App\Http\Controllers\MainStockController::class, 'getItem'])->name('get-item');
+        Route::get('/generate-code', [App\Http\Controllers\MainStockController::class, 'generateCode'])->name('generate-code');
+    });
+
     // QZ Tray Signature Route (for thermal printing)
     Route::post('/qz/sign', [App\Http\Controllers\QZTrayController::class, 'signQzRequest'])->name('qz.sign');
 });

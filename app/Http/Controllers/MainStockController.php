@@ -1,0 +1,293 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\MainStockItem;
+use App\Models\MainStockTransaction;
+use App\Models\MainStockTransactionItem;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
+
+class MainStockController extends Controller
+{
+    /**
+     * Display the main stock items listing.
+     */
+    public function index(Request $request)
+    {
+        $query = MainStockItem::with(['creator', 'updater'])
+            ->orderBy('item_name');
+
+        // Filter by type
+        if ($request->filled('type') && $request->type !== 'all') {
+            $query->ofType($request->type);
+        }
+
+        // Filter by status
+        if ($request->filled('status')) {
+            if ($request->status === 'active') {
+                $query->active();
+            } elseif ($request->status === 'inactive') {
+                $query->where('is_active', false);
+            } elseif ($request->status === 'low_stock') {
+                $query->active()->lowStock();
+            }
+        }
+
+        // Search
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('item_code', 'like', "%{$search}%")
+                    ->orWhere('item_name', 'like', "%{$search}%");
+            });
+        }
+
+        $items = $query->paginate(100)->withQueryString();
+
+        // Stats
+        $stats = [
+            'total' => MainStockItem::count(),
+            'active' => MainStockItem::active()->count(),
+            'low_stock' => MainStockItem::active()->lowStock()->count(),
+            'raw_materials' => MainStockItem::active()->ofType('raw_material')->count(),
+            'finished_goods' => MainStockItem::active()->ofType('finished_good')->count(),
+        ];
+
+        return view('stock.supervisor.main-stock.index', compact('items', 'stats'));
+    }
+
+    /**
+     * Show the form for creating a new stock item.
+     */
+    public function create()
+    {
+        $itemCode = MainStockItem::generateItemCode('other');
+        return view('stock.supervisor.main-stock.create', compact('itemCode'));
+    }
+
+    /**
+     * Store a newly created stock item.
+     */
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'item_code' => 'required|string|max:50|unique:main_stock_items,item_code',
+            'item_name' => 'required|string|max:255',
+            'unit_type' => ['required', Rule::in(array_keys(MainStockItem::UNIT_TYPES))],
+            'item_type' => ['required', Rule::in(array_keys(MainStockItem::ITEM_TYPES))],
+            'quantity' => 'required|numeric|min:0',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $item = MainStockItem::create([
+                'item_code' => $validated['item_code'],
+                'item_name' => $validated['item_name'],
+                'unit_type' => $validated['unit_type'],
+                'item_type' => $validated['item_type'],
+                'quantity' => $validated['quantity'],
+                'is_active' => true,
+                'created_by' => Auth::id(),
+                'updated_by' => Auth::id(),
+            ]);
+
+            // Create initial stock transaction if quantity > 0
+            if ($validated['quantity'] > 0) {
+                MainStockTransaction::create([
+                    'main_stock_item_id' => $item->id,
+                    'transaction_type' => 'stock_in',
+                    'quantity' => $validated['quantity'],
+                    'quantity_before' => 0,
+                    'quantity_after' => $validated['quantity'],
+                    'notes' => 'Initial stock entry',
+                    'performed_by' => Auth::id(),
+                ]);
+            }
+
+            DB::commit();
+
+            return redirect()
+                ->route('main-stock.index')
+                ->with('success', 'Stock item created successfully!');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()
+                ->withInput()
+                ->with('error', 'Failed to create stock item: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Show the form for editing a stock item.
+     */
+    public function edit(MainStockItem $mainStock)
+    {
+        return view('stock.supervisor.main-stock.edit', ['item' => $mainStock]);
+    }
+
+    /**
+     * Update the specified stock item.
+     */
+    public function update(Request $request, MainStockItem $mainStock)
+    {
+        $validated = $request->validate([
+            'item_code' => ['required', 'string', 'max:50', Rule::unique('main_stock_items', 'item_code')->ignore($mainStock->id)],
+            'item_name' => 'required|string|max:255',
+            'unit_type' => ['required', Rule::in(array_keys(MainStockItem::UNIT_TYPES))],
+            'item_type' => ['required', Rule::in(array_keys(MainStockItem::ITEM_TYPES))],
+            'is_active' => 'boolean',
+        ]);
+
+        $mainStock->update([
+            'item_code' => $validated['item_code'],
+            'item_name' => $validated['item_name'],
+            'unit_type' => $validated['unit_type'],
+            'item_type' => $validated['item_type'],
+            'is_active' => $validated['is_active'] ?? true,
+            'updated_by' => Auth::id(),
+        ]);
+
+        return redirect()
+            ->route('main-stock.index')
+            ->with('success', 'Stock item updated successfully!');
+    }
+
+    /**
+     * Delete the specified stock item.
+     */
+    public function destroy(MainStockItem $mainStock)
+    {
+        $mainStock->delete();
+        return redirect()
+            ->route('main-stock.index')
+            ->with('success', 'Stock item deleted successfully!');
+    }
+
+    /**
+     * Show stock update page for adding/removing stock.
+     */
+    public function showStockUpdate()
+    {
+        $items = MainStockItem::active()
+            ->orderBy('item_name')
+            ->get();
+
+        return view('stock.supervisor.main-stock.stock-update', compact('items'));
+    }
+
+    /**
+     * Process stock update (add or remove).
+     * Handles bulk items - creates one transaction with multiple items.
+     */
+    public function processStockUpdate(Request $request)
+    {
+        $validated = $request->validate([
+            'items' => 'required|array|min:1',
+            'items.*.item_id' => 'required|exists:main_stock_items,id',
+            'items.*.quantity' => 'required|numeric|min:0.001',
+            'reference_number' => 'nullable|string|max:100',
+            'notes' => 'nullable|string|max:500',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            // Create a single transaction for all items
+            $transaction = MainStockTransaction::create([
+                'transaction_type' => 'stock_in',
+                'quantity' => 0, // Will be sum of all items
+                'quantity_before' => 0,
+                'quantity_after' => 0,
+                'reference_number' => $validated['reference_number'] ?? null,
+                'notes' => $validated['notes'] ?? 'Bulk stock update',
+                'performed_by' => Auth::id(),
+            ]);
+
+            $totalQuantity = 0;
+            $updatedItems = [];
+
+            foreach ($validated['items'] as $itemData) {
+                $item = MainStockItem::findOrFail($itemData['item_id']);
+                $qty = $itemData['quantity'];
+                $quantityBefore = $item->quantity;
+
+                // Add to main stock
+                $item->quantity += $qty;
+                $item->updated_by = Auth::id();
+                $item->save();
+
+                $quantityAfter = $item->quantity;
+
+                // Create transaction item record
+                MainStockTransactionItem::create([
+                    'main_stock_transaction_id' => $transaction->id,
+                    'main_stock_item_id' => $item->id,
+                    'quantity' => $qty,
+                    'quantity_before' => $quantityBefore,
+                    'quantity_after' => $quantityAfter,
+                ]);
+
+                $totalQuantity += $qty;
+                $updatedItems[] = [
+                    'item_name' => $item->item_name,
+                    'quantity_added' => $qty,
+                    'new_quantity' => $quantityAfter,
+                    'unit' => $item->unit_abbreviation,
+                ];
+            }
+
+            // Update transaction totals
+            $transaction->update([
+                'quantity' => $totalQuantity,
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Stock updated successfully! ' . count($updatedItems) . ' item(s) updated.',
+                'transaction_number' => $transaction->transaction_number,
+                'updated_items' => $updatedItems,
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+    }
+
+    /**
+     * Get item details via AJAX.
+     */
+    public function getItem(MainStockItem $mainStock)
+    {
+        return response()->json([
+            'id' => $mainStock->id,
+            'item_code' => $mainStock->item_code,
+            'item_name' => $mainStock->item_name,
+            'unit_type' => $mainStock->unit_type,
+            'unit_abbreviation' => $mainStock->unit_abbreviation,
+            'item_type' => $mainStock->item_type,
+            'item_type_label' => $mainStock->item_type_label,
+            'quantity' => $mainStock->quantity,
+            'min_quantity' => $mainStock->min_quantity,
+            'is_low_stock' => $mainStock->isLowStock(),
+        ]);
+    }
+
+    /**
+     * Generate a new item code via AJAX.
+     */
+    public function generateCode(Request $request)
+    {
+        $type = $request->get('type', 'other');
+        $code = MainStockItem::generateItemCode($type);
+        return response()->json(['code' => $code]);
+    }
+}

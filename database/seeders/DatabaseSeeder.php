@@ -17,7 +17,7 @@ class DatabaseSeeder extends Seeder
             TableSeeder::class,
             CategorySeeder::class,
             ItemSeeder::class,
-            
+            MainStockItemSeeder::class,
         ]);
     }
 }

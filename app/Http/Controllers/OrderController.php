@@ -6,6 +6,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Table;
 use App\Models\Item;
+use App\Models\RestaurantStock;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -61,6 +62,16 @@ class OrderController extends Controller
                     'subtotal' => $subtotal,
                     'special_instructions' => $itemData['special_instructions'] ?? null,
                 ]);
+
+                // Deduct from restaurant stock for finished goods items
+                if ($item->is_finished_goods) {
+                    RestaurantStock::deductForSale(
+                        $item->id,
+                        null, // No modifier support in simple order controller
+                        $itemData['quantity'],
+                        Auth::id()
+                    );
+                }
             }
 
             // Recalculate order totals
