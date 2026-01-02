@@ -114,7 +114,6 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/{user}', [UserController::class, 'show'])->name('show');
         Route::put('/{user}', [UserController::class, 'update'])->name('update');
         Route::delete('/{user}', [UserController::class, 'destroy'])->name('destroy');
-        Route::post('/{user}/regenerate-pin', [UserController::class, 'regeneratePin'])->name('regenerate-pin');
     });
 
     // POS (Cashier only)
@@ -163,11 +162,11 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/{mainStock}/edit', [App\Http\Controllers\MainStockController::class, 'edit'])->name('edit');
         Route::put('/{mainStock}', [App\Http\Controllers\MainStockController::class, 'update'])->name('update');
         Route::delete('/{mainStock}', [App\Http\Controllers\MainStockController::class, 'destroy'])->name('destroy');
-        
+
         // Stock Operations
         Route::get('/stock-update', [App\Http\Controllers\MainStockController::class, 'showStockUpdate'])->name('stock-update');
         Route::post('/stock-update', [App\Http\Controllers\MainStockController::class, 'processStockUpdate'])->name('process-stock-update');
-        
+
         // AJAX endpoints
         Route::get('/item/{mainStock}', [App\Http\Controllers\MainStockController::class, 'getItem'])->name('get-item');
         Route::get('/generate-code', [App\Http\Controllers\MainStockController::class, 'generateCode'])->name('generate-code');

@@ -125,19 +125,19 @@
                                 </span>
                             </td>
 
-                            <!-- PIN (only for supervisors) -->
+                            <!-- PIN (only for supervisors) - Auto-changes every 5 minutes -->
                             <td class="px-6 py-4">
-                                @if($user->hasRole('supervisor') && $user->pin)
-                                <div class="flex items-center gap-2">
-                                    <span class="font-mono text-sm bg-gray-100 px-2 py-1 rounded">{{ $user->pin }}</span>
-                                    <form action="{{ route('users.regenerate-pin', $user) }}" method="POST" class="inline" onsubmit="return confirm('Regenerate PIN for this user?')">
-                                        @csrf
-                                        <button type="submit" class="text-purple-600 hover:text-purple-800" title="Regenerate PIN">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                            </svg>
-                                        </button>
-                                    </form>
+                                @if($user->hasRole('supervisor'))
+                                <div class="flex flex-col gap-1">
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-mono text-lg font-bold bg-gradient-to-r from-purple-100 to-orange-100 px-3 py-1 rounded-lg text-purple-800 pin-display" data-user-id="{{ $user->id }}">{{ $user->dynamic_pin }}</span>
+                                    </div>
+                                    <span class="text-xs text-orange-600 flex items-center gap-1">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                        Next refresh: <span class="pin-countdown font-medium"></span>
+                                    </span>
                                 </div>
                                 @else
                                 <span class="text-gray-400">-</span>
@@ -397,6 +397,44 @@
             closeModal();
         }
     });
+
+    // PIN Auto-refresh countdown timer
+    function updatePinCountdown() {
+        const now = new Date();
+        const minutes = now.getMinutes();
+        const seconds = now.getSeconds();
+
+        // Calculate time until next 5-minute mark
+        const minutesUntilRefresh = 4 - (minutes % 5);
+        const secondsUntilRefresh = 60 - seconds;
+
+        let totalSeconds = minutesUntilRefresh * 60 + secondsUntilRefresh;
+        if (secondsUntilRefresh === 60) {
+            totalSeconds = (minutesUntilRefresh + 1) * 60;
+        }
+
+        const displayMinutes = Math.floor(totalSeconds / 60);
+        const displaySeconds = totalSeconds % 60;
+
+        const countdownText = `${displayMinutes}:${displaySeconds.toString().padStart(2, '0')}`;
+
+        document.querySelectorAll('.pin-countdown').forEach(el => {
+            el.textContent = countdownText;
+        });
+
+        // Auto-refresh page when countdown reaches 0
+        if (totalSeconds <= 1) {
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
+        }
+    }
+
+    // Update countdown every second
+    if (document.querySelectorAll('.pin-countdown').length > 0) {
+        updatePinCountdown();
+        setInterval(updatePinCountdown, 1000);
+    }
 </script>
 @endpush
 @endsection

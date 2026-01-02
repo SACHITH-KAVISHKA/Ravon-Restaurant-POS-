@@ -856,6 +856,7 @@ class POSController extends Controller
 
     /**
      * Verify supervisor PIN for void operations
+     * PIN is dynamically generated and changes every 5 minutes
      */
     public function verifySupervisorPin(Request $request)
     {
@@ -863,19 +864,22 @@ class POSController extends Controller
             'pin' => 'required|string|size:4',
         ]);
 
-        // Find a supervisor with this PIN
-        $supervisor = \App\Models\User::where('pin', $validated['pin'])
-            ->whereHas('roles', function ($query) {
-                $query->where('name', 'supervisor');
-            })
-            ->first();
+        // Find all supervisors and check their dynamic PIN
+        $supervisors = \App\Models\User::whereHas('roles', function ($query) {
+            $query->where('name', 'supervisor');
+        })
+            ->where('is_active', true)
+            ->get();
 
-        if ($supervisor) {
-            return response()->json([
-                'success' => true,
-                'message' => 'PIN verified successfully',
-                'supervisor_name' => $supervisor->name
-            ]);
+        foreach ($supervisors as $supervisor) {
+            // Check against the dynamically generated PIN
+            if ($supervisor->dynamic_pin === $validated['pin']) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'PIN verified successfully',
+                    'supervisor_name' => $supervisor->name
+                ]);
+            }
         }
 
         return response()->json([
@@ -898,12 +902,20 @@ class POSController extends Controller
             'supervisor_pin' => 'required|string|size:4',
         ]);
 
-        // Verify supervisor PIN again
-        $supervisor = \App\Models\User::where('pin', $validated['supervisor_pin'])
-            ->whereHas('roles', function ($query) {
-                $query->where('name', 'supervisor');
-            })
-            ->first();
+        // Verify supervisor PIN again using dynamic PIN
+        $supervisors = \App\Models\User::whereHas('roles', function ($query) {
+            $query->where('name', 'supervisor');
+        })
+            ->where('is_active', true)
+            ->get();
+
+        $supervisor = null;
+        foreach ($supervisors as $sup) {
+            if ($sup->dynamic_pin === $validated['supervisor_pin']) {
+                $supervisor = $sup;
+                break;
+            }
+        }
 
         if (!$supervisor) {
             return response()->json([

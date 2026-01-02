@@ -26,6 +26,7 @@ class UserController extends Controller
 
     /**
      * Store a newly created user.
+     * Note: Supervisor PINs are now generated dynamically based on time, no need to store.
      */
     public function store(Request $request)
     {
@@ -35,12 +36,6 @@ class UserController extends Controller
             'password' => ['required', 'string', 'min:6'],
             'role' => ['required', 'string', 'in:admin,cashier,supervisor'],
         ]);
-
-        // Generate PIN for Supervisor
-        $pin = null;
-        if ($request->role === 'supervisor') {
-            $pin = $this->generateUniquePin();
-        }
 
         // Check if supervisor role exists, if not create it
         if ($request->role === 'supervisor') {
@@ -54,14 +49,13 @@ class UserController extends Controller
             'name' => $request->name,
             'username' => $request->username,
             'password' => Hash::make($request->password),
-            'pin' => $pin,
             'is_active' => true,
         ]);
 
         $user->assignRole($request->role);
 
         return redirect()->route('users.index')
-            ->with('success', 'User created successfully!' . ($pin ? ' Supervisor PIN: ' . $pin : ''));
+            ->with('success', 'User created successfully!');
     }
 
     /**
@@ -77,16 +71,7 @@ class UserController extends Controller
             'is_active' => ['boolean'],
         ]);
 
-        $oldRole = $user->roles->first()?->name;
         $newRole = $request->role;
-
-        // Generate PIN if changing to supervisor and no pin exists
-        $pin = $user->pin;
-        if ($newRole === 'supervisor' && !$pin) {
-            $pin = $this->generateUniquePin();
-        } elseif ($newRole !== 'supervisor') {
-            $pin = null;
-        }
 
         // Check if supervisor role exists, if not create it
         if ($newRole === 'supervisor') {
@@ -99,7 +84,6 @@ class UserController extends Controller
         $updateData = [
             'name' => $request->name,
             'username' => $request->username,
-            'pin' => $pin,
             'is_active' => $request->has('is_active') ? $request->is_active : true,
         ];
 
@@ -112,12 +96,7 @@ class UserController extends Controller
         // Update role
         $user->syncRoles([$newRole]);
 
-        $message = 'User updated successfully!';
-        if ($newRole === 'supervisor' && $oldRole !== 'supervisor') {
-            $message .= ' Supervisor PIN: ' . $pin;
-        }
-
-        return redirect()->route('users.index')->with('success', $message);
+        return redirect()->route('users.index')->with('success', 'User updated successfully!');
     }
 
     /**
@@ -146,38 +125,9 @@ class UserController extends Controller
             'id' => $user->id,
             'name' => $user->name,
             'username' => $user->username,
-            'pin' => $user->pin,
+            'pin' => $user->dynamic_pin, // Use dynamic PIN
             'is_active' => $user->is_active,
             'role' => $user->roles->first()?->name,
         ]);
-    }
-
-    /**
-     * Regenerate PIN for a supervisor.
-     */
-    public function regeneratePin(User $user)
-    {
-        if (!$user->hasRole('supervisor')) {
-            return redirect()->route('users.index')
-                ->with('error', 'PIN can only be regenerated for supervisors!');
-        }
-
-        $newPin = $this->generateUniquePin();
-        $user->update(['pin' => $newPin]);
-
-        return redirect()->route('users.index')
-            ->with('success', 'PIN regenerated successfully! New PIN: ' . $newPin);
-    }
-
-    /**
-     * Generate a unique 4-digit PIN.
-     */
-    private function generateUniquePin(): string
-    {
-        do {
-            $pin = str_pad(random_int(0, 9999), 4, '0', STR_PAD_LEFT);
-        } while (User::where('pin', $pin)->exists());
-
-        return $pin;
     }
 }

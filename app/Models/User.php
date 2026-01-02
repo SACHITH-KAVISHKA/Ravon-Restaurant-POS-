@@ -128,4 +128,31 @@ class User extends Authenticatable
     {
         return $this->hasRole('supervisor');
     }
+
+    /**
+     * Get the dynamic PIN that changes every 5 minutes.
+     * This PIN is calculated based on current time + user ID, no scheduler needed!
+     */
+    public function getDynamicPinAttribute(): ?string
+    {
+        // Only supervisors have PINs
+        if (!$this->hasRole('supervisor')) {
+            return null;
+        }
+
+        // Get the current 5-minute time slot (changes every 5 minutes)
+        $timeSlot = floor(time() / 300); // 300 seconds = 5 minutes
+
+        // Create a unique seed using user ID and time slot
+        $seed = $this->id + $timeSlot;
+
+        // Use the seed to generate a deterministic "random" PIN
+        mt_srand($seed);
+        $pin = str_pad(mt_rand(0, 9999), 4, '0', STR_PAD_LEFT);
+
+        // Reset the random seed to avoid affecting other random operations
+        mt_srand();
+
+        return $pin;
+    }
 }
