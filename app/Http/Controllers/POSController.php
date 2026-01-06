@@ -1122,11 +1122,16 @@ class POSController extends Controller
                     ];
                 })->values();
 
+            // Check if all items have been voided (no active items remaining)
+            // We don't cancel immediately - user can still add new items
+            // Order will be cancelled only when user starts a new order without adding items
+            $allItemsVoided = $updatedItems->isEmpty();
+
             DB::commit();
 
             return response()->json([
                 'success' => true,
-                'message' => 'Items voided successfully',
+                'message' => $allItemsVoided ? 'All items voided - Add new items or start a new order' : 'Items voided successfully',
                 'voided_items' => $voidedItems,
                 'updated_items' => $updatedItems,
                 'new_total' => $order->total_amount,
@@ -1134,13 +1139,76 @@ class POSController extends Controller
                 'cancel_bot_number' => $cancelBotNumber,
                 'cancel_kot_items' => $kitchenCancelItems ?? [],
                 'cancel_bot_items' => $barCancelItems ?? [],
-                'supervisor_name' => $supervisor->name
+                'supervisor_name' => $supervisor->name,
+                'all_items_voided' => $allItemsVoided,
+                'order_id' => $order->id
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
                 'success' => false,
                 'message' => 'Error voiding items: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Cancel a voided order when user starts a new order without adding items
+     * This is called when user had voided all items and then starts a fresh order
+     */
+    public function cancelVoidedOrder(Request $request)
+    {
+        $validated = $request->validate([
+            'order_id' => 'required|exists:orders,id',
+        ]);
+
+        DB::beginTransaction();
+        try {
+            $order = Order::with('orderItems')->findOrFail($validated['order_id']);
+
+            // Check if order has any active items
+            $activeItemsCount = $order->orderItems()
+                ->whereNotIn('status', ['cancelled', 'deleted'])
+                ->count();
+
+            if ($activeItemsCount > 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Order still has active items. Cannot cancel.'
+                ], 400);
+            }
+
+            // Cancel the order
+            $order->update([
+                'status' => 'cancelled',
+                'cancelled_at' => now(),
+                'cancelled_by' => Auth::id(),
+                'cancellation_reason' => 'All items voided - New order started',
+            ]);
+
+            // Free up the table if dine-in
+            if ($order->table_id) {
+                $table = Table::find($order->table_id);
+                if ($table) {
+                    $table->update([
+                        'status' => 'available',
+                        'current_order_id' => null,
+                    ]);
+                }
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Voided order cancelled successfully',
+                'order_id' => $order->id
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Error cancelling voided order: ' . $e->getMessage()
             ], 500);
         }
     }

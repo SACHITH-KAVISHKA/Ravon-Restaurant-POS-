@@ -919,6 +919,7 @@
             let originalOrderItems = []; // Items loaded from existing order (can be voided)
             let voidItemsList = []; // Items selected to void
             let verifiedSupervisorPin = null; // Store verified PIN for void operation
+            let voidedOrderId = null; // Track order ID when all items are voided (for cancellation when starting new order)
 
             // Payment Modal Variables
             let selectedPaymentMethod = null;
@@ -1872,6 +1873,12 @@
 
             // Add item to bill
             function addItemToBill(itemId, itemName, itemPrice) {
+                // If user adds an item after voiding all items, they're continuing the order
+                // Clear the voided tracking so the order won't be cancelled
+                if (voidedOrderId && currentOrderId === voidedOrderId) {
+                    voidedOrderId = null;
+                }
+
                 const existingItem = billItems.find(item => item.item_id === itemId && item.name === itemName);
 
                 if (existingItem) {
@@ -2004,11 +2011,49 @@
                 });
             }
 
+            // Cancel a voided order (when user starts a new order without adding items)
+            async function cancelVoidedOrderIfExists() {
+                if (!voidedOrderId) return; // No voided order to cancel
+
+                try {
+                    const response = await fetch('{{ route("pos.cancelVoidedOrder") }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify({
+                            order_id: voidedOrderId
+                        })
+                    });
+
+                    const result = await response.json();
+                    if (result.success) {
+                        console.log('Voided order cancelled:', voidedOrderId);
+                    } else {
+                        console.error('Failed to cancel voided order:', result.message);
+                    }
+                } catch (error) {
+                    console.error('Error cancelling voided order:', error);
+                }
+
+                // Clear tracking variables
+                voidedOrderId = null;
+                currentOrderId = null;
+                originalOrderItems = [];
+                billItems = [];
+                printedItems = [];
+            }
+
             // Set Order Type Helper
-            function setOrderType(type, label) {
+            async function setOrderType(type, label) {
+                // Cancel any voided order before starting a new one
+                await cancelVoidedOrderIfExists();
+
                 currentOrderType = type;
                 selectedTableId = null;
                 currentOrderId = null;
+                voidedOrderId = null; // Reset voided order tracking
                 const display = document.getElementById('orderTypeDisplay');
                 if (display) display.textContent = label;
 
@@ -2129,10 +2174,14 @@
                 setOrderType('pickme', 'PickMe Food - Ref: ' + refNumber);
             }
 
-            function selectTable(tableNumber, tableId) {
+            async function selectTable(tableNumber, tableId) {
+                // Cancel any voided order before starting a new one
+                await cancelVoidedOrderIfExists();
+
                 selectedTableId = tableId;
                 currentOrderType = 'dine_in';
                 currentOrderId = null;
+                voidedOrderId = null; // Reset voided order tracking
                 const display = document.getElementById('orderTypeDisplay');
                 if (display) display.textContent = 'Table: ' + tableNumber;
 
@@ -3030,28 +3079,50 @@
                             await printCancelKOT(result.cancel_bot_number, result.cancel_bot_items, 'BAR', orderInfo);
                         }
 
-                        showNotification(
-                            `${result.voided_items.length} item(s) voided successfully by ${result.supervisor_name}. New total: Rs. ${parseFloat(result.new_total).toFixed(2)}`,
-                            'Void Successful'
-                        );
+                        // Check if all items were voided (order is empty but not cancelled yet)
+                        if (result.all_items_voided) {
+                            // Track this order ID for cancellation when user starts a new order
+                            voidedOrderId = result.order_id;
 
-                        // Disable VOID button if no more original items
-                        if (originalOrderItems.length === 0) {
+                            // Disable VOID button since no items left
                             const voidBtn = document.getElementById('voidButton');
                             if (voidBtn) {
                                 voidBtn.disabled = true;
                                 voidBtn.classList.remove('text-white', 'hover:bg-gray-600', 'cursor-pointer');
                                 voidBtn.classList.add('text-gray-500', 'cursor-not-allowed', 'disabled:opacity-50');
                             }
-                        }
 
-                        // Scroll to bill section to show updated items
-                        const billSection = document.getElementById('billItems');
-                        if (billSection) {
-                            billSection.scrollIntoView({
-                                behavior: 'smooth',
-                                block: 'start'
-                            });
+                            showNotification(
+                                `All items voided by ${result.supervisor_name}. You can add new items to continue this order, or start a new order.`,
+                                'All Items Voided'
+                            );
+                        } else {
+                            // Some items still remain - clear voided order tracking
+                            voidedOrderId = null;
+
+                            showNotification(
+                                `${result.voided_items.length} item(s) voided successfully by ${result.supervisor_name}. New total: Rs. ${parseFloat(result.new_total).toFixed(2)}`,
+                                'Void Successful'
+                            );
+
+                            // Disable VOID button if no more original items
+                            if (originalOrderItems.length === 0) {
+                                const voidBtn = document.getElementById('voidButton');
+                                if (voidBtn) {
+                                    voidBtn.disabled = true;
+                                    voidBtn.classList.remove('text-white', 'hover:bg-gray-600', 'cursor-pointer');
+                                    voidBtn.classList.add('text-gray-500', 'cursor-not-allowed', 'disabled:opacity-50');
+                                }
+                            }
+
+                            // Scroll to bill section to show updated items
+                            const billSection = document.getElementById('billItems');
+                            if (billSection) {
+                                billSection.scrollIntoView({
+                                    behavior: 'smooth',
+                                    block: 'start'
+                                });
+                            }
                         }
                     } else {
                         console.error('Void failed:', result.message);

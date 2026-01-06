@@ -49,11 +49,6 @@
             <!-- Stock Update Form -->
             <div class="lg:col-span-2">
                 <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                    <div class="p-6 border-b border-gray-100 bg-gradient-to-r from-purple-50 to-indigo-50">
-                        <h2 class="text-lg font-semibold text-gray-800">Items Table</h2>
-                        <p class="text-sm text-gray-500">Select items and enter quantities. Press TAB after quantity to add a new row.</p>
-                    </div>
-
                     <form id="stockUpdateForm" class="p-6">
                         @csrf
 

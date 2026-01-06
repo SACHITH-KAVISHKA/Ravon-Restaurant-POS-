@@ -49,7 +49,6 @@
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden max-w-3xl mx-auto">
             <div class="p-6 border-b border-gray-100 bg-gradient-to-r from-purple-50 to-indigo-50">
                 <h2 class="text-lg font-semibold text-gray-800">Item Details</h2>
-                <p class="text-sm text-gray-500">Fill in the information below to create a new stock item</p>
             </div>
 
             <form action="{{ route('main-stock.store') }}" method="POST" class="p-6 space-y-6">
