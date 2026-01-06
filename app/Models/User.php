@@ -131,7 +131,8 @@ class User extends Authenticatable
 
     /**
      * Get the dynamic PIN that changes every 5 minutes.
-     * This PIN is calculated based on current time + user ID, no scheduler needed!
+     * This PIN is calculated based on current time + user ID.
+     * The generated PIN is also saved to the database.
      */
     public function getDynamicPinAttribute(): ?string
     {
@@ -148,11 +149,22 @@ class User extends Authenticatable
 
         // Use the seed to generate a deterministic "random" PIN
         mt_srand($seed);
-        $pin = str_pad(mt_rand(0, 9999), 4, '0', STR_PAD_LEFT);
+        $newPin = str_pad(mt_rand(0, 9999), 4, '0', STR_PAD_LEFT);
 
         // Reset the random seed to avoid affecting other random operations
         mt_srand();
 
-        return $pin;
+        // Save the PIN to the database if it has changed
+        if ($this->pin !== $newPin) {
+            // Use query builder to avoid triggering model events and infinite loops
+            \Illuminate\Support\Facades\DB::table('users')
+                ->where('id', $this->id)
+                ->update(['pin' => $newPin]);
+
+            // Update the model's attribute as well
+            $this->attributes['pin'] = $newPin;
+        }
+
+        return $newPin;
     }
 }
