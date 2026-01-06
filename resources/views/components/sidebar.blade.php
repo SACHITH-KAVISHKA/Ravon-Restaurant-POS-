@@ -46,8 +46,8 @@
 
         <!-- Reports (Collapsible) -->
         @role('admin')
-        <div x-data="{ open: {{ request()->routeIs('reports.*') || request()->routeIs('sales-report.*') ? 'true' : 'false' }} }">
-            <button @click="open = !open" class="w-full flex items-center justify-between gap-3 px-4 py-3 {{ request()->routeIs('reports.*') || request()->routeIs('sales-report.*') ? 'bg-white/25 text-white border-l-4 border-white font-semibold' : 'text-white/80 hover:bg-white/15 hover:text-white' }} rounded-lg transition">
+        <div x-data="{ open: {{ request()->routeIs('reports.*') || request()->routeIs('sales-report.*') || request()->routeIs('void-report.*') ? 'true' : 'false' }} }">
+            <button @click="open = !open" class="w-full flex items-center justify-between gap-3 px-4 py-3 {{ request()->routeIs('reports.*') || request()->routeIs('sales-report.*') || request()->routeIs('void-report.*') ? 'bg-white/25 text-white border-l-4 border-white font-semibold' : 'text-white/80 hover:bg-white/15 hover:text-white' }} rounded-lg transition">
                 <div class="flex items-center gap-3">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
@@ -72,6 +72,13 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                     </svg>
                     <span>Item Wise Summary</span>
+                </a>
+
+                <a href="{{ route('void-report.index') }}" class="flex items-center gap-3 px-4 py-2 {{ request()->routeIs('void-report.*') ? 'bg-white/20 text-white font-medium' : 'text-white/70 hover:bg-white/10 hover:text-white' }} rounded-lg transition text-sm">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                    </svg>
+                    <span>Void Report</span>
                 </a>
             </div>
         </div>

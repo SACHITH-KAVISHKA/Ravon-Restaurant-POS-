@@ -8,6 +8,7 @@ use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\SalesReportController;
 use App\Http\Controllers\ItemSalesReportController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\VoidReportController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -105,6 +106,13 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/receipt/{order}', [SalesReportController::class, 'receipt'])->name('receipt');
         Route::get('/export', [SalesReportController::class, 'exportExcel'])->name('export');
         Route::delete('/order/{order}', [SalesReportController::class, 'softDelete'])->name('order.delete');
+    });
+
+    // Void Report (Admin only)
+    Route::middleware(['role:admin'])->prefix('void-report')->name('void-report.')->group(function () {
+        Route::get('/', [VoidReportController::class, 'index'])->name('index');
+        Route::get('/export', [VoidReportController::class, 'export'])->name('export');
+        Route::get('/{voidRecord}', [VoidReportController::class, 'getDetails'])->name('details');
     });
 
     // User Management (Admin only)

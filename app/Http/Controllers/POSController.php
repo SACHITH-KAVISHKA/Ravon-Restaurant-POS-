@@ -11,6 +11,7 @@ use App\Models\Payment;
 use App\Models\Kot;
 use App\Models\KotItem;
 use App\Models\RestaurantStock;
+use App\Models\VoidRecord;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -957,6 +958,8 @@ class POSController extends Controller
                 $currentQty = $orderItem->quantity;
                 $voidQty = min($voidItem['void_quantity'], $currentQty);
                 $newQty = $currentQty - $voidQty;
+                $unitPrice = $orderItem->unit_price;
+                $voidedAmount = $voidQty * $unitPrice;
 
                 if ($newQty <= 0) {
                     // Mark as cancelled
@@ -969,15 +972,37 @@ class POSController extends Controller
                     // Reduce quantity
                     $orderItem->update([
                         'quantity' => $newQty,
-                        'subtotal' => $orderItem->unit_price * $newQty
+                        'subtotal' => $unitPrice * $newQty
                     ]);
                 }
+
+                // Create void record for audit trail
+                $voidRecord = VoidRecord::create([
+                    'void_number' => VoidRecord::generateVoidNumber(),
+                    'order_id' => $order->id,
+                    'order_number' => $order->order_number,
+                    'item_id' => $voidItem['item_id'],
+                    'order_item_id' => $orderItem->id,
+                    'item_name' => $voidItem['item_name'],
+                    'item_code' => $orderItem->item->item_code ?? null,
+                    'voided_quantity' => $voidQty,
+                    'unit_price' => $unitPrice,
+                    'voided_amount' => $voidedAmount,
+                    'cashier_id' => Auth::id(),
+                    'supervisor_id' => $supervisor->id,
+                    'supervisor_name' => $supervisor->name,
+                    'reason' => $request->input('reason'), // Optional reason from frontend
+                    'table_number' => $order->table?->table_number,
+                    'cancel_kot_number' => null, // Will be updated after KOT creation
+                ]);
 
                 $voidedItems[] = [
                     'item_id' => $voidItem['item_id'],
                     'item_name' => $voidItem['item_name'],
                     'voided_quantity' => $voidQty,
-                    'new_quantity' => $newQty
+                    'new_quantity' => $newQty,
+                    'voided_amount' => $voidedAmount,
+                    'void_number' => $voidRecord->void_number,
                 ];
 
                 // Add to cancel KOT items
@@ -985,7 +1010,8 @@ class POSController extends Controller
                     'name' => $voidItem['item_name'],
                     'quantity' => $voidQty,
                     'item_id' => $voidItem['item_id'],
-                    'is_cancelled' => true
+                    'is_cancelled' => true,
+                    'void_record_id' => $voidRecord->id,
                 ];
             }
 
@@ -1048,6 +1074,14 @@ class POSController extends Controller
                         'print_count' => 1,
                     ]);
                     $cancelKotNumber = 'CANCEL-' . $cancelKot->kot_number;
+
+                    // Update void records with cancel KOT number
+                    foreach ($kitchenCancelItems as $cancelItem) {
+                        if (isset($cancelItem['void_record_id'])) {
+                            VoidRecord::where('id', $cancelItem['void_record_id'])
+                                ->update(['cancel_kot_number' => $cancelKotNumber]);
+                        }
+                    }
                 }
 
                 // Create Cancel BOT for bar items
@@ -1062,6 +1096,14 @@ class POSController extends Controller
                         'print_count' => 1,
                     ]);
                     $cancelBotNumber = 'CANCEL-' . $cancelBot->kot_number;
+
+                    // Update void records with cancel BOT number
+                    foreach ($barCancelItems as $cancelItem) {
+                        if (isset($cancelItem['void_record_id'])) {
+                            VoidRecord::where('id', $cancelItem['void_record_id'])
+                                ->update(['cancel_kot_number' => $cancelBotNumber]);
+                        }
+                    }
                 }
             }
 
