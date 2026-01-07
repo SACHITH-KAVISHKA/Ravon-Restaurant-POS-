@@ -238,12 +238,9 @@ class SalesReportController extends Controller
             ->get();
 
         // Calculate totals
-        $totalSubtotal = 0;
         $totalCash = 0;
         $totalCard = 0;
-        $totalDiscount = 0;
-        $totalTax = 0;
-        $totalServiceCharge = 0;
+        $totalCredit = 0;
         $totalAmount = 0;
 
         // Create Excel spreadsheet
@@ -253,18 +250,13 @@ class SalesReportController extends Controller
         // Set headers
         $headers = [
             'A1' => 'Order Number',
-            'B1' => 'Payment Number',
-            'C1' => 'Waiter',
-            'D1' => 'Customer',
-            'E1' => 'Order Type',
-            'F1' => 'Subtotal',
-            'G1' => 'Discount',
-            'H1' => 'Service Charge',
-            'I1' => 'Tax',
-            'J1' => 'Total',
-            'K1' => 'Cash',
-            'L1' => 'Card',
-            'M1' => 'Date & Time',
+            'B1' => 'Order Type',
+            'C1' => 'Payment Method',
+            'D1' => 'Total',
+            'E1' => 'Cash',
+            'F1' => 'Card',
+            'G1' => 'Credit',
+            'H1' => 'Date & Time',
         ];
 
         foreach ($headers as $cell => $header) {
@@ -290,59 +282,48 @@ class SalesReportController extends Controller
             $displayCashAmount = max(0, $cashAmount - $changeAmount);
 
             $sheet->setCellValue('A' . $row, $order->order_number);
-            $sheet->setCellValue('B' . $row, $order->payment ? $order->payment->payment_number : 'N/A');
-            $sheet->setCellValue('C' . $row, $order->waiter ? $order->waiter->name : 'N/A');
-            $sheet->setCellValue('D' . $row, $order->customer_name ?? 'Walk-in');
-            $sheet->setCellValue('E' . $row, ucfirst($order->order_type));
-            $sheet->setCellValue('F' . $row, $order->subtotal);
-            $sheet->setCellValue('G' . $row, $order->discount_amount);
-            $sheet->setCellValue('H' . $row, $order->service_charge);
-            $sheet->setCellValue('I' . $row, $order->tax_amount);
-            $sheet->setCellValue('J' . $row, $order->total_amount);
-            $sheet->setCellValue('K' . $row, $displayCashAmount);
-            $sheet->setCellValue('L' . $row, $cardAmount);
-            $sheet->setCellValue('M' . $row, $order->completed_at ? $order->completed_at->format('Y-m-d H:i:s') : 'N/A');
+            $sheet->setCellValue('B' . $row, ucfirst($order->order_type));
+            $sheet->setCellValue('C' . $row, $order->payment ? $order->payment->payment_method : 'N/A');
+            $sheet->setCellValue('D' . $row, $order->total_amount);
+            $sheet->setCellValue('E' . $row, $displayCashAmount);
+            $sheet->setCellValue('F' . $row, $cardAmount);
+            $sheet->setCellValue('G' . $row, $creditAmount);
+            $sheet->setCellValue('H' . $row, $order->completed_at ? $order->completed_at->format('Y-m-d H:i:s') : 'N/A');
 
             // Add to totals
-            $totalSubtotal += $order->subtotal;
-            $totalDiscount += $order->discount_amount;
-            $totalServiceCharge += $order->service_charge;
-            $totalTax += $order->tax_amount;
             $totalAmount += $order->total_amount;
             $totalCash += $displayCashAmount;
             $totalCard += $cardAmount;
+            $totalCredit += $creditAmount;
 
             $row++;
         }
 
         // Totals row
         $sheet->setCellValue('A' . $row, 'TOTAL');
-        $sheet->mergeCells('A' . $row . ':E' . $row);
-        $sheet->setCellValue('F' . $row, $totalSubtotal);
-        $sheet->setCellValue('G' . $row, $totalDiscount);
-        $sheet->setCellValue('H' . $row, $totalServiceCharge);
-        $sheet->setCellValue('I' . $row, $totalTax);
-        $sheet->setCellValue('J' . $row, $totalAmount);
-        $sheet->setCellValue('K' . $row, $totalCash);
-        $sheet->setCellValue('L' . $row, $totalCard);
+        $sheet->mergeCells('A' . $row . ':C' . $row);
+        $sheet->setCellValue('D' . $row, $totalAmount);
+        $sheet->setCellValue('E' . $row, $totalCash);
+        $sheet->setCellValue('F' . $row, $totalCard);
+        $sheet->setCellValue('G' . $row, $totalCredit);
 
         // Style totals row
-        $sheet->getStyle('A' . $row . ':M' . $row)->getFont()->setBold(true);
-        $sheet->getStyle('A' . $row . ':M' . $row)
+        $sheet->getStyle('A' . $row . ':G' . $row)->getFont()->setBold(true);
+        $sheet->getStyle('A' . $row . ':G' . $row)
             ->getFill()
             ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
             ->getStartColor()
             ->setRGB('E3F2FD');
 
         // Format currency columns
-        foreach (['F', 'G', 'H', 'I', 'J', 'K', 'L'] as $column) {
+        foreach (['D', 'E', 'F', 'G'] as $column) {
             $sheet->getStyle($column . '2:' . $column . $row)
                 ->getNumberFormat()
                 ->setFormatCode('#,##0.00');
         }
 
         // Auto-size columns
-        foreach (range('A', 'M') as $column) {
+        foreach (range('A', 'H') as $column) {
             $sheet->getColumnDimension($column)->setAutoSize(true);
         }
 
