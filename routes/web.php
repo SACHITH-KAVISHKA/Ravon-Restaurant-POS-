@@ -181,6 +181,28 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/generate-code', [App\Http\Controllers\MainStockController::class, 'generateCode'])->name('generate-code');
     });
 
+    // Stock Transfer Routes (Supervisor to Cashier transfers)
+    Route::prefix('stock-transfer')->name('stock-transfer.')->group(function () {
+        // Supervisor routes - create and manage transfers
+        Route::middleware(['role:supervisor'])->group(function () {
+            Route::get('/supervisor', [App\Http\Controllers\StockTransferController::class, 'supervisorIndex'])->name('supervisor.index');
+            Route::post('/', [App\Http\Controllers\StockTransferController::class, 'store'])->name('store');
+            Route::get('/history', [App\Http\Controllers\StockTransferController::class, 'getTransferHistory'])->name('history');
+        });
+
+        // Cashier routes - receive and respond to transfers
+        Route::middleware(['role:cashier'])->group(function () {
+            Route::get('/cashier', [App\Http\Controllers\StockTransferController::class, 'cashierIndex'])->name('cashier.index');
+            Route::get('/cashier/sub-stock', [App\Http\Controllers\StockTransferController::class, 'cashierSubStock'])->name('cashier.sub-stock');
+            Route::post('/{stockTransfer}/respond', [App\Http\Controllers\StockTransferController::class, 'cashierRespond'])->name('cashier.respond');
+            Route::get('/pending', [App\Http\Controllers\StockTransferController::class, 'getPendingTransfers'])->name('pending');
+            Route::get('/sub-stock-data', [App\Http\Controllers\StockTransferController::class, 'getSubStock'])->name('sub-stock-data');
+        });
+
+        // Shared route - view transfer details
+        Route::get('/{stockTransfer}', [App\Http\Controllers\StockTransferController::class, 'show'])->name('show');
+    });
+
     // QZ Tray Signature Route (for thermal printing)
     Route::post('/qz/sign', [App\Http\Controllers\QZTrayController::class, 'signQzRequest'])->name('qz.sign');
 });
