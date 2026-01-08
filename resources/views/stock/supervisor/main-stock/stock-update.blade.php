@@ -48,25 +48,31 @@
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <!-- Stock Update Form -->
             <div class="lg:col-span-2">
-                <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                <div class="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+                    <!-- Form Header -->
+                    <div class="px-6 py-4 bg-gradient-to-r from-[#667eea] to-[#764ba2]">
+                        <h2 class="text-lg font-bold text-white">Add Stock Items</h2>
+                        <p class="text-purple-200 text-sm">Select items and enter quantities to add to stock</p>
+                    </div>
+
                     <form id="stockUpdateForm" class="p-6">
                         @csrf
 
                         <!-- Items Table -->
-                        <div class="overflow-x-auto">
+                        <div class="overflow-x-auto border border-gray-200 rounded-lg">
                             <table class="w-full">
                                 <thead>
-                                    <tr class="border-b border-gray-200">
-                                        <th class="text-left py-3 px-2 text-sm font-medium text-gray-700">Items</th>
-                                        <th class="text-left py-3 px-2 text-sm font-medium text-gray-700 w-40">Qty</th>
-                                        <th class="text-center py-3 px-2 text-sm font-medium text-gray-700 w-20">Action</th>
+                                    <tr class="bg-gradient-to-r from-purple-50 to-indigo-50 border-b border-gray-200">
+                                        <th class="text-left py-4 px-4 text-sm font-semibold text-gray-700">Items</th>
+                                        <th class="text-left py-4 px-4 text-sm font-semibold text-gray-700 w-40">Qty</th>
+                                        <th class="text-center py-4 px-4 text-sm font-semibold text-gray-700 w-20">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody id="itemsTableBody">
                                     <!-- Initial Row -->
-                                    <tr class="item-row border-b border-gray-100">
-                                        <td class="py-3 px-2">
-                                            <select name="items[0][item_id]" class="item-select form-input w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
+                                    <tr class="item-row border-b border-gray-100 hover:bg-gray-50">
+                                        <td class="py-4 px-4">
+                                            <select name="items[0][item_id]" class="item-select form-input w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-sm font-medium focus:border-purple-500 focus:ring-2 focus:ring-purple-200 bg-white">
                                                 <option value="">Select Item</option>
                                                 @foreach($items as $item)
                                                 <option value="{{ $item->id }}" data-unit="{{ $item->unit_abbreviation }}" data-name="{{ $item->item_name }}">
@@ -75,11 +81,11 @@
                                                 @endforeach
                                             </select>
                                         </td>
-                                        <td class="py-3 px-2">
-                                            <input type="number" name="items[0][quantity]" class="qty-input form-input w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" step="0.001" min="0.001" placeholder="0.000">
+                                        <td class="py-4 px-4">
+                                            <input type="number" name="items[0][quantity]" class="qty-input form-input w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-sm font-medium focus:border-purple-500 focus:ring-2 focus:ring-purple-200 text-center" step="0.001" min="0.001" placeholder="0.000">
                                         </td>
-                                        <td class="py-3 px-2 text-center">
-                                            <button type="button" class="delete-row-btn p-2 text-red-500 hover:text-red-700 rounded-lg transition">
+                                        <td class="py-4 px-4 text-center">
+                                            <button type="button" class="delete-row-btn p-3 text-red-500 hover:text-white hover:bg-red-500 rounded-lg transition border border-red-200 hover:border-red-500">
                                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                                 </svg>
@@ -195,14 +201,16 @@
         let rowIndex = 1;
 
         // Items data for dropdown
-        const itemsData = {!! json_encode($items->map(function($item) {
-            return [
-                'id' => $item->id,
-                'code' => $item->item_code,
-                'name' => $item->item_name,
-                'unit' => $item->unit_abbreviation
-            ];
-        })->values()) !!};
+        const itemsData = {
+            !!json_encode($items - > map(function($item) {
+                return [
+                    'id' => $item - > id,
+                    'code' => $item - > item_code,
+                    'name' => $item - > item_name,
+                    'unit' => $item - > unit_abbreviation
+                ];
+            }) - > values()) !!
+        };
 
         // Generate option HTML for select
         function getOptionsHtml(excludeIds = []) {
@@ -230,18 +238,18 @@
         function addNewRow() {
             const selectedIds = getSelectedItemIds();
             const newRow = document.createElement('tr');
-            newRow.className = 'item-row border-b border-gray-100';
+            newRow.className = 'item-row border-b border-gray-100 hover:bg-gray-50';
             newRow.innerHTML = `
-                <td class="py-3 px-2">
-                    <select name="items[${rowIndex}][item_id]" class="item-select form-input w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
+                <td class="py-4 px-4">
+                    <select name="items[${rowIndex}][item_id]" class="item-select form-input w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-sm font-medium focus:border-purple-500 focus:ring-2 focus:ring-purple-200 bg-white">
                         ${getOptionsHtml(selectedIds)}
                     </select>
                 </td>
-                <td class="py-3 px-2">
-                    <input type="number" name="items[${rowIndex}][quantity]" class="qty-input form-input w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" step="0.001" min="0.001" placeholder="0.000">
+                <td class="py-4 px-4">
+                    <input type="number" name="items[${rowIndex}][quantity]" class="qty-input form-input w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-sm font-medium focus:border-purple-500 focus:ring-2 focus:ring-purple-200 text-center" step="0.001" min="0.001" placeholder="0.000">
                 </td>
-                <td class="py-3 px-2 text-center">
-                    <button type="button" class="delete-row-btn p-2 text-red-500 hover:text-red-700 rounded-lg transition">
+                <td class="py-4 px-4 text-center">
+                    <button type="button" class="delete-row-btn p-3 text-red-500 hover:text-white hover:bg-red-500 rounded-lg transition border border-red-200 hover:border-red-500">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                         </svg>
@@ -310,10 +318,10 @@
                 const select = row.querySelector('.item-select');
                 const currentValue = select.value;
                 const selectedIds = getSelectedItemIds(row);
-                
+
                 // Rebuild options
                 select.innerHTML = getOptionsHtml(selectedIds);
-                
+
                 // Re-select current value if it's still valid
                 if (currentValue) {
                     select.value = currentValue;
@@ -348,7 +356,7 @@
         document.querySelectorAll('.item-quick-select').forEach(el => {
             el.addEventListener('click', function() {
                 const itemId = this.dataset.itemId;
-                
+
                 // Find first empty row or add new row
                 let targetSelect = null;
                 document.querySelectorAll('.item-select').forEach(select => {
@@ -413,7 +421,7 @@
 
                 if (data.success) {
                     showToast(data.message, 'success');
-                    
+
                     // Clear form after successful submission
                     clearFormBtn.click();
                 } else {

@@ -227,13 +227,13 @@
                 </div>
             </button>
 
-            <button class="w-full h-14 flex items-stretch shadow-sm group mb-2" onclick="checkout()">
+            <button id="placeOrderBtn" class="w-full h-14 flex items-stretch shadow-sm group mb-2" onclick="checkout()">
                 <div class="bg-white text-green-600 p-3 rounded-l-lg flex items-center justify-center w-14">
                     <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
                     </svg>
                 </div>
-                <div class="bg-green-500 text-white flex-1 flex items-center justify-center font-bold text-base rounded-r-lg group-hover:bg-green-600 transition">
+                <div id="placeOrderBtnText" class="bg-green-500 text-white flex-1 flex items-center justify-center font-bold text-base rounded-r-lg group-hover:bg-green-600 transition">
                     Place Order
                 </div>
             </button>
@@ -2122,6 +2122,12 @@
             }
 
             function addPortionToBill(itemId, itemName, portionPrice, portionName) {
+                // If user adds an item after voiding all items, they're continuing the order
+                // Clear the voided tracking so the order won't be cancelled
+                if (voidedOrderId && currentOrderId === voidedOrderId) {
+                    voidedOrderId = null;
+                }
+
                 const fullName = `${itemName} (${portionName})`;
                 const existingItem = billItems.find(item => item.item_id === itemId && item.name === fullName);
 
@@ -2198,7 +2204,15 @@
             }
 
             // Checkout - Place Order
+            let isPlacingOrder = false; // Flag to prevent double-clicking
+
             async function checkout() {
+                // Prevent double-clicking
+                if (isPlacingOrder) {
+                    console.log('Order already being placed, ignoring click');
+                    return;
+                }
+
                 if (billItems.length === 0) {
                     showNotification('Please add items to the bill first', 'Empty Bill');
                     return;
@@ -2207,6 +2221,18 @@
                 if (!currentOrderType) {
                     showNotification('Please select an order type first', 'Order Type Required');
                     return;
+                }
+
+                // Set flag and disable button
+                isPlacingOrder = true;
+                const placeOrderBtn = document.getElementById('placeOrderBtn');
+                const placeOrderBtnText = document.getElementById('placeOrderBtnText');
+                if (placeOrderBtn) {
+                    placeOrderBtn.disabled = true;
+                    placeOrderBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                }
+                if (placeOrderBtnText) {
+                    placeOrderBtnText.textContent = 'Processing...';
                 }
 
                 try {
@@ -2327,6 +2353,18 @@
                 } catch (error) {
                     console.error('Checkout error:', error);
                     showNotification('Error placing order: ' + error.message, 'System Error');
+                } finally {
+                    // Reset flag and button state
+                    isPlacingOrder = false;
+                    const placeOrderBtn = document.getElementById('placeOrderBtn');
+                    const placeOrderBtnText = document.getElementById('placeOrderBtnText');
+                    if (placeOrderBtn) {
+                        placeOrderBtn.disabled = false;
+                        placeOrderBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    }
+                    if (placeOrderBtnText) {
+                        placeOrderBtnText.textContent = 'Place Order';
+                    }
                 }
             }
 
@@ -2367,6 +2405,10 @@
             // Open Open Checks Modal
             async function openOrderCheckModal() {
                 try {
+                    // Cancel any voided order before opening Open Checks
+                    // (if user is abandoning a voided order to select another)
+                    await cancelVoidedOrderIfExists();
+
                     const response = await fetch('{{ route("pos.openChecks") }}');
                     const result = await response.json();
 
@@ -2422,6 +2464,11 @@
             // Load existing order
             async function loadOrder(orderId) {
                 try {
+                    // Cancel any voided order before loading a new one (if loading a different order)
+                    if (voidedOrderId && voidedOrderId !== orderId) {
+                        await cancelVoidedOrderIfExists();
+                    }
+
                     const response = await fetch(`{{ url('/pos/order') }}/${orderId}`);
                     const result = await response.json();
 

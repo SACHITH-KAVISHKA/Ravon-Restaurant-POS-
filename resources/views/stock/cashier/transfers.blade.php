@@ -138,29 +138,48 @@
                                 <p class="text-gray-400 mt-1">All caught up! No transfers waiting for your approval.</p>
                             </div>
                             @else
-                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                @foreach($pendingTransfers as $transfer)
-                                <div class="transfer-card pending bg-white border border-gray-200 rounded-lg p-4 cursor-pointer hover:border-yellow-300" onclick="viewTransfer({{ $transfer->id }})">
-                                    <div class="flex justify-between items-start">
-                                        <div>
-                                            <span class="text-emerald-600 font-mono font-bold text-lg">{{ $transfer->transfer_number }}</span>
-                                            <p class="text-gray-500 text-sm mt-1">From: {{ $transfer->supervisor->name }}</p>
-                                        </div>
-                                        <div class="text-right">
-                                            <span class="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm font-medium">Pending</span>
-                                        </div>
-                                    </div>
-                                    <div class="mt-3 flex items-center justify-between text-sm text-gray-600">
-                                        <div class="flex items-center gap-2">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                                            </svg>
-                                            <span>{{ $transfer->items->count() }} items</span>
-                                        </div>
-                                        <p class="text-gray-400 text-xs">{{ $transfer->created_at->format('M d, h:i A') }}</p>
-                                    </div>
-                                </div>
-                                @endforeach
+                            <div class="overflow-x-auto">
+                                <table class="w-full">
+                                    <thead class="bg-gradient-to-r from-[#667eea] to-[#764ba2]">
+                                        <tr>
+                                            <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase">Transfer #</th>
+                                            <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase">From</th>
+                                            <th class="px-4 py-3 text-center text-xs font-semibold text-white uppercase">Items</th>
+                                            <th class="px-4 py-3 text-center text-xs font-semibold text-white uppercase">Status</th>
+                                            <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase">Date</th>
+                                            <th class="px-4 py-3 text-center text-xs font-semibold text-white uppercase">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-gray-200">
+                                        @foreach($pendingTransfers as $transfer)
+                                        <tr class="hover:bg-yellow-50 transition-colors">
+                                            <td class="px-4 py-3">
+                                                <span class="text-emerald-600 font-mono font-semibold">{{ $transfer->transfer_number }}</span>
+                                            </td>
+                                            <td class="px-4 py-3 text-gray-600">
+                                                {{ $transfer->supervisor->name }}
+                                            </td>
+                                            <td class="px-4 py-3 text-center">
+                                                <span class="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-sm">{{ $transfer->items->count() }} items</span>
+                                            </td>
+                                            <td class="px-4 py-3 text-center">
+                                                <span class="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm font-medium">Pending</span>
+                                            </td>
+                                            <td class="px-4 py-3 text-gray-600 text-sm">
+                                                {{ $transfer->created_at->format('M d, Y') }}
+                                            </td>
+                                            <td class="px-4 py-3 text-center">
+                                                <button data-transfer-id="{{ $transfer->id }}" class="view-transfer-btn p-2 bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white rounded-lg hover:shadow-lg transition" title="View & Respond">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                    </svg>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
                             </div>
                             @endif
                         </div>
@@ -199,7 +218,7 @@
                                                 {{ $transfer->responded_at ? $transfer->responded_at->format('M d, Y') : $transfer->created_at->format('M d, Y') }}
                                             </td>
                                             <td class="px-4 py-3 text-center">
-                                                <button onclick="viewTransfer({{ $transfer->id }})" class="p-2 bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white rounded-lg hover:shadow-lg transition">
+                                                <button data-transfer-id="{{ $transfer->id }}" class="view-transfer-btn p-2 bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white rounded-lg hover:shadow-lg transition">
                                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
@@ -248,7 +267,7 @@
                                                 {{ $transfer->responded_at ? $transfer->responded_at->format('M d, Y') : $transfer->created_at->format('M d, Y') }}
                                             </td>
                                             <td class="px-4 py-3 text-center">
-                                                <button onclick="viewTransfer({{ $transfer->id }})" class="p-2 bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white rounded-lg hover:shadow-lg transition">
+                                                <button data-transfer-id="{{ $transfer->id }}" class="view-transfer-btn p-2 bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white rounded-lg hover:shadow-lg transition">
                                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
@@ -486,6 +505,17 @@
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') {
             closeTransferModal();
+        }
+    });
+
+    // Event delegation for view transfer buttons
+    document.addEventListener('click', function(e) {
+        const btn = e.target.closest('.view-transfer-btn');
+        if (btn) {
+            const transferId = btn.dataset.transferId;
+            if (transferId) {
+                viewTransfer(parseInt(transferId));
+            }
         }
     });
 </script>

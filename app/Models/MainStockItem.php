@@ -28,6 +28,13 @@ class MainStockItem extends Model
     ];
 
     /**
+     * Attributes to append to the model's JSON form.
+     */
+    protected $appends = [
+        'unit_abbreviation',
+    ];
+
+    /**
      * Unit type labels for display
      */
     public const UNIT_TYPES = [
@@ -159,7 +166,7 @@ class MainStockItem extends Model
     {
         $quantityBefore = $this->quantity;
         $difference = $newQty - $this->quantity;
-        
+
         $this->quantity = $newQty;
         $this->updated_by = $userId;
         $this->save();

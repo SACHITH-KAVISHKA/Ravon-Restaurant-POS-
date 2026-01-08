@@ -62,6 +62,7 @@
 
     .quantity-input {
         -moz-appearance: textfield;
+        appearance: textfield;
     }
 </style>
 @endpush
@@ -92,11 +93,7 @@
             <!-- Tab Navigation -->
             <div class="border-b border-gray-100 px-6">
                 <div class="flex gap-6">
-                    <button onclick="switchTab('my-transfers')" id="tab-my-transfers" class="tab-btn active py-4 font-medium text-sm flex items-center gap-2">
-                        <span class="w-2 h-2 bg-emerald-400 rounded-full"></span>
-                        My Transfers
-                    </button>
-                    <button onclick="switchTab('pending')" id="tab-pending" class="tab-btn py-4 font-medium text-sm flex items-center gap-2 text-gray-500">
+                    <button onclick="switchTab('pending')" id="tab-pending" class="tab-btn active py-4 font-medium text-sm flex items-center gap-2">
                         <span class="w-2 h-2 bg-yellow-400 rounded-full"></span>
                         Pending
                         <span class="px-2 py-0.5 bg-yellow-100 text-yellow-700 rounded-full text-xs font-semibold">{{ $counts['pending'] }}</span>
@@ -116,70 +113,8 @@
 
             <!-- Tab Content -->
             <div class="p-6">
-                <!-- My Transfers Tab -->
-                <div id="content-my-transfers" class="tab-content">
-                    @if($myTransfers->isEmpty())
-                    <div class="text-center py-16">
-                        <svg class="w-24 h-24 mx-auto text-gray-200 empty-state-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-                        </svg>
-                        <h3 class="mt-4 text-lg font-semibold text-gray-500">No Transfers Yet</h3>
-                        <p class="text-gray-400 mt-1">Create your first stock transfer to get started</p>
-                    </div>
-                    @else
-                    <div class="overflow-x-auto">
-                        <table class="w-full">
-                            <thead class="bg-gradient-to-r from-[#667eea] to-[#764ba2]">
-                                <tr>
-                                    <th class="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">Transfer #</th>
-                                    <th class="px-6 py-4 text-center text-xs font-semibold text-white uppercase tracking-wider">Items</th>
-                                    <th class="px-6 py-4 text-center text-xs font-semibold text-white uppercase tracking-wider">Status</th>
-                                    <th class="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">Date</th>
-                                    <th class="px-6 py-4 text-center text-xs font-semibold text-white uppercase tracking-wider">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-200">
-                                @foreach($myTransfers as $transfer)
-                                <tr class="hover:bg-purple-50 transition-colors">
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <span class="text-emerald-600 font-mono font-semibold">{{ $transfer->transfer_number }}</span>
-                                    </td>
-                                    <td class="px-6 py-4 text-center whitespace-nowrap">
-                                        <span class="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-medium">{{ $transfer->items->count() }} items</span>
-                                    </td>
-                                    <td class="px-6 py-4 text-center whitespace-nowrap">
-                                        <span class="px-3 py-1 rounded-full text-sm font-medium
-                                            @if($transfer->status === 'pending') bg-yellow-100 text-yellow-700
-                                            @elseif($transfer->status === 'accepted') bg-green-100 text-green-700
-                                            @else bg-red-100 text-red-700
-                                            @endif">
-                                            {{ ucfirst($transfer->status) }}
-                                        </span>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-gray-600 text-sm">
-                                        {{ $transfer->created_at->format('M d, Y') }}
-                                    </td>
-                                    <td class="px-6 py-4 text-center whitespace-nowrap">
-                                        <button onclick="viewTransfer({{ $transfer->id }})" class="p-2 bg-gradient-to-r from-[#667eea] to-[#764ba2] hover:shadow-lg hover:shadow-purple-500/50 text-white rounded-lg transition" title="View Details">
-                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                            </svg>
-                                        </button>
-                                    </td>
-                                </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="mt-6">
-                        {{ $myTransfers->links() }}
-                    </div>
-                    @endif
-                </div>
-
                 <!-- Pending Tab -->
-                <div id="content-pending" class="tab-content hidden">
+                <div id="content-pending" class="tab-content">
                     <div id="pending-container">
                         <!-- Will load via AJAX -->
                     </div>
@@ -291,10 +226,14 @@
 
 @endsection
 
+<script type="application/json" id="main-stock-data">
+    @json($mainStockItems)
+</script>
+
 @push('scripts')
 <script>
     // Main stock items data from PHP
-    const mainStockItems = @json($mainStockItems);
+    const mainStockItems = JSON.parse(document.getElementById('main-stock-data').textContent);
 
     let rowCounter = 0;
     let currentViewingTransfer = null;
@@ -718,6 +657,22 @@
             closeCreateTransferModal();
             closeViewTransferModal();
         }
+    });
+
+    // Event delegation for view transfer buttons
+    document.addEventListener('click', function(e) {
+        const btn = e.target.closest('.view-transfer-btn');
+        if (btn) {
+            const transferId = btn.dataset.transferId;
+            if (transferId) {
+                viewTransfer(parseInt(transferId));
+            }
+        }
+    });
+
+    // Load pending transfers on page load (default tab)
+    document.addEventListener('DOMContentLoaded', function() {
+        loadTransfersByStatus('pending');
     });
 </script>
 @endpush
