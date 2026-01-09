@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'My Sub Stock - Cashier')
+@section('title', ($type === 'raw_material' ? 'Raw Material Stock' : 'Finished Goods Stock') . ' - Cashier')
 
 @push('styles')
 <style>
@@ -45,19 +45,35 @@
         <!-- Header -->
         <div class="flex justify-between items-center mb-6">
             <div>
-                <h1 class="text-2xl font-bold text-gray-800">My Sub Stock</h1>
-                <p class="text-gray-500 text-sm">Raw materials in your inventory</p>
+                <h1 class="text-2xl font-bold text-gray-800">
+                    @if($type === 'raw_material')
+                    Raw Material Stock
+                    @else
+                    Finished Goods Stock
+                    @endif
+                </h1>
+                <p class="text-gray-500 text-sm">
+                    @if($type === 'raw_material')
+                    Raw materials in your inventory
+                    @else
+                    Finished goods in your inventory
+                    @endif
+                </p>
             </div>
         </div>
 
         <!-- Stock List -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <div class="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-emerald-600 to-emerald-700">
+            <div class="px-6 py-4 border-b border-gray-100 {{ $type === 'raw_material' ? 'bg-gradient-to-r from-blue-600 to-blue-700' : 'bg-gradient-to-r from-emerald-600 to-emerald-700' }}">
                 <h2 class="font-bold text-white flex items-center gap-2">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                     </svg>
-                    Stock Inventory
+                    @if($type === 'raw_material')
+                    Raw Material Inventory
+                    @else
+                    Finished Goods Inventory
+                    @endif
                 </h2>
             </div>
 
@@ -76,7 +92,6 @@
                         <tr>
                             <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Item Code</th>
                             <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Item Name</th>
-                            <th class="px-6 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Type</th>
                             <th class="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Quantity</th>
                             <th class="px-6 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Unit</th>
                             <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Last Updated</th>
@@ -84,24 +99,15 @@
                     </thead>
                     <tbody class="divide-y divide-gray-100">
                         @foreach($subStock as $stock)
-                        <tr class="hover:bg-emerald-50 transition-colors stock-card">
+                        <tr class="hover:bg-{{ $type === 'raw_material' ? 'blue' : 'emerald' }}-50 transition-colors stock-card">
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <span class="font-mono text-gray-600 bg-gray-100 px-2 py-1 rounded">{{ $stock->mainStockItem->item_code }}</span>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <span class="font-semibold text-gray-800">{{ $stock->mainStockItem->item_name }}</span>
                             </td>
-                            <td class="px-6 py-4 text-center whitespace-nowrap">
-                                <span class="px-3 py-1 rounded-full text-xs font-medium
-                                    @if($stock->mainStockItem->item_type === 'raw_material') bg-blue-100 text-blue-700
-                                    @elseif($stock->mainStockItem->item_type === 'finished_good') bg-emerald-100 text-emerald-700
-                                    @else bg-gray-100 text-gray-700
-                                    @endif">
-                                    {{ $stock->mainStockItem->item_type_label }}
-                                </span>
-                            </td>
                             <td class="px-6 py-4 text-right whitespace-nowrap">
-                                <span class="text-xl font-bold text-emerald-600">{{ number_format($stock->quantity, 3) }}</span>
+                                <span class="text-xl font-bold {{ $type === 'raw_material' ? 'text-blue-600' : 'text-emerald-600' }}">{{ number_format($stock->quantity, 3) }}</span>
                             </td>
                             <td class="px-6 py-4 text-center whitespace-nowrap">
                                 <span class="text-gray-500 font-medium">{{ $stock->mainStockItem->unit_abbreviation }}</span>

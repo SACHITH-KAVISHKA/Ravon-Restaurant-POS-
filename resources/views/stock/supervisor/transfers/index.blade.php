@@ -155,6 +155,16 @@
 
         <!-- Modal Body -->
         <div class="flex-1 overflow-y-auto p-6">
+            <!-- Add All Items Button -->
+            <div class="flex justify-end mb-4">
+                <button onclick="addAllItems()" class="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg font-medium hover:from-blue-600 hover:to-blue-700 transition shadow-md flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                    Add All Items
+                </button>
+            </div>
+
             <!-- Transfer Items Table -->
             <div class="overflow-x-auto">
                 <table class="w-full border-collapse" id="transfer-items-table">
@@ -352,6 +362,75 @@
 
     function closeCreateTransferModal() {
         document.getElementById('createTransferModal').classList.add('hidden');
+    }
+
+    // Add all items with their full quantities
+    function addAllItems() {
+        const tbody = document.getElementById('transfer-items-body');
+        tbody.innerHTML = ''; // Clear existing rows
+        rowCounter = 0;
+
+        // Filter items that have quantity > 0
+        const itemsWithStock = mainStockItems.filter(item => parseFloat(item.quantity) > 0);
+
+        if (itemsWithStock.length === 0) {
+            showToast('No items with available stock to transfer', 'error');
+            addItemRow(); // Add empty row
+            return;
+        }
+
+        // Add a row for each item with stock
+        itemsWithStock.forEach(item => {
+            const rowId = rowCounter++;
+            const row = document.createElement('tr');
+            row.id = `item-row-${rowId}`;
+            row.className = 'border-b border-gray-200 item-row';
+            row.innerHTML = `
+                <td class="px-4 py-3">
+                    <select id="item-select-${rowId}" onchange="onItemSelect(${rowId})" 
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white">
+                        <option value="">Select Item</option>
+                        ${mainStockItems.map(i => `
+                            <option value="${i.id}" 
+                                    data-qty="${i.quantity}" 
+                                    data-unit="${i.unit_abbreviation}"
+                                    data-name="${i.item_name}"
+                                    ${i.id === item.id ? 'selected' : ''}>${i.item_code} - ${i.item_name}</option>
+                        `).join('')}
+                    </select>
+                </td>
+                <td class="px-4 py-3 text-center">
+                    <input type="text" id="available-qty-${rowId}" value="${parseFloat(item.quantity).toFixed(3)}" readonly
+                        class="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-100 text-center text-gray-600">
+                </td>
+                <td class="px-4 py-3 text-center">
+                    <input type="text" id="unit-${rowId}" value="${item.unit_abbreviation}" readonly
+                        class="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-100 text-center text-gray-600">
+                </td>
+                <td class="px-4 py-3 text-center">
+                    <input type="number" id="transfer-qty-${rowId}" value="${parseFloat(item.quantity).toFixed(3)}" min="0.001" step="0.001"
+                        onchange="validateQuantity(${rowId})"
+                        onkeydown="handleTransferQtyKeydown(event, ${rowId})"
+                        class="quantity-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-center"
+                        placeholder="0">
+                </td>
+                <td class="px-4 py-3 text-center">
+                    <button onclick="removeItemRow(${rowId})" class="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+
+        // Update dropdowns to exclude already selected items
+        updateDropdowns();
+        // Enable submit button
+        updateSubmitButton();
+
+        showToast(`Added ${itemsWithStock.length} items with full quantities`, 'success');
     }
 
     // Add a new item row to the table

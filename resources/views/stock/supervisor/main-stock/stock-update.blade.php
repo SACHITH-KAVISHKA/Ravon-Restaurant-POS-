@@ -96,16 +96,6 @@
                             </table>
                         </div>
 
-                        <!-- Add Row Button -->
-                        <div class="mt-4">
-                            <button type="button" id="addRowBtn" class="text-purple-600 hover:text-purple-800 font-medium flex items-center gap-2 text-sm">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                                </svg>
-                                Add Another Item
-                            </button>
-                        </div>
-
                         <!-- Reference Number & Notes -->
                         <div class="mt-6 pt-6 border-t border-gray-100 grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
@@ -192,25 +182,30 @@
     <div id="toastContent" class="px-6 py-3 rounded-lg shadow-lg font-medium"></div>
 </div>
 
+<!-- Items Data for JavaScript -->
+<script type="application/json" id="items-data">
+    @php
+    $itemsArray = $items->map(function($item) {
+        return [
+            'id' => $item->id,
+            'code' => $item->item_code,
+            'name' => $item->item_name,
+            'unit' => $item->unit_abbreviation
+        ];
+    })->values();
+    echo json_encode($itemsArray);
+    @endphp
+</script>
+
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const form = document.getElementById('stockUpdateForm');
         const tableBody = document.getElementById('itemsTableBody');
-        const addRowBtn = document.getElementById('addRowBtn');
         const clearFormBtn = document.getElementById('clearFormBtn');
         let rowIndex = 1;
 
         // Items data for dropdown
-        const itemsData = {
-            !!json_encode($items - > map(function($item) {
-                return [
-                    'id' => $item - > id,
-                    'code' => $item - > item_code,
-                    'name' => $item - > item_name,
-                    'unit' => $item - > unit_abbreviation
-                ];
-            }) - > values()) !!
-        };
+        const itemsData = JSON.parse(document.getElementById('items-data').textContent);
 
         // Generate option HTML for select
         function getOptionsHtml(excludeIds = []) {
@@ -328,11 +323,6 @@
                 }
             });
         }
-
-        // Add Row button click
-        addRowBtn.addEventListener('click', function() {
-            addNewRow();
-        });
 
         // Clear form
         clearFormBtn.addEventListener('click', function() {

@@ -240,16 +240,18 @@ class StockTransferController extends Controller
     /**
      * Display the cashier's sub stock page.
      */
-    public function cashierSubStock()
+    public function cashierSubStock(Request $request)
     {
+        $type = $request->get('type', 'raw_material'); // Default to raw_material
+
         $subStock = CashierSubStock::with('mainStockItem')
-            ->whereHas('mainStockItem', function ($q) {
-                $q->active();
+            ->whereHas('mainStockItem', function ($q) use ($type) {
+                $q->active()->where('item_type', $type);
             })
             ->orderBy('updated_at', 'desc')
             ->get();
 
-        return view('stock.cashier.sub-stock', compact('subStock'));
+        return view('stock.cashier.sub-stock', compact('subStock', 'type'));
     }
 
     /**
