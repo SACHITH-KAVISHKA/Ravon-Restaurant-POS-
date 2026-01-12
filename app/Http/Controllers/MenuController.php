@@ -111,6 +111,7 @@ class MenuController extends Controller
             'special_prices' => 'nullable|array',
             'has_portions' => 'nullable|boolean',
             'is_finished_goods' => 'nullable|boolean',
+            'is_stock_count' => 'nullable|boolean',
             'portions' => 'nullable|array',
             'portions.*.name' => 'required_with:portions|string|max:255',
             'portions.*.price' => 'required_with:portions|numeric|min:0',
@@ -122,6 +123,7 @@ class MenuController extends Controller
         $validated['is_available'] = true;
         $validated['is_featured'] = false;
         $validated['is_finished_goods'] = $request->has('is_finished_goods');
+        $validated['is_stock_count'] = $request->has('is_stock_count');
         $validated['display_order'] = 0;
         $validated['price'] = $validated['price'] ?? 0;
 
@@ -190,11 +192,13 @@ class MenuController extends Controller
             'price' => 'nullable|numeric|min:0',
             'special_prices' => 'nullable|array',
             'is_finished_goods' => 'nullable|boolean',
+            'is_stock_count' => 'nullable|boolean',
         ]);
 
         $validated['slug'] = Str::slug($validated['name']);
         $validated['price'] = $validated['price'] ?? $item->price;
         $validated['is_finished_goods'] = $request->has('is_finished_goods');
+        $validated['is_stock_count'] = $request->has('is_stock_count');
 
         $item->update($validated);
 

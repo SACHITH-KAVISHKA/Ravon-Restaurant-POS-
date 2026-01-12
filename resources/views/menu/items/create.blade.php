@@ -53,13 +53,23 @@
                         @enderror
                     </div>
 
-                    <!-- Finished Goods Checkbox -->
-                    <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                        <label class="flex items-center cursor-pointer">
-                            <input type="checkbox" name="is_finished_goods" value="1" {{ old('is_finished_goods') ? 'checked' : '' }}
-                                class="w-5 h-5 text-blue-600 bg-gray-50 border-gray-300 rounded focus:ring-blue-500">
-                            <span class="ml-3 text-gray-800 font-semibold">Finished Goods</span>
-                        </label>
+                    <!-- Finished Goods & Stock Count Checkboxes -->
+                    <div class="flex gap-4">
+                        <div class="flex-1 bg-blue-50 p-4 rounded-lg border border-blue-200">
+                            <label class="flex items-center cursor-pointer">
+                                <input type="checkbox" name="is_finished_goods" value="1" {{ old('is_finished_goods') ? 'checked' : '' }}
+                                    class="w-5 h-5 text-blue-600 bg-gray-50 border-gray-300 rounded focus:ring-blue-500">
+                                <span class="ml-3 text-gray-800 font-semibold">Finished Goods</span>
+                            </label>
+                        </div>
+
+                        <div class="flex-1 bg-green-50 p-4 rounded-lg border border-green-200">
+                            <label class="flex items-center cursor-pointer">
+                                <input type="checkbox" name="is_stock_count" value="1" {{ old('is_stock_count', true) ? 'checked' : '' }}
+                                    class="w-5 h-5 text-green-600 bg-gray-50 border-gray-300 rounded focus:ring-green-500">
+                                <span class="ml-3 text-gray-800 font-semibold">Stock Count</span>
+                            </label>
+                        </div>
                     </div>
 
                     <!-- Default Price (disabled when has portions) -->
@@ -67,13 +77,12 @@
                         <label class="block text-sm font-semibold text-gray-800-muted mb-2">Default Price (Rs.) *</label>
                         <input type="number" name="price" id="defaultPrice" value="{{ old('price', 0) }}" step="0.01" min="0" required
                             class="w-full px-4 py-2 bg-gray-50 text-gray-800 rounded-lg border border-gray-300 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500">
-                        <p class="text-gray-800-muted/60 text-sm mt-1">This will be disabled if you enable portions below</p>
                     </div>
 
                     <!-- Special Prices Section -->
                     <div id="specialPricesSection" class="bg-gradient-to-br from-purple-50 to-purple-100/50 p-4 rounded-lg border border-purple-200">
                         <div class="flex justify-between items-center mb-3">
-                            <label class="text-sm font-semibold text-gray-800">Special Prices (Optional)</label>
+                            <label class="text-sm font-semibold text-gray-800">Special Prices</label>
                             <button type="button" onclick="addSpecialPrice()" class="px-3 py-1.5 bg-gradient-to-r from-[#667eea] to-[#764ba2] hover:shadow-lg hover:shadow-purple-500/50 text-white rounded-lg transition text-sm font-semibold flex items-center gap-1">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
@@ -94,7 +103,6 @@
                                 onchange="togglePortionFields()">
                             <span class="ml-3 text-gray-800 font-semibold">This item has different portions/sizes</span>
                         </label>
-                        <p class="text-gray-800-muted text-sm mt-1 ml-8">Check this if the item comes in different sizes (Small, Large, etc.)</p>
                     </div>
 
                     <!-- Portions Section (shown when HAS portions) -->
@@ -292,7 +300,7 @@
             defaultPriceInput.disabled = true;
             defaultPriceInput.classList.add('opacity-50', 'cursor-not-allowed');
             defaultPriceInput.value = 0;
-            
+
             // Disable special prices section when portions are enabled
             if (specialPricesSection) {
                 specialPricesSection.classList.add('opacity-50', 'pointer-events-none');
@@ -306,7 +314,7 @@
             portionsSection.classList.add('hidden');
             defaultPriceInput.disabled = false;
             defaultPriceInput.classList.remove('opacity-50', 'cursor-not-allowed');
-            
+
             // Re-enable special prices section when portions are disabled
             if (specialPricesSection) {
                 specialPricesSection.classList.remove('opacity-50', 'pointer-events-none');
@@ -325,7 +333,7 @@
             hasPortionsCheckbox.checked = true;
             togglePortionFields();
         }
-        
+
         portionCount++;
         const portionsList = document.getElementById('portionsList');
 
@@ -375,11 +383,11 @@
         if (portionDiv) {
             portionDiv.remove();
         }
-        
+
         // Check if there are any remaining portions
         const portionsList = document.getElementById('portionsList');
         const remainingPortions = portionsList.querySelectorAll('[id^="portion-"]');
-        
+
         // If no portions left, uncheck the checkbox
         if (remainingPortions.length === 0) {
             const hasPortionsCheckbox = document.getElementById('hasPortions');

@@ -765,8 +765,8 @@ class POSController extends Controller
             foreach ($orderItemsForStock as $orderItem) {
                 if (!$orderItem->item) continue;
 
-                // Only deduct stock for items marked as "Finished Goods"
-                if ($orderItem->item->is_finished_goods && $orderItem->quantity > 0) {
+                // Only deduct stock for items marked as "Finished Goods" AND "Stock Count"
+                if ($orderItem->item->is_finished_goods && $orderItem->item->is_stock_count && $orderItem->quantity > 0) {
                     // Use display name to find matching MainStockItem and deduct from CashierSubStock
                     $displayName = $orderItem->item_display_name ?? $orderItem->item->name;
                     CashierSubStock::deductForSaleByDisplayName(
