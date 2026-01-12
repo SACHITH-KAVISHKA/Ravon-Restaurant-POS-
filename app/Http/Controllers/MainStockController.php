@@ -65,7 +65,21 @@ class MainStockController extends Controller
     public function create()
     {
         $itemCode = MainStockItem::generateItemCode('other');
-        return view('stock.supervisor.main-stock.create', compact('itemCode'));
+
+        // Get beverage and dessert items with their portions/sizes for finished goods dropdown
+        $finishedGoodsItems = \App\Models\Item::with(['category', 'activeModifiers' => function ($q) {
+            $q->whereIn('type', ['portion', 'size']);
+        }])
+            ->whereHas('category', function ($q) {
+                $q->whereIn('slug', ['beverages', 'desserts', 'beverage', 'dessert'])
+                    ->orWhereRaw('LOWER(name) LIKE ?', ['%beverage%'])
+                    ->orWhereRaw('LOWER(name) LIKE ?', ['%dessert%']);
+            })
+            ->where('is_available', true)
+            ->orderBy('name')
+            ->get();
+
+        return view('stock.supervisor.main-stock.create', compact('itemCode', 'finishedGoodsItems'));
     }
 
     /**
@@ -126,7 +140,23 @@ class MainStockController extends Controller
      */
     public function edit(MainStockItem $mainStock)
     {
-        return view('stock.supervisor.main-stock.edit', ['item' => $mainStock]);
+        // Get beverage and dessert items with their portions/sizes for finished goods dropdown
+        $finishedGoodsItems = \App\Models\Item::with(['category', 'activeModifiers' => function ($q) {
+            $q->whereIn('type', ['portion', 'size']);
+        }])
+            ->whereHas('category', function ($q) {
+                $q->whereIn('slug', ['beverages', 'desserts', 'beverage', 'dessert'])
+                    ->orWhereRaw('LOWER(name) LIKE ?', ['%beverage%'])
+                    ->orWhereRaw('LOWER(name) LIKE ?', ['%dessert%']);
+            })
+            ->where('is_available', true)
+            ->orderBy('name')
+            ->get();
+
+        return view('stock.supervisor.main-stock.edit', [
+            'item' => $mainStock,
+            'finishedGoodsItems' => $finishedGoodsItems
+        ]);
     }
 
     /**

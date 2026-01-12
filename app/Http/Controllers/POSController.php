@@ -10,7 +10,7 @@ use App\Models\OrderItem;
 use App\Models\Payment;
 use App\Models\Kot;
 use App\Models\KotItem;
-use App\Models\RestaurantStock;
+use App\Models\CashierSubStock;
 use App\Models\VoidRecord;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -755,7 +755,7 @@ class POSController extends Controller
                 }
             }
 
-            // Deduct stock for Finished Goods items from RestaurantStock
+            // Deduct stock for Finished Goods items from CashierSubStock (FG Stock)
             // Stock is deducted even if not present (creates stock entry with negative quantity)
             $orderItemsForStock = $order->orderItems()
                 ->whereNotIn('status', ['cancelled', 'deleted'])
@@ -767,9 +767,9 @@ class POSController extends Controller
 
                 // Only deduct stock for items marked as "Finished Goods"
                 if ($orderItem->item->is_finished_goods && $orderItem->quantity > 0) {
-                    // Use display name to find modifier and deduct stock
+                    // Use display name to find matching MainStockItem and deduct from CashierSubStock
                     $displayName = $orderItem->item_display_name ?? $orderItem->item->name;
-                    RestaurantStock::deductForSaleByDisplayName(
+                    CashierSubStock::deductForSaleByDisplayName(
                         $orderItem->item_id,
                         $displayName,
                         $orderItem->quantity,

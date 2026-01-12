@@ -1,4 +1,4 @@
-<aside class="w-64 border-r border-gray-200 flex flex-col overflow-y-auto shadow-md" style="background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);">
+<aside class="w-64 border-r border-gray-200 flex flex-col overflow-y-auto shadow-md sticky top-0 h-screen" style="background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);">
     <div class="p-4 border-b border-white/20" style="background: rgba(255, 255, 255, 0.1);">
         <h2 class="text-lg font-bold text-white">Management</h2>
     </div>
@@ -124,12 +124,12 @@
                     <span>Update Stock</span>
                 </a>
 
-                <a href="{{ route('stock.supervisor.index') }}" class="flex items-center gap-3 px-4 py-2 {{ request()->routeIs('stock.supervisor.*') ? 'bg-white/20 text-white font-medium' : 'text-white/70 hover:bg-white/10 hover:text-white' }} rounded-lg transition text-sm">
+                <!-- <a href="{{ route('stock.supervisor.index') }}" class="flex items-center gap-3 px-4 py-2 {{ request()->routeIs('stock.supervisor.*') ? 'bg-white/20 text-white font-medium' : 'text-white/70 hover:bg-white/10 hover:text-white' }} rounded-lg transition text-sm">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     <span>Stock Requests</span>
-                </a>
+                </a> -->
 
                 <a href="{{ route('stock-transfer.supervisor.index') }}" class="flex items-center gap-3 px-4 py-2 {{ request()->routeIs('stock-transfer.supervisor.*') ? 'bg-white/20 text-white font-medium' : 'text-white/70 hover:bg-white/10 hover:text-white' }} rounded-lg transition text-sm">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -143,18 +143,12 @@
 
         <!-- Cashier Stock Section -->
         @role('cashier')
-        <a href="{{ route('stock.cashier.stock') }}" class="flex items-center gap-3 px-4 py-3 {{ request()->routeIs('stock.cashier.stock') ? 'bg-white/25 text-white border-l-4 border-white font-semibold' : 'text-white/80 hover:bg-white/15 hover:text-white' }} rounded-lg transition">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-            </svg>
-            <span class="font-medium">My Stock</span>
-        </a>
-        <a href="{{ route('stock.cashier.index') }}" class="flex items-center gap-3 px-4 py-3 {{ request()->routeIs('stock.cashier.index') ? 'bg-white/25 text-white border-l-4 border-white font-semibold' : 'text-white/80 hover:bg-white/15 hover:text-white' }} rounded-lg transition">
+        <!-- <a href="{{ route('stock.cashier.index') }}" class="flex items-center gap-3 px-4 py-3 {{ request()->routeIs('stock.cashier.index') ? 'bg-white/25 text-white border-l-4 border-white font-semibold' : 'text-white/80 hover:bg-white/15 hover:text-white' }} rounded-lg transition">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
             </svg>
             <span class="font-medium">Stock Requests</span>
-        </a>
+        </a> -->
         <a href="{{ route('stock-transfer.cashier.index') }}" class="flex items-center gap-3 px-4 py-3 {{ request()->routeIs('stock-transfer.cashier.index') ? 'bg-white/25 text-white border-l-4 border-white font-semibold' : 'text-white/80 hover:bg-white/15 hover:text-white' }} rounded-lg transition">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
@@ -167,7 +161,7 @@
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                     </svg>
-                    <span class="font-medium">My Sub Stock</span>
+                    <span class="font-medium">My Stock</span>
                 </div>
                 <svg class="w-4 h-4 transition-transform" :class="{'rotate-180': open}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />

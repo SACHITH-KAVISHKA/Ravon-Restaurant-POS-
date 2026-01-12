@@ -100,7 +100,7 @@
                         <label for="item_type" class="block text-sm font-medium text-gray-700 mb-1">
                             Item Type <span class="text-red-500">*</span>
                         </label>
-                        <select name="item_type" id="item_type" class="form-select w-full px-4 py-2.5 border border-gray-200 rounded-lg" required>
+                        <select name="item_type" id="item_type" class="form-select w-full px-4 py-2.5 border border-gray-200 rounded-lg" required onchange="handleItemTypeChange()">
                             @foreach(\App\Models\MainStockItem::ITEM_TYPES as $value => $label)
                             <option value="{{ $value }}" {{ old('item_type', $item->item_type) === $value ? 'selected' : '' }}>{{ $label }}</option>
                             @endforeach
@@ -125,6 +125,46 @@
                         @enderror
                     </div>
 
+                </div>
+
+                <!-- Linked Menu Item Row (Only for Finished Goods) -->
+                <div id="finished-goods-row" class="hidden grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="linked_item_id" class="block text-sm font-medium text-gray-700 mb-1">
+                            Select Menu Item
+                        </label>
+                        <select name="linked_item_id" id="linked_item_id" class="form-select w-full px-4 py-2.5 border border-gray-200 rounded-lg" onchange="onLinkedItemChange()">
+                            <option value="">-- Select Beverage/Dessert --</option>
+                            @foreach($finishedGoodsItems as $fgItem)
+                            @if($fgItem->activeModifiers->count() > 0)
+                            {{-- Item has portions - show each portion --}}
+                            @foreach($fgItem->activeModifiers as $portion)
+                            <option value="{{ $fgItem->id }}_{{ $portion->id }}"
+                                data-name="{{ $fgItem->name }} - {{ $portion->name }}"
+                                data-item-id="{{ $fgItem->id }}"
+                                data-portion-id="{{ $portion->id }}"
+                                data-category="{{ $fgItem->category->name ?? '' }}"
+                                {{ old('linked_item_id') == $fgItem->id.'_'.$portion->id ? 'selected' : '' }}>
+                                [{{ $fgItem->category->name ?? 'N/A' }}] {{ $fgItem->name }} - {{ $portion->name }}
+                            </option>
+                            @endforeach
+                            @else
+                            {{-- Item has no portions - show item name only --}}
+                            <option value="{{ $fgItem->id }}"
+                                data-name="{{ $fgItem->name }}"
+                                data-item-id="{{ $fgItem->id }}"
+                                data-category="{{ $fgItem->category->name ?? '' }}"
+                                {{ old('linked_item_id') == $fgItem->id ? 'selected' : '' }}>
+                                [{{ $fgItem->category->name ?? 'N/A' }}] {{ $fgItem->name }}
+                            </option>
+                            @endif
+                            @endforeach
+                        </select>
+                        <p class="mt-1 text-xs text-gray-500">Select a menu item to auto-fill the item name</p>
+                        @error('linked_item_id')
+                        <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
+                        @enderror
+                    </div>
                 </div>
 
                 <!-- Active Status -->
@@ -152,4 +192,38 @@
         </div>
     </div>
 </div>
+
+<script>
+    // Handle item type change - show/hide finished goods dropdown
+    function handleItemTypeChange() {
+        const itemType = document.getElementById('item_type').value;
+        const finishedGoodsRow = document.getElementById('finished-goods-row');
+
+        if (itemType === 'finished_good') {
+            finishedGoodsRow.classList.remove('hidden');
+        } else {
+            finishedGoodsRow.classList.add('hidden');
+            document.getElementById('linked_item_id').value = '';
+        }
+    }
+
+    // When a linked item is selected, autofill the item name
+    function onLinkedItemChange() {
+        const linkedItemSelect = document.getElementById('linked_item_id');
+        const itemNameInput = document.getElementById('item_name');
+
+        if (linkedItemSelect.value) {
+            const selectedOption = linkedItemSelect.options[linkedItemSelect.selectedIndex];
+            const itemName = selectedOption.getAttribute('data-name');
+            if (itemName) {
+                itemNameInput.value = itemName;
+            }
+        }
+    }
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        handleItemTypeChange();
+    });
+</script>
 @endsection
