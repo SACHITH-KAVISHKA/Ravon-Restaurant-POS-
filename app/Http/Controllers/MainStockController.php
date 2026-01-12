@@ -67,6 +67,7 @@ class MainStockController extends Controller
         $itemCode = MainStockItem::generateItemCode('other');
 
         // Get beverage and dessert items with their portions/sizes for finished goods dropdown
+        // Items must be in Beverage/Dessert category AND marked as "Finished Goods"
         $finishedGoodsItems = \App\Models\Item::with(['category', 'activeModifiers' => function ($q) {
             $q->whereIn('type', ['portion', 'size']);
         }])
@@ -76,6 +77,7 @@ class MainStockController extends Controller
                     ->orWhereRaw('LOWER(name) LIKE ?', ['%dessert%']);
             })
             ->where('is_available', true)
+            ->where('is_finished_goods', true)
             ->orderBy('name')
             ->get();
 
@@ -141,6 +143,7 @@ class MainStockController extends Controller
     public function edit(MainStockItem $mainStock)
     {
         // Get beverage and dessert items with their portions/sizes for finished goods dropdown
+        // Items must be in Beverage/Dessert category AND marked as "Finished Goods"
         $finishedGoodsItems = \App\Models\Item::with(['category', 'activeModifiers' => function ($q) {
             $q->whereIn('type', ['portion', 'size']);
         }])
@@ -150,6 +153,7 @@ class MainStockController extends Controller
                     ->orWhereRaw('LOWER(name) LIKE ?', ['%dessert%']);
             })
             ->where('is_available', true)
+            ->where('is_finished_goods', true)
             ->orderBy('name')
             ->get();
 
