@@ -66,6 +66,11 @@ class MainStockController extends Controller
     {
         $itemCode = MainStockItem::generateItemCode('other');
 
+        // Get existing stock item names to exclude from dropdown
+        $existingStockItemNames = MainStockItem::where('item_type', 'finished_good')
+            ->pluck('item_name')
+            ->toArray();
+
         // Get beverage and dessert items with their portions/sizes for finished goods dropdown
         // Items must be in Beverage/Dessert category AND marked as "Finished Goods"
         $finishedGoodsItems = \App\Models\Item::with(['category', 'activeModifiers' => function ($q) {
@@ -80,6 +85,25 @@ class MainStockController extends Controller
             ->where('is_finished_goods', true)
             ->orderBy('name')
             ->get();
+
+        // Filter out items/portions that are already added as stock items
+        $finishedGoodsItems = $finishedGoodsItems->map(function ($item) use ($existingStockItemNames) {
+            // Filter out portions that are already added
+            if ($item->activeModifiers->count() > 0) {
+                $item->setRelation('activeModifiers', $item->activeModifiers->filter(function ($portion) use ($item, $existingStockItemNames) {
+                    $portionName = $item->name . ' - ' . $portion->name;
+                    return !in_array($portionName, $existingStockItemNames);
+                }));
+            }
+            return $item;
+        })->filter(function ($item) use ($existingStockItemNames) {
+            // If item has portions, keep it if at least one portion is not added
+            if ($item->activeModifiers->count() > 0) {
+                return $item->activeModifiers->count() > 0;
+            }
+            // If item has no portions, check if the item itself is already added
+            return !in_array($item->name, $existingStockItemNames);
+        });
 
         return view('stock.supervisor.main-stock.create', compact('itemCode', 'finishedGoodsItems'));
     }
@@ -142,6 +166,12 @@ class MainStockController extends Controller
      */
     public function edit(MainStockItem $mainStock)
     {
+        // Get existing stock item names to exclude from dropdown (except current item)
+        $existingStockItemNames = MainStockItem::where('item_type', 'finished_good')
+            ->where('id', '!=', $mainStock->id)
+            ->pluck('item_name')
+            ->toArray();
+
         // Get beverage and dessert items with their portions/sizes for finished goods dropdown
         // Items must be in Beverage/Dessert category AND marked as "Finished Goods"
         $finishedGoodsItems = \App\Models\Item::with(['category', 'activeModifiers' => function ($q) {
@@ -156,6 +186,25 @@ class MainStockController extends Controller
             ->where('is_finished_goods', true)
             ->orderBy('name')
             ->get();
+
+        // Filter out items/portions that are already added as stock items
+        $finishedGoodsItems = $finishedGoodsItems->map(function ($item) use ($existingStockItemNames) {
+            // Filter out portions that are already added
+            if ($item->activeModifiers->count() > 0) {
+                $item->setRelation('activeModifiers', $item->activeModifiers->filter(function ($portion) use ($item, $existingStockItemNames) {
+                    $portionName = $item->name . ' - ' . $portion->name;
+                    return !in_array($portionName, $existingStockItemNames);
+                }));
+            }
+            return $item;
+        })->filter(function ($item) use ($existingStockItemNames) {
+            // If item has portions, keep it if at least one portion is not added
+            if ($item->activeModifiers->count() > 0) {
+                return $item->activeModifiers->count() > 0;
+            }
+            // If item has no portions, check if the item itself is already added
+            return !in_array($item->name, $existingStockItemNames);
+        });
 
         return view('stock.supervisor.main-stock.edit', [
             'item' => $mainStock,
