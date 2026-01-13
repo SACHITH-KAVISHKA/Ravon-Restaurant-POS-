@@ -16,8 +16,6 @@ class DatabaseSeeder extends Seeder
             KitchenStationSeeder::class,
             TableSeeder::class,
             CategorySeeder::class,
-            ItemSeeder::class,
-            MainStockItemSeeder::class,
         ]);
     }
 }

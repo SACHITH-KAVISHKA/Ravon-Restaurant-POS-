@@ -6,6 +6,8 @@ use App\Models\Item;
 use App\Models\Category;
 use App\Models\ItemModifier;
 use App\Models\ItemPrice;
+use App\Models\ItemRecipe;
+use App\Models\MainStockItem;
 use App\Models\KitchenStation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -95,8 +97,12 @@ class MenuController extends Controller
     {
         $categories = Category::all();
         $kitchenStations = KitchenStation::all();
+        $rawMaterials = MainStockItem::active()
+            ->ofType('raw_material')
+            ->orderBy('item_name')
+            ->get();
 
-        return view('menu.items.create', compact('categories', 'kitchenStations'));
+        return view('menu.items.create', compact('categories', 'kitchenStations', 'rawMaterials'));
     }
 
     /**
@@ -141,6 +147,19 @@ class MenuController extends Controller
             }
         }
 
+        // Store recipes for the item (only when no portions)
+        if ($request->has('recipes') && is_array($request->recipes)) {
+            foreach ($request->recipes as $recipeData) {
+                if (!empty($recipeData['main_stock_item_id']) && isset($recipeData['quantity']) && $recipeData['quantity'] > 0) {
+                    $item->recipes()->create([
+                        'main_stock_item_id' => $recipeData['main_stock_item_id'],
+                        'quantity' => $recipeData['quantity'],
+                        'item_modifier_id' => null,
+                    ]);
+                }
+            }
+        }
+
         // If has portions, create modifiers with independent prices
         if ($request->has('portions') && is_array($request->portions)) {
             foreach ($request->portions as $portionIndex => $portion) {
@@ -162,6 +181,19 @@ class MenuController extends Controller
                             ]);
                         }
                     }
+
+                    // Store recipes for this portion if provided
+                    if (isset($portion['recipes']) && is_array($portion['recipes'])) {
+                        foreach ($portion['recipes'] as $recipeData) {
+                            if (!empty($recipeData['main_stock_item_id']) && isset($recipeData['quantity']) && $recipeData['quantity'] > 0) {
+                                $item->recipes()->create([
+                                    'main_stock_item_id' => $recipeData['main_stock_item_id'],
+                                    'quantity' => $recipeData['quantity'],
+                                    'item_modifier_id' => $modifier->id,
+                                ]);
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -176,9 +208,13 @@ class MenuController extends Controller
     {
         $categories = Category::all();
         $kitchenStations = KitchenStation::all();
-        $item->load('modifiers');
+        $rawMaterials = MainStockItem::active()
+            ->ofType('raw_material')
+            ->orderBy('item_name')
+            ->get();
+        $item->load(['modifiers.recipes.mainStockItem', 'itemRecipes.mainStockItem']);
 
-        return view('menu.items.edit', compact('item', 'categories', 'kitchenStations'));
+        return view('menu.items.edit', compact('item', 'categories', 'kitchenStations', 'rawMaterials'));
     }
 
     /**
@@ -233,6 +269,39 @@ class MenuController extends Controller
             }
         }
 
+        // Handle recipe deletion
+        if ($request->has('recipes.delete')) {
+            ItemRecipe::whereIn('id', $request->input('recipes.delete'))->delete();
+        }
+
+        // Handle existing recipe updates
+        if ($request->has('recipes.existing')) {
+            foreach ($request->input('recipes.existing') as $recipeData) {
+                if (isset($recipeData['id'])) {
+                    $recipe = ItemRecipe::find($recipeData['id']);
+                    if ($recipe && $recipe->item_id === $item->id) {
+                        $recipe->update([
+                            'main_stock_item_id' => $recipeData['main_stock_item_id'],
+                            'quantity' => $recipeData['quantity'],
+                        ]);
+                    }
+                }
+            }
+        }
+
+        // Handle new recipes
+        if ($request->has('recipes.new')) {
+            foreach ($request->input('recipes.new') as $recipeData) {
+                if (!empty($recipeData['main_stock_item_id']) && isset($recipeData['quantity']) && $recipeData['quantity'] > 0) {
+                    $item->recipes()->create([
+                        'main_stock_item_id' => $recipeData['main_stock_item_id'],
+                        'quantity' => $recipeData['quantity'],
+                        'item_modifier_id' => null,
+                    ]);
+                }
+            }
+        }
+
         return redirect()->route('menu.items.edit', $item)->with('success', 'Item updated successfully!');
     }
 
@@ -272,6 +341,19 @@ class MenuController extends Controller
                     'price' => $priceData['price'],
                     'item_modifier_id' => $modifier->id,
                 ]);
+            }
+        }
+
+        // Store recipes for this portion
+        if ($request->has('portion_recipes')) {
+            foreach ($request->input('portion_recipes') as $recipeData) {
+                if (!empty($recipeData['main_stock_item_id']) && isset($recipeData['quantity']) && $recipeData['quantity'] > 0) {
+                    $item->recipes()->create([
+                        'main_stock_item_id' => $recipeData['main_stock_item_id'],
+                        'quantity' => $recipeData['quantity'],
+                        'item_modifier_id' => $modifier->id,
+                    ]);
+                }
             }
         }
 
@@ -324,6 +406,43 @@ class MenuController extends Controller
                             'price' => $priceData['price'],
                             'item_modifier_id' => $modifier->id,
                         ]);
+                    }
+                }
+            }
+        }
+
+        // Handle recipe deletion for this modifier
+        if ($request->has('modifier_recipes.delete')) {
+            ItemRecipe::whereIn('id', $request->input('modifier_recipes.delete'))->delete();
+        }
+
+        // Handle existing recipe updates for this modifier
+        if ($request->has('modifier_recipes.existing')) {
+            foreach ($request->input('modifier_recipes.existing') as $recipeData) {
+                if (isset($recipeData['id'])) {
+                    $recipe = ItemRecipe::find($recipeData['id']);
+                    if ($recipe && $recipe->item_modifier_id === $modifier->id) {
+                        $recipe->update([
+                            'main_stock_item_id' => $recipeData['main_stock_item_id'],
+                            'quantity' => $recipeData['quantity'],
+                        ]);
+                    }
+                }
+            }
+        }
+
+        // Handle new recipes for this modifier
+        if ($request->has('modifier_recipes.new')) {
+            foreach ($request->input('modifier_recipes.new') as $modId => $recipes) {
+                if ($modId == $modifier->id) {
+                    foreach ($recipes as $recipeData) {
+                        if (!empty($recipeData['main_stock_item_id']) && isset($recipeData['quantity']) && $recipeData['quantity'] > 0) {
+                            $modifier->item->recipes()->create([
+                                'main_stock_item_id' => $recipeData['main_stock_item_id'],
+                                'quantity' => $recipeData['quantity'],
+                                'item_modifier_id' => $modifier->id,
+                            ]);
+                        }
                     }
                 }
             }

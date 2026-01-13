@@ -83,6 +83,7 @@ class MainStockController extends Controller
             })
             ->where('is_available', true)
             ->where('is_finished_goods', true)
+            ->where('is_stock_count', true)
             ->orderBy('name')
             ->get();
 
@@ -184,6 +185,7 @@ class MainStockController extends Controller
             })
             ->where('is_available', true)
             ->where('is_finished_goods', true)
+            ->where('is_stock_count', true)
             ->orderBy('name')
             ->get();
 

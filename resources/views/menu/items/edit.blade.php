@@ -61,8 +61,9 @@
                             <div class="flex gap-4">
                                 <div class="flex-1 bg-blue-50 p-4 rounded-lg border border-blue-200">
                                     <label class="flex items-center cursor-pointer">
-                                        <input type="checkbox" name="is_finished_goods" value="1" {{ old('is_finished_goods', $item->is_finished_goods) ? 'checked' : '' }}
-                                            class="w-5 h-5 text-blue-600 bg-gray-50 border-gray-300 rounded focus:ring-blue-500">
+                                        <input type="checkbox" name="is_finished_goods" id="isFinishedGoodsEdit" value="1" {{ old('is_finished_goods', $item->is_finished_goods) ? 'checked' : '' }}
+                                            class="w-5 h-5 text-blue-600 bg-gray-50 border-gray-300 rounded focus:ring-blue-500"
+                                            onchange="toggleFinishedGoodsRecipeEdit()">
                                         <span class="ml-3 text-gray-800 font-semibold">Finished Goods</span>
                                     </label>
                                 </div>
@@ -143,6 +144,54 @@
                                     @endforeach
                                 </div>
                             </div>
+
+                            <!-- Recipe Section (for items without portions) -->
+                            <div id="recipeSection" class="bg-gradient-to-br from-amber-50 to-orange-100/50 p-4 rounded-lg border border-amber-200 {{ $item->modifiers->count() > 0 ? 'opacity-50 pointer-events-none' : '' }}">
+                                <div class="flex justify-between items-center mb-3">
+                                    <label class="text-sm font-semibold text-gray-800">Recipe (Raw Materials)</label>
+                                    <button type="button" onclick="addRecipeRow()" class="px-3 py-1.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:shadow-lg hover:shadow-amber-500/50 text-white rounded-lg transition text-sm font-semibold flex items-center gap-1"
+                                        {{ $item->modifiers->count() > 0 ? 'disabled' : '' }}>
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                                        </svg>
+                                        Add Recipe
+                                    </button>
+                                </div>
+                                <div id="recipesList" class="space-y-2">
+                                    @foreach($item->itemRecipes as $recipe)
+                                    <div id="recipe-existing-{{ $recipe->id }}" class="flex gap-2 items-center bg-white p-2 rounded border border-amber-200 shadow-sm">
+                                        <div class="flex-1 grid grid-cols-3 gap-2">
+                                            <div class="col-span-1">
+                                                <select name="recipes[existing][{{ $recipe->id }}][main_stock_item_id]" required
+                                                    class="w-full px-3 py-2 bg-gray-50 text-gray-800 rounded-lg border border-amber-300 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200 text-sm">
+                                                    @foreach($rawMaterials as $material)
+                                                    <option value="{{ $material->id }}" data-unit="{{ $material->unit_abbreviation }}" {{ $recipe->main_stock_item_id == $material->id ? 'selected' : '' }}>
+                                                        {{ $material->item_name }}
+                                                    </option>
+                                                    @endforeach
+                                                </select>
+                                                <input type="hidden" name="recipes[existing][{{ $recipe->id }}][id]" value="{{ $recipe->id }}">
+                                            </div>
+                                            <div>
+                                                <input type="number" name="recipes[existing][{{ $recipe->id }}][quantity]"
+                                                    value="{{ $recipe->quantity }}" step="0.001" min="0.001" required
+                                                    placeholder="Quantity"
+                                                    class="w-full px-3 py-2 bg-gray-50 text-gray-800 rounded-lg border border-amber-300 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200 text-sm">
+                                            </div>
+                                            <div class="flex items-center">
+                                                <span class="text-sm text-gray-600 font-medium px-2">{{ $recipe->mainStockItem->unit_abbreviation ?? '--' }}</span>
+                                            </div>
+                                        </div>
+                                        <button type="button" onclick="removeExistingRecipe({{ $recipe->id }})"
+                                            class="px-2 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition shadow-sm hover:shadow-md">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                    @endforeach
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Submit Button -->
@@ -191,6 +240,21 @@
                                     </div>
                                     <div id="newPortionSpecialPrices" class="space-y-1">
                                         <!-- Special prices for new portion -->
+                                    </div>
+                                </div>
+
+                                <div class="bg-gradient-to-br from-amber-50 to-orange-100/50 p-2 rounded border border-amber-200">
+                                    <div class="flex justify-between items-center mb-2">
+                                        <label class="text-xs font-semibold text-amber-700">Recipe (Raw Materials)</label>
+                                        <button type="button" onclick="addNewPortionRecipe()" class="px-2 py-1 bg-gradient-to-r from-amber-500 to-orange-500 hover:shadow-md hover:shadow-amber-500/30 text-white rounded text-xs font-semibold flex items-center gap-1">
+                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                                            </svg>
+                                            Add
+                                        </button>
+                                    </div>
+                                    <div id="newPortionRecipes" class="space-y-1">
+                                        <!-- Recipes for new portion -->
                                     </div>
                                 </div>
 
@@ -277,19 +341,57 @@
                                                     $modifierPrices = $modifier->itemPrices()->get();
                                                     @endphp
                                                     @foreach($modifierPrices as $modPrice)
-                                                    <div id="modifierSpecialPrice-existing-{{ $modPrice->id }}" class="flex gap-2 items-center">
+                                                    <div id="modifierSpecialPrice-existing-{{ $modPrice->id }}" class="flex gap-1 items-center">
                                                         <select name="modifier_special_prices[existing][{{ $modPrice->id }}][type]" required
-                                                            class="px-3 py-2 bg-purple-50 text-gray-800 rounded-lg border border-purple-200 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 text-sm">
+                                                            class="px-2 py-1.5 bg-purple-50 text-gray-800 rounded-lg border border-purple-200 focus:outline-none focus:border-purple-500 text-xs">
                                                             <option value="pickme" {{ $modPrice->price_type === 'pickme' ? 'selected' : '' }}>Pick Me</option>
                                                         </select>
                                                         <input type="number" name="modifier_special_prices[existing][{{ $modPrice->id }}][price]"
                                                             value="{{ $modPrice->price }}" step="0.01" min="0" required
-                                                            placeholder="Price" class="flex-1 px-3 py-2 bg-purple-50 text-gray-800 rounded-lg border border-purple-200 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 text-sm">
+                                                            placeholder="Price" class="w-20 px-2 py-1.5 bg-purple-50 text-gray-800 rounded-lg border border-purple-200 focus:outline-none focus:border-purple-500 text-xs">
                                                         <input type="hidden" name="modifier_special_prices[existing][{{ $modPrice->id }}][id]" value="{{ $modPrice->id }}">
                                                         <input type="hidden" name="modifier_special_prices[existing][{{ $modPrice->id }}][modifier_id]" value="{{ $modifier->id }}">
                                                         <button type="button" onclick="removeExistingModifierSpecialPrice({{ $modPrice->id }})"
-                                                            class="px-2 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition shadow-sm">
-                                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            class="px-1.5 py-1.5 bg-red-500 text-white rounded hover:bg-red-600 transition">
+                                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                                            </svg>
+                                                        </button>
+                                                    </div>
+                                                    @endforeach
+                                                </div>
+                                            </div>
+
+                                            <div class="col-span-2 bg-gradient-to-br from-amber-50 to-orange-100/50 p-2 rounded border border-amber-200">
+                                                <div class="flex justify-between items-center mb-2">
+                                                    <label class="text-xs font-semibold text-amber-700">Recipe (Raw Materials)</label>
+                                                    <button type="button" onclick="addEditPortionRecipe({{ $modifier->id }})" class="px-2 py-1 bg-gradient-to-r from-amber-500 to-orange-500 hover:shadow-md hover:shadow-amber-500/30 text-white rounded text-xs font-semibold flex items-center gap-1">
+                                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                                                        </svg>
+                                                        Add
+                                                    </button>
+                                                </div>
+                                                <div id="editPortionRecipes-{{ $modifier->id }}" class="space-y-1">
+                                                    @foreach($modifier->recipes as $recipe)
+                                                    <div id="modifierRecipe-existing-{{ $recipe->id }}" class="flex gap-1 items-center">
+                                                        <select name="modifier_recipes[existing][{{ $recipe->id }}][main_stock_item_id]" required
+                                                            class="flex-1 px-2 py-1.5 bg-amber-50 text-gray-800 rounded-lg border border-amber-200 focus:outline-none focus:border-amber-500 text-xs">
+                                                            @foreach($rawMaterials as $material)
+                                                            <option value="{{ $material->id }}" data-unit="{{ $material->unit_abbreviation }}" {{ $recipe->main_stock_item_id == $material->id ? 'selected' : '' }}>
+                                                                {{ $material->item_name }}
+                                                            </option>
+                                                            @endforeach
+                                                        </select>
+                                                        <input type="number" name="modifier_recipes[existing][{{ $recipe->id }}][quantity]"
+                                                            value="{{ $recipe->quantity }}" step="0.001" min="0.001" required
+                                                            placeholder="Qty"
+                                                            class="w-16 px-2 py-1.5 bg-amber-50 text-gray-800 rounded-lg border border-amber-200 focus:outline-none focus:border-amber-500 text-xs">
+                                                        <span class="text-xs text-gray-600 w-8">{{ $recipe->mainStockItem->unit_abbreviation ?? '--' }}</span>
+                                                        <input type="hidden" name="modifier_recipes[existing][{{ $recipe->id }}][id]" value="{{ $recipe->id }}">
+                                                        <button type="button" onclick="removeExistingModifierRecipe({{ $recipe->id }})"
+                                                            class="px-1.5 py-1.5 bg-red-500 text-white rounded hover:bg-red-600 transition">
+                                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                                                             </svg>
                                                         </button>
@@ -324,13 +426,176 @@
 </div>
 
 <script>
-    let specialPriceCount = {
-        {
-            $item - > itemPrices() - > whereNull('item_modifier_id') - > count()
-        }
-    };
+    let specialPriceCount = {{ $item->itemPrices()->whereNull('item_modifier_id')->count() }};
     let newPortionSpecialPriceCount = 0;
     let editPortionSpecialPriceCounts = {};
+    let recipeCount = {{ $item->itemRecipes->count() }};
+    let newPortionRecipeCount = 0;
+    let editPortionRecipeCounts = {};
+
+    // Raw materials data from server
+    const rawMaterials = @json($rawMaterials);
+
+    // Get list of already selected raw material IDs for item recipes
+    function getSelectedRecipeIds(containerId, excludeRowId = null) {
+        const container = document.getElementById(containerId);
+        const selects = container.querySelectorAll('select');
+        const selectedIds = [];
+        selects.forEach(select => {
+            const rowId = select.closest('[id^="recipe-"]')?.id;
+            if (select.value && rowId !== excludeRowId) {
+                selectedIds.push(parseInt(select.value));
+            }
+        });
+        return selectedIds;
+    }
+
+    // Get available options for a dropdown (excluding already selected items)
+    function getRecipeOptionsHtml(containerId, excludeRowId = null, selectedValue = null) {
+        const selectedIds = getSelectedRecipeIds(containerId, excludeRowId);
+        let optionsHtml = '<option value="">-- Select Stock Item --</option>';
+        rawMaterials.forEach(item => {
+            const isSelected = selectedValue == item.id;
+            const isDisabled = selectedIds.includes(item.id) && !isSelected;
+            if (!isDisabled) {
+                optionsHtml += `<option value="${item.id}" data-unit="${item.unit_abbreviation}" ${isSelected ? 'selected' : ''}>${item.item_name}</option>`;
+            }
+        });
+        return optionsHtml;
+    }
+
+    // Update all recipe dropdowns to exclude already selected items
+    function refreshRecipeDropdowns(containerId) {
+        const container = document.getElementById(containerId);
+        const selects = container.querySelectorAll('select');
+        selects.forEach(select => {
+            const rowId = select.closest('[id^="recipe-"]')?.id;
+            const currentValue = select.value;
+            select.innerHTML = getRecipeOptionsHtml(containerId, rowId, currentValue);
+        });
+    }
+
+    // Toggle Recipe section when Finished Goods checkbox is changed
+    function toggleFinishedGoodsRecipeEdit() {
+        const isFinishedGoods = document.getElementById('isFinishedGoodsEdit').checked;
+        const recipeSection = document.getElementById('recipeSection');
+        
+        // Disable/enable all portion recipe sections in existing portions
+        const portionRecipeSections = document.querySelectorAll('[id^="portionRecipes-"], [id^="editPortionRecipes-"]');
+        const portionRecipeButtons = document.querySelectorAll('[onclick*="addPortionRecipeRow"], [onclick*="addNewPortionRecipe"], [onclick*="addEditPortionRecipe"]');
+        
+        if (isFinishedGoods) {
+            // Disable item Recipe section
+            recipeSection.classList.add('opacity-50', 'pointer-events-none');
+            // Disable new portion recipe section
+            const newPortionRecipes = document.getElementById('newPortionRecipes');
+            if (newPortionRecipes) {
+                newPortionRecipes.closest('.border-amber-200')?.classList.add('opacity-50', 'pointer-events-none');
+            }
+            // Disable all portion recipe sections and buttons
+            portionRecipeButtons.forEach(btn => {
+                btn.closest('.border-amber-200')?.classList.add('opacity-50', 'pointer-events-none');
+            });
+        } else {
+            // Only enable item recipe if portions are not enabled
+            const hasPortions = document.getElementById('hasPortionsEdit')?.checked;
+            if (!hasPortions) {
+                recipeSection.classList.remove('opacity-50', 'pointer-events-none');
+            }
+            // Enable new portion recipe section
+            const newPortionRecipes = document.getElementById('newPortionRecipes');
+            if (newPortionRecipes) {
+                newPortionRecipes.closest('.border-amber-200')?.classList.remove('opacity-50', 'pointer-events-none');
+            }
+            // Enable all portion recipe sections
+            portionRecipeButtons.forEach(btn => {
+                btn.closest('.border-amber-200')?.classList.remove('opacity-50', 'pointer-events-none');
+            });
+        }
+    }
+
+    // Recipe Management for Item
+    function addRecipeRow() {
+        recipeCount++;
+        const container = document.getElementById('recipesList');
+
+        const recipeDiv = document.createElement('div');
+        recipeDiv.id = `recipe-new-${recipeCount}`;
+        recipeDiv.className = 'flex gap-2 items-center bg-white p-2 rounded border border-amber-200 shadow-sm';
+
+        let optionsHtml = getRecipeOptionsHtml('recipesList');
+
+        recipeDiv.innerHTML = `
+            <div class="flex-1 grid grid-cols-3 gap-2">
+                <div class="col-span-1">
+                    <select name="recipes[new][${recipeCount}][main_stock_item_id]" required
+                        onchange="updateNewRecipeUnit(${recipeCount}); refreshRecipeDropdowns('recipesList');"
+                        class="w-full px-3 py-2 bg-gray-50 text-gray-800 rounded-lg border border-amber-300 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200 text-sm">
+                        ${optionsHtml}
+                    </select>
+                </div>
+                <div>
+                    <input type="number" name="recipes[new][${recipeCount}][quantity]" step="0.001" min="0.001" required
+                        placeholder="Quantity"
+                        onkeydown="handleNewRecipeTabKey(event, ${recipeCount})"
+                        class="w-full px-3 py-2 bg-gray-50 text-gray-800 rounded-lg border border-amber-300 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200 text-sm">
+                </div>
+                <div class="flex items-center">
+                    <span id="recipeUnit-new-${recipeCount}" class="text-sm text-gray-600 font-medium px-2">--</span>
+                </div>
+            </div>
+            <button type="button" onclick="removeNewRecipe(${recipeCount})" 
+                class="px-2 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition shadow-sm hover:shadow-md">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        `;
+
+        container.appendChild(recipeDiv);
+    }
+
+    function removeNewRecipe(id) {
+        const element = document.getElementById(`recipe-new-${id}`);
+        if (element) {
+            element.remove();
+            refreshRecipeDropdowns('recipesList');
+        }
+    }
+
+    function removeExistingRecipe(id) {
+        const element = document.getElementById(`recipe-existing-${id}`);
+        if (element) {
+            const deleteInput = document.createElement('input');
+            deleteInput.type = 'hidden';
+            deleteInput.name = 'recipes[delete][]';
+            deleteInput.value = id;
+            document.querySelector('form').appendChild(deleteInput);
+            element.remove();
+            refreshRecipeDropdowns('recipesList');
+        }
+    }
+
+    function updateNewRecipeUnit(rowId) {
+        const select = document.querySelector(`select[name="recipes[new][${rowId}][main_stock_item_id]"]`);
+        const unitSpan = document.getElementById(`recipeUnit-new-${rowId}`);
+        const selectedOption = select.options[select.selectedIndex];
+        unitSpan.textContent = selectedOption.dataset.unit || '--';
+    }
+
+    function handleNewRecipeTabKey(event, currentId) {
+        if (event.key === 'Tab' && !event.shiftKey) {
+            const lastRecipe = document.querySelector('#recipesList > div:last-child');
+            if (lastRecipe && lastRecipe.id === `recipe-new-${currentId}`) {
+                event.preventDefault();
+                addRecipeRow();
+                setTimeout(() => {
+                    const newSelect = document.querySelector(`select[name="recipes[new][${recipeCount}][main_stock_item_id]"]`);
+                    if (newSelect) newSelect.focus();
+                }, 50);
+            }
+        }
+    }
 
     // Toggle Portions Section
     function togglePortionSectionEdit() {
@@ -338,6 +603,7 @@
         const portionsSection = document.getElementById('portionsSectionEdit');
         const defaultPriceInput = document.querySelector('input[name="price"]');
         const specialPricesSection = document.getElementById('specialPricesSection');
+        const recipeSection = document.getElementById('recipeSection');
 
         if (hasPortions) {
             portionsSection.classList.remove('hidden');
@@ -348,6 +614,9 @@
             if (specialPricesSection) {
                 specialPricesSection.classList.add('opacity-50', 'pointer-events-none');
             }
+            if (recipeSection) {
+                recipeSection.classList.add('opacity-50', 'pointer-events-none');
+            }
         } else {
             portionsSection.classList.add('hidden');
             if (defaultPriceInput) {
@@ -356,6 +625,9 @@
             }
             if (specialPricesSection) {
                 specialPricesSection.classList.remove('opacity-50', 'pointer-events-none');
+            }
+            if (recipeSection) {
+                recipeSection.classList.remove('opacity-50', 'pointer-events-none');
             }
         }
     }
@@ -462,14 +734,14 @@
 
         priceDiv.innerHTML = `
         <select name="portion_special_prices[${newPortionSpecialPriceCount}][type]" required
-            class="px-3 py-2 bg-purple-50 text-gray-800 rounded-lg border border-purple-200 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 text-sm">
+            class="px-2 py-1.5 bg-purple-50 text-gray-800 rounded-lg border border-purple-200 focus:outline-none focus:border-purple-500 text-xs">
             <option value="pickme" selected>Pick Me</option>
         </select>
         <input type="number" name="portion_special_prices[${newPortionSpecialPriceCount}][price]" step="0.01" min="0" required
-            placeholder="Price" class="flex-1 px-3 py-2 bg-purple-50 text-gray-800 rounded-lg border border-purple-200 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 text-sm">
+            placeholder="Price" class="w-20 px-2 py-1.5 bg-purple-50 text-gray-800 rounded-lg border border-purple-200 focus:outline-none focus:border-purple-500 text-xs">
         <button type="button" onclick="removeNewPortionSpecialPrice(${newPortionSpecialPriceCount})" 
-            class="px-2 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition shadow-sm">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            class="px-1.5 py-1.5 bg-red-500 text-white rounded hover:bg-red-600 transition">
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
         </button>
@@ -515,6 +787,69 @@
         }
     }
 
+    // Recipe Management for New Portion
+    function addNewPortionRecipe() {
+        newPortionRecipeCount++;
+        const container = document.getElementById('newPortionRecipes');
+
+        let optionsHtml = '<option value="">-- Select --</option>';
+        rawMaterials.forEach(item => {
+            optionsHtml += `<option value="${item.id}" data-unit="${item.unit_abbreviation}">${item.item_name}</option>`;
+        });
+
+        const recipeDiv = document.createElement('div');
+        recipeDiv.id = `newPortionRecipe-${newPortionRecipeCount}`;
+        recipeDiv.className = 'flex gap-1 items-center';
+
+        recipeDiv.innerHTML = `
+            <select name="portion_recipes[${newPortionRecipeCount}][main_stock_item_id]" required
+                onchange="updateNewPortionRecipeUnit(${newPortionRecipeCount})"
+                class="flex-1 px-2 py-1.5 bg-amber-50 text-gray-800 rounded-lg border border-amber-200 focus:outline-none focus:border-amber-500 text-xs">
+                ${optionsHtml}
+            </select>
+            <input type="number" name="portion_recipes[${newPortionRecipeCount}][quantity]" step="0.001" min="0.001" required
+                placeholder="Qty"
+                onkeydown="handleNewPortionRecipeTabKey(event, ${newPortionRecipeCount})"
+                class="w-16 px-2 py-1.5 bg-amber-50 text-gray-800 rounded-lg border border-amber-200 focus:outline-none focus:border-amber-500 text-xs">
+            <span id="newPortionRecipeUnit-${newPortionRecipeCount}" class="text-xs text-gray-600 w-8">--</span>
+            <button type="button" onclick="removeNewPortionRecipe(${newPortionRecipeCount})" 
+                class="px-1.5 py-1.5 bg-red-500 text-white rounded hover:bg-red-600 transition">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        `;
+
+        container.appendChild(recipeDiv);
+    }
+
+    function removeNewPortionRecipe(id) {
+        const element = document.getElementById(`newPortionRecipe-${id}`);
+        if (element) element.remove();
+    }
+
+    function updateNewPortionRecipeUnit(recipeId) {
+        const select = document.querySelector(`select[name="portion_recipes[${recipeId}][main_stock_item_id]"]`);
+        const unitSpan = document.getElementById(`newPortionRecipeUnit-${recipeId}`);
+        const selectedOption = select.options[select.selectedIndex];
+        unitSpan.textContent = selectedOption.dataset.unit || '--';
+    }
+
+    function handleNewPortionRecipeTabKey(event, currentId) {
+        if (event.key === 'Tab' && !event.shiftKey) {
+            const container = document.getElementById('newPortionRecipes');
+            const lastRecipe = container.querySelector(':scope > div:last-child');
+            if (lastRecipe && lastRecipe.id === `newPortionRecipe-${currentId}`) {
+                event.preventDefault();
+                addNewPortionRecipe();
+                setTimeout(() => {
+                    const newSelect = document.querySelector(`select[name="portion_recipes[${newPortionRecipeCount}][main_stock_item_id]"]`);
+                    if (newSelect) newSelect.focus();
+                }, 50);
+            }
+        }
+    }
+
     // Special Price Management for Edit Portion
     function addEditPortionSpecialPrice(modifierId) {
         if (!editPortionSpecialPriceCounts[modifierId]) {
@@ -531,15 +866,15 @@
 
         priceDiv.innerHTML = `
         <select name="modifier_special_prices[new][${modifierId}][${priceId}][type]" required
-            class="px-3 py-2 bg-purple-50 text-gray-800 rounded-lg border border-purple-200 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 text-sm">
+            class="px-2 py-1.5 bg-purple-50 text-gray-800 rounded-lg border border-purple-200 focus:outline-none focus:border-purple-500 text-xs">
             <option value="pickme" selected>Pick Me</option>
         </select>
         <input type="number" name="modifier_special_prices[new][${modifierId}][${priceId}][price]" step="0.01" min="0" required
-            placeholder="Price" class="flex-1 px-3 py-2 bg-purple-50 text-gray-800 rounded-lg border border-purple-200 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 text-sm">
+            placeholder="Price" class="w-20 px-2 py-1.5 bg-purple-50 text-gray-800 rounded-lg border border-purple-200 focus:outline-none focus:border-purple-500 text-xs">
         <input type="hidden" name="modifier_special_prices[new][${modifierId}][${priceId}][modifier_id]" value="${modifierId}">
         <button type="button" onclick="removeEditPortionSpecialPrice(${modifierId}, ${priceId})" 
-            class="px-2 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition shadow-sm">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            class="px-1.5 py-1.5 bg-red-500 text-white rounded hover:bg-red-600 transition">
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
         </button>
@@ -610,6 +945,73 @@
         } else {
             viewMode.classList.add('hidden');
             editMode.classList.remove('hidden');
+        }
+    }
+
+    // Recipe Management for Edit Portion
+    function addEditPortionRecipe(modifierId) {
+        if (!editPortionRecipeCounts[modifierId]) {
+            editPortionRecipeCounts[modifierId] = 0;
+        }
+        editPortionRecipeCounts[modifierId]++;
+
+        const container = document.getElementById(`editPortionRecipes-${modifierId}`);
+        const recipeId = editPortionRecipeCounts[modifierId];
+
+        let optionsHtml = '<option value="">-- Select --</option>';
+        rawMaterials.forEach(item => {
+            optionsHtml += `<option value="${item.id}" data-unit="${item.unit_abbreviation}">${item.item_name}</option>`;
+        });
+
+        const recipeDiv = document.createElement('div');
+        recipeDiv.id = `modifierRecipe-${modifierId}-${recipeId}`;
+        recipeDiv.className = 'flex gap-1 items-center';
+
+        recipeDiv.innerHTML = `
+            <select name="modifier_recipes[new][${modifierId}][${recipeId}][main_stock_item_id]" required
+                onchange="updateEditPortionRecipeUnit(${modifierId}, ${recipeId})"
+                class="flex-1 px-2 py-1.5 bg-amber-50 text-gray-800 rounded-lg border border-amber-200 focus:outline-none focus:border-amber-500 text-xs">
+                ${optionsHtml}
+            </select>
+            <input type="number" name="modifier_recipes[new][${modifierId}][${recipeId}][quantity]" step="0.001" min="0.001" required
+                placeholder="Qty"
+                class="w-16 px-2 py-1.5 bg-amber-50 text-gray-800 rounded-lg border border-amber-200 focus:outline-none focus:border-amber-500 text-xs">
+            <span id="editPortionRecipeUnit-${modifierId}-${recipeId}" class="text-xs text-gray-600 w-8">--</span>
+            <button type="button" onclick="removeEditPortionRecipe(${modifierId}, ${recipeId})" 
+                class="px-1.5 py-1.5 bg-red-500 text-white rounded hover:bg-red-600 transition">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        `;
+
+        container.appendChild(recipeDiv);
+    }
+
+    function removeEditPortionRecipe(modifierId, recipeId) {
+        const element = document.getElementById(`modifierRecipe-${modifierId}-${recipeId}`);
+        if (element) element.remove();
+    }
+
+    function removeExistingModifierRecipe(id) {
+        const element = document.getElementById(`modifierRecipe-existing-${id}`);
+        if (element) {
+            const form = element.closest('form');
+            const deleteInput = document.createElement('input');
+            deleteInput.type = 'hidden';
+            deleteInput.name = 'modifier_recipes[delete][]';
+            deleteInput.value = id;
+            if (form) form.appendChild(deleteInput);
+            element.remove();
+        }
+    }
+
+    function updateEditPortionRecipeUnit(modifierId, recipeId) {
+        const select = document.querySelector(`select[name="modifier_recipes[new][${modifierId}][${recipeId}][main_stock_item_id]"]`);
+        const unitSpan = document.getElementById(`editPortionRecipeUnit-${modifierId}-${recipeId}`);
+        if (select && unitSpan) {
+            const selectedOption = select.options[select.selectedIndex];
+            unitSpan.textContent = selectedOption.dataset.unit || '--';
         }
     }
 </script>

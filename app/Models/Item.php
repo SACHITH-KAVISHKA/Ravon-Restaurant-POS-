@@ -162,4 +162,20 @@ class Item extends Model
         }
         return null;
     }
+
+    /**
+     * Get the recipes for this item.
+     */
+    public function recipes(): HasMany
+    {
+        return $this->hasMany(ItemRecipe::class);
+    }
+
+    /**
+     * Get item-level recipes only (not portion-specific).
+     */
+    public function itemRecipes(): HasMany
+    {
+        return $this->hasMany(ItemRecipe::class)->whereNull('item_modifier_id');
+    }
 }

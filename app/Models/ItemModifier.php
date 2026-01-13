@@ -80,4 +80,12 @@ class ItemModifier extends Model
     {
         return $query->where('type', $type);
     }
+
+    /**
+     * Get the recipes for this modifier/portion.
+     */
+    public function recipes(): HasMany
+    {
+        return $this->hasMany(ItemRecipe::class);
+    }
 }
