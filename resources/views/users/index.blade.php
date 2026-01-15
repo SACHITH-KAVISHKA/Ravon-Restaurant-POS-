@@ -404,17 +404,16 @@
         const minutes = now.getMinutes();
         const seconds = now.getSeconds();
 
-        // Calculate time until next 5-minute mark
-        const minutesUntilRefresh = 4 - (minutes % 5);
-        const secondsUntilRefresh = 60 - seconds;
+        // Calculate time until next 1-hour mark
+        const secondsPassedInBlock = ((minutes % 60) * 60) + seconds;
+        const totalBlockSeconds = 3600; // 1 Hour in seconds
 
-        let totalSeconds = minutesUntilRefresh * 60 + secondsUntilRefresh;
-        if (secondsUntilRefresh === 60) {
-            totalSeconds = (minutesUntilRefresh + 1) * 60;
-        }
+        // Time remaining until next refresh
+        const totalSecondsRemaining = totalBlockSeconds - secondsPassedInBlock;
 
-        const displayMinutes = Math.floor(totalSeconds / 60);
-        const displaySeconds = totalSeconds % 60;
+        // Break down into minutes and seconds
+        const displayMinutes = Math.floor(totalSecondsRemaining / 60);
+        const displaySeconds = totalSecondsRemaining % 60;
 
         const countdownText = `${displayMinutes}:${displaySeconds.toString().padStart(2, '0')}`;
 
@@ -423,7 +422,7 @@
         });
 
         // Auto-refresh page when countdown reaches 0
-        if (totalSeconds <= 1) {
+        if (totalSecondsRemaining <= 1) {
             setTimeout(() => {
                 location.reload();
             }, 1000);

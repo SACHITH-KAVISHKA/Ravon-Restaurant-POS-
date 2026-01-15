@@ -141,8 +141,8 @@ class User extends Authenticatable
             return null;
         }
 
-        // Get the current 5-minute time slot (changes every 5 minutes)
-        $timeSlot = floor(time() / 300); // 300 seconds = 5 minutes
+        // Get the current 1-hour time slot (changes every 1 hour)
+        $timeSlot = floor(time() / 3600); // 3600 seconds = 1 hour
 
         // Create a unique seed using user ID and time slot
         $seed = $this->id + $timeSlot;
