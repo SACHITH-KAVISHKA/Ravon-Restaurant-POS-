@@ -4269,7 +4269,7 @@
 
                     // Generate Base64 and Print
                     const pdfBase64 = pdf.output('datauristring').split(',')[1];
-                    const receiptPrinterName = "Microsoft Print to PDF"; // Configure printer name
+                    const receiptPrinterName = "XP-76"; // Configure printer name
                     await printPDFwithQZ(pdfBase64, receiptPrinterName, "Receipt", false);
                     console.log('Receipt sent to printer successfully');
 
@@ -4535,7 +4535,7 @@
 
                     // Generate Base64 and Print
                     const pdfBase64 = pdf.output('datauristring').split(',')[1];
-                    const invoicePrinterName = "Microsoft Print to PDF";
+                    const invoicePrinterName = "XP-76";
                     await printPDFwithQZ(pdfBase64, invoicePrinterName, "Invoice", false);
                     console.log('Invoice (without payment) sent to printer successfully');
 
