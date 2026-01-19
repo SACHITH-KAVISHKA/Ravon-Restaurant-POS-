@@ -516,21 +516,19 @@ class POSController extends Controller
                 $item->load('category');
             }
 
-            // Check by category_id or category slug - BEVERAGES (ID 21) or DESSERTS (ID 20) go to BOT
-            // All other categories go to KOT (Kitchen Order Ticket)
+            // Check by category_id or category slug - Only BEVERAGES (ID 21) go to BOT
+            // Desserts and all other categories go to KOT (Kitchen Order Ticket)
             $isBarItem = false;
 
-            if (in_array($item->category_id, [20, 21])) {
-                // Dessert (ID 20) and Beverages (ID 21) go to BOT
+            if ($item->category_id === 21) {
+                // Only Beverages (ID 21) go to BOT
                 $isBarItem = true;
             } elseif ($item->category) {
                 // Fallback: check by slug/name for flexibility
                 $categorySlug = strtolower($item->category->slug);
                 $categoryName = strtoupper($item->category->name);
                 $isBarItem = (
-                    $categorySlug === 'beverages' || $categoryName === 'BEVERAGES' ||
-                    $categorySlug === 'desserts' || $categoryName === 'DESSERTS' ||
-                    $categorySlug === 'dessert' || $categoryName === 'DESSERT'
+                    $categorySlug === 'beverages' || $categoryName === 'BEVERAGES'
                 );
             }
 
@@ -789,10 +787,10 @@ class POSController extends Controller
                     $categorySlug = strtolower($orderItem->item->category->slug ?? '');
                     $categoryName = strtoupper($orderItem->item->category->name ?? '');
 
-                    // Category IDs 20 (Desserts) and 21 (Beverages) or by name/slug
-                    $isBeverageOrDessert = in_array($categoryId, [20, 21]) ||
-                        in_array($categorySlug, ['beverages', 'desserts', 'dessert']) ||
-                        in_array($categoryName, ['BEVERAGES', 'DESSERTS', 'DESSERT']);
+                    // Category ID 21 (Beverages) only - by name/slug
+                    $isBeverageOrDessert = $categoryId === 21 ||
+                        in_array($categorySlug, ['beverages']) ||
+                        in_array($categoryName, ['BEVERAGES']);
                 }
 
                 // Deduct stock if item qualifies as finished goods
@@ -1128,19 +1126,17 @@ class POSController extends Controller
                 foreach ($cancelKotItems as $cancelItem) {
                     $item = Item::with('category')->find($cancelItem['item_id']);
                     if ($item) {
-                        // Dessert (ID 20) and Beverages (ID 21) go to Cancel BOT
-                        // All other categories go to Cancel KOT
+                        // Only Beverages (ID 21) go to Cancel BOT
+                        // Desserts and all other categories go to Cancel KOT
                         $isBarItem = false;
-                        if (in_array($item->category_id, [20, 21])) {
+                        if ($item->category_id === 21) {
                             $isBarItem = true;
                         } elseif ($item->category) {
                             // Fallback: check by slug/name for flexibility
                             $categorySlug = strtolower($item->category->slug);
                             $categoryName = strtoupper($item->category->name);
                             $isBarItem = (
-                                $categorySlug === 'beverages' || $categoryName === 'BEVERAGES' ||
-                                $categorySlug === 'desserts' || $categoryName === 'DESSERTS' ||
-                                $categorySlug === 'dessert' || $categoryName === 'DESSERT'
+                                $categorySlug === 'beverages' || $categoryName === 'BEVERAGES'
                             );
                         }
 
