@@ -282,19 +282,22 @@
                 category: @json($fgItem->category->name ?? 'N/A'),
                 portions: [
                     @foreach($fgItem->activeModifiers as $portion)
-                                                {
+                                                            {
                             id: {{ $portion->id }},
                             name: @json($portion->name),
                             fullName: @json($fgItem->name . ' - ' . $portion->name)
                         },
                     @endforeach
-                                ]
+                                        ]
             });
         @endforeach
 
         let rowCounter = 0;
 
-        // Calculate offset by counting how many codes of each type prefix exist in the form
+        // Track all used codes across the form to prevent duplicates
+        const usedCodes = new Set();
+
+        // Calculate offset by finding the highest code number used for each type prefix
         function getCodeOffset(type) {
             const prefix = {
                 'raw_material': 'RM',
@@ -302,15 +305,36 @@
                 'other': 'OT'
             }[type] || 'OT';
 
-            // Count how many item codes in the form start with this prefix
+            // Find the highest number used for this prefix in the form
             const codeInputs = document.querySelectorAll('.item-code-input');
+            let maxNumber = 0;
             let count = 0;
+
             codeInputs.forEach(input => {
                 if (input.value && input.value.startsWith(prefix)) {
                     count++;
+                    // Extract the number part (e.g., "RM00005" -> 5)
+                    const numPart = parseInt(input.value.substring(2), 10);
+                    if (!isNaN(numPart) && numPart > maxNumber) {
+                        maxNumber = numPart;
+                    }
                 }
             });
-            return count;
+
+            // Return offset to ensure next code is higher than max used
+            // The offset accounts for codes already in the database + codes in the form
+            return count > 0 ? count : 0;
+        }
+
+        // Check if a code is already used in the form
+        function isCodeUsedInForm(code) {
+            const codeInputs = document.querySelectorAll('.item-code-input');
+            for (const input of codeInputs) {
+                if (input.value === code) {
+                    return true;
+                }
+            }
+            return false;
         }
 
         // Generate item type options HTML
@@ -333,42 +357,101 @@
             return options;
         }
 
-        // Generate linked item options HTML
-        function getLinkedItemOptions() {
+        // Get all currently selected linked item values (excluding a specific row)
+        function getSelectedLinkedValues(excludeRowId = null) {
+            const selectedValues = new Set();
+            const allLinkedSelects = document.querySelectorAll('.linked-item-select');
+
+            allLinkedSelects.forEach(select => {
+                // Get the row ID from the select's name attribute
+                const match = select.name.match(/items\[(\d+)\]/);
+                const rowId = match ? parseInt(match[1]) : null;
+
+                // Skip the excluded row and empty values
+                if (rowId !== excludeRowId && select.value) {
+                    selectedValues.add(select.value);
+                }
+            });
+
+            return selectedValues;
+        }
+
+        // Generate linked item options HTML (excluding already selected items)
+        function getLinkedItemOptions(currentValue = '', excludeValues = new Set()) {
             let options = '<option value="">-- Select Beverage/Dessert --</option>';
 
             finishedGoodsItems.forEach(item => {
                 if (item.portions && item.portions.length > 0) {
                     // Item has portions - show each portion
                     item.portions.forEach(portion => {
-                        options += `<option value="${item.id}_${portion.id}" 
-                                        data-name="${portion.fullName}"
-                                        data-item-id="${item.id}"
-                                        data-portion-id="${portion.id}">
-                                        [${item.category}] ${portion.fullName}
-                                    </option>`;
+                        const value = `${item.id}_${portion.id}`;
+                        // Skip if this value is selected in another row (but keep if it's the current row's value)
+                        if (excludeValues.has(value) && value !== currentValue) {
+                            return;
+                        }
+                        const selected = value === currentValue ? 'selected' : '';
+                        options += `<option value="${value}" ${selected}
+                                            data-name="${portion.fullName}"
+                                            data-item-id="${item.id}"
+                                            data-portion-id="${portion.id}">
+                                            [${item.category}] ${portion.fullName}
+                                        </option>`;
                     });
                 } else {
                     // Item has no portions
-                    options += `<option value="${item.id}" 
-                                    data-name="${item.name}"
-                                    data-item-id="${item.id}">
-                                    [${item.category}] ${item.name}
-                                </option>`;
+                    const value = `${item.id}`;
+                    // Skip if this value is selected in another row (but keep if it's the current row's value)
+                    if (excludeValues.has(value) && value !== currentValue) {
+                        return;
+                    }
+                    const selected = value === currentValue ? 'selected' : '';
+                    options += `<option value="${value}" ${selected}
+                                        data-name="${item.name}"
+                                        data-item-id="${item.id}">
+                                        [${item.category}] ${item.name}
+                                    </option>`;
                 }
             });
 
             return options;
         }
 
+        // Refresh all linked item dropdowns (to hide already-selected items)
+        function refreshAllLinkedItemDropdowns() {
+            const allLinkedSelects = document.querySelectorAll('.linked-item-select');
+
+            allLinkedSelects.forEach(select => {
+                // Get the row ID from the select's name attribute
+                const match = select.name.match(/items\[(\d+)\]/);
+                const rowId = match ? parseInt(match[1]) : null;
+
+                // Get values selected in OTHER rows (exclude this row)
+                const excludeValues = getSelectedLinkedValues(rowId);
+
+                // Store current value
+                const currentValue = select.value;
+
+                // Regenerate options
+                select.innerHTML = getLinkedItemOptions(currentValue, excludeValues);
+            });
+        }
+
         // Fetch new item code from server (with offset to avoid duplicates)
-        async function fetchItemCode(type = 'raw_material', inputElement = null) {
+        async function fetchItemCode(type = 'raw_material', inputElement = null, retryCount = 0) {
             try {
                 // Calculate offset dynamically by counting existing codes of this type in the form
-                const offset = getCodeOffset(type);
+                const baseOffset = getCodeOffset(type);
+                const offset = baseOffset + retryCount;
 
                 const response = await fetch(`{{ route('main-stock.generate-code') }}?type=${type}&offset=${offset}`);
                 const data = await response.json();
+
+                // Check if this code is already used in the form
+                if (isCodeUsedInForm(data.code) && retryCount < 10) {
+                    // Retry with a higher offset
+                    return await fetchItemCode(type, inputElement, retryCount + 1);
+                }
+
                 if (inputElement) {
                     inputElement.value = data.code;
                 }
@@ -386,44 +469,47 @@
 
             // Fetch item code for the new row
             const itemCode = await fetchItemCode('raw_material');
+            
+            // Get already selected linked items to exclude from this row's dropdown
+            const excludeValues = getSelectedLinkedValues();
 
             const row = document.createElement('tr');
             row.id = `row-${rowCounter}`;
             row.innerHTML = `
-                            <td>
-                                <span class="row-number">${rowCounter}</span>
-                            </td>
-                            <td>
-                                <input type="text" name="items[${rowCounter}][item_code]" class="item-code-input" value="${itemCode}" required>
-                                <input type="hidden" name="items[${rowCounter}][quantity]" value="0">
-                            </td>
-                            <td>
-                                <input type="text" name="items[${rowCounter}][item_name]" class="item-name-input" placeholder="e.g., Rice, Oil" required>
-                            </td>
-                            <td class="linked-item-cell" id="linked-cell-${rowCounter}">
-                                <span class="na-text">N/A</span>
-                                <select name="items[${rowCounter}][linked_item_id]" class="linked-item-select" onchange="onLinkedItemChange(this, ${rowCounter})">
-                                    ${getLinkedItemOptions()}
-                                </select>
-                            </td>
-                            <td>
-                                <select name="items[${rowCounter}][item_type]" class="item-type-select" onchange="onItemTypeChange(this, ${rowCounter})" required>
-                                    ${getItemTypeOptions()}
-                                </select>
-                            </td>
-                            <td>
-                                <select name="items[${rowCounter}][unit_type]" class="unit-type-select" required>
-                                    ${getUnitTypeOptions()}
-                                </select>
-                            </td>
-                            <td>
-                                <button type="button" class="remove-row-btn" onclick="removeRow(${rowCounter})" title="Remove row">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                    </svg>
-                                </button>
-                            </td>
-                        `;
+                                <td>
+                                    <span class="row-number">${rowCounter}</span>
+                                </td>
+                                <td>
+                                    <input type="text" name="items[${rowCounter}][item_code]" class="item-code-input" value="${itemCode}" required>
+                                    <input type="hidden" name="items[${rowCounter}][quantity]" value="0">
+                                </td>
+                                <td>
+                                    <input type="text" name="items[${rowCounter}][item_name]" class="item-name-input" placeholder="e.g., Rice, Oil" required>
+                                </td>
+                                <td class="linked-item-cell" id="linked-cell-${rowCounter}">
+                                    <span class="na-text">N/A</span>
+                                    <select name="items[${rowCounter}][linked_item_id]" class="linked-item-select" onchange="onLinkedItemChange(this, ${rowCounter})">
+                                        ${getLinkedItemOptions('', excludeValues)}
+                                    </select>
+                                </td>
+                                <td>
+                                    <select name="items[${rowCounter}][item_type]" class="item-type-select" onchange="onItemTypeChange(this, ${rowCounter})" required>
+                                        ${getItemTypeOptions()}
+                                    </select>
+                                </td>
+                                <td>
+                                    <select name="items[${rowCounter}][unit_type]" class="unit-type-select" required>
+                                        ${getUnitTypeOptions()}
+                                    </select>
+                                </td>
+                                <td>
+                                    <button type="button" class="remove-row-btn" onclick="removeRow(${rowCounter})" title="Remove row">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                    </button>
+                                </td>
+                            `;
 
             tbody.appendChild(row);
 
@@ -461,6 +547,8 @@
             if (row) {
                 row.remove();
                 updateRowNumbers();
+                // Refresh dropdowns so removed row's selection becomes available again
+                refreshAllLinkedItemDropdowns();
             }
         }
 
@@ -516,7 +604,7 @@
             }
         }
 
-        // Handle linked item selection - auto-fill item name
+        // Handle linked item selection - auto-fill item name and refresh dropdowns
         function onLinkedItemChange(selectElement, rowId) {
             const row = document.getElementById(`row-${rowId}`);
             if (!row) return;
@@ -532,6 +620,9 @@
             } else {
                 itemNameInput.value = '';
             }
+
+            // Refresh all dropdowns to hide/show items based on selections
+            refreshAllLinkedItemDropdowns();
         }
 
         // Initialize on page load
