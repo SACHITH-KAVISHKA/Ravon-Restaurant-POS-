@@ -1879,13 +1879,15 @@
                     voidedOrderId = null;
                 }
 
-                const existingItem = billItems.find(item => item.item_id === itemId && item.name === itemName);
+                // Items without portions have modifier_id = null
+                const existingItem = billItems.find(item => item.item_id === itemId && item.modifier_id === null && item.name === itemName);
 
                 if (existingItem) {
                     existingItem.quantity++;
                 } else {
                     billItems.push({
                         item_id: itemId,
+                        modifier_id: null, // No modifier for items without portions
                         name: itemName,
                         price: itemPrice,
                         quantity: 1,
@@ -1914,9 +1916,9 @@
                 }
 
                 billItemsDiv.innerHTML = billItems.map((item, index) => {
-                    // Check if this item is from the original order (previously ordered)
+                    // Check if this item is from the original order (previously ordered) - use modifier_id for accurate matching
                     const originalItem = originalOrderItems.find(o =>
-                        o.item_id === item.item_id && o.name === item.name
+                        o.item_id === item.item_id && o.modifier_id === item.modifier_id && o.name === item.name
                     );
                     const isOriginalItem = !!originalItem;
                     const originalQty = originalItem ? originalItem.quantity : 0;
@@ -1968,9 +1970,9 @@
             function decrementQuantity(index) {
                 const item = billItems[index];
 
-                // Check if this item is from the original order
+                // Check if this item is from the original order (use modifier_id for accurate matching)
                 const originalItem = originalOrderItems.find(o =>
-                    o.item_id === item.item_id && o.name === item.name
+                    o.item_id === item.item_id && o.modifier_id === item.modifier_id && o.name === item.name
                 );
 
                 if (originalItem) {
@@ -2101,7 +2103,7 @@
 
                     return `
                     <button class="p-3 bg-blue-700 text-white rounded-lg hover:bg-blue-600 transition font-semibold"
-                            onclick="addPortionToBill(${itemId}, '${itemName}', ${portionPrice}, '${p.name}')">
+                            onclick="addPortionToBill(${itemId}, '${itemName}', ${portionPrice}, '${p.name}', ${p.id})">
                         ${p.name}
                     </button>
                 `;
@@ -2121,7 +2123,7 @@
                 closeBtn.classList.add('hidden');
             }
 
-            function addPortionToBill(itemId, itemName, portionPrice, portionName) {
+            function addPortionToBill(itemId, itemName, portionPrice, portionName, modifierId) {
                 // If user adds an item after voiding all items, they're continuing the order
                 // Clear the voided tracking so the order won't be cancelled
                 if (voidedOrderId && currentOrderId === voidedOrderId) {
@@ -2129,13 +2131,15 @@
                 }
 
                 const fullName = `${itemName} (${portionName})`;
-                const existingItem = billItems.find(item => item.item_id === itemId && item.name === fullName);
+                // Match by item_id AND modifier_id for accurate stock tracking
+                const existingItem = billItems.find(item => item.item_id === itemId && item.modifier_id === modifierId && item.name === fullName);
 
                 if (existingItem) {
                     existingItem.quantity++;
                 } else {
                     billItems.push({
                         item_id: itemId,
+                        modifier_id: modifierId, // Store modifier ID for ID-based stock deduction
                         name: fullName,
                         price: portionPrice,
                         quantity: 1,
@@ -2236,10 +2240,11 @@
                 }
 
                 try {
-                    // Merge duplicate items before sending
+                    // Merge duplicate items before sending (use item_id + modifier_id for accurate matching)
                     const mergedItems = {};
                     billItems.forEach(item => {
-                        const key = item.item_id + '_' + item.name;
+                        // Use modifier_id in key for accurate item matching
+                        const key = item.item_id + '_' + (item.modifier_id || 'null') + '_' + item.name;
                         if (mergedItems[key]) {
                             // Item exists, add quantities
                             mergedItems[key].quantity += item.quantity;
@@ -2247,6 +2252,7 @@
                             // New item, add to merged list
                             mergedItems[key] = {
                                 item_id: item.item_id,
+                                modifier_id: item.modifier_id || null, // Include modifier_id for ID-based stock deduction
                                 name: item.name,
                                 price: item.price,
                                 quantity: item.quantity
@@ -2495,17 +2501,19 @@
                             display.textContent = orderTypeLabels[result.order.order_type] || result.order.order_type;
                         }
 
-                        // Load items - merge duplicates if any exist in database
+                        // Load items - merge duplicates if any exist in database (use modifier_id for matching)
                         const mergedItems = {};
                         result.order.items.forEach(item => {
-                            const key = item.item_id + '_' + item.name;
+                            // Use item_id + modifier_id for accurate matching (ID-based)
+                            const key = item.item_id + '_' + (item.modifier_id || 'null') + '_' + item.name;
                             if (mergedItems[key]) {
                                 // Duplicate found - merge quantities
                                 mergedItems[key].quantity += parseInt(item.quantity);
                             } else {
-                                // New item
+                                // New item - include modifier_id for ID-based stock matching
                                 mergedItems[key] = {
                                     item_id: item.item_id,
+                                    modifier_id: item.modifier_id || null, // Include modifier_id for ID-based matching
                                     name: item.name,
                                     price: parseFloat(item.price),
                                     quantity: parseInt(item.quantity),
@@ -2900,9 +2908,9 @@
                 dropdown.innerHTML = '<option value="">-- Select an item --</option>';
 
                 originalOrderItems.forEach((item, index) => {
-                    // Check how much has already been added to void list
+                    // Check how much has already been added to void list (use modifier_id for accurate matching)
                     const alreadyVoided = voidItemsList
-                        .filter(v => v.item_id === item.item_id && v.item_name === item.name)
+                        .filter(v => v.item_id === item.item_id && v.modifier_id === item.modifier_id && v.item_name === item.name)
                         .reduce((sum, v) => sum + v.void_quantity, 0);
 
                     const remainingQty = item.quantity - alreadyVoided;
@@ -2911,6 +2919,7 @@
                         const option = document.createElement('option');
                         option.value = JSON.stringify({
                             item_id: item.item_id,
+                            modifier_id: item.modifier_id || null, // Include modifier_id for ID-based matching
                             item_name: item.name,
                             price: item.price,
                             current_quantity: item.quantity,
@@ -2972,9 +2981,9 @@
                     return;
                 }
 
-                // Check if item already exists in void list
+                // Check if item already exists in void list (use modifier_id for accurate matching)
                 const existingIndex = voidItemsList.findIndex(
-                    v => v.item_id === itemData.item_id && v.item_name === itemData.item_name
+                    v => v.item_id === itemData.item_id && v.modifier_id === itemData.modifier_id && v.item_name === itemData.item_name
                 );
 
                 if (existingIndex >= 0) {
@@ -2986,9 +2995,10 @@
                     }
                     voidItemsList[existingIndex].void_quantity = newTotal;
                 } else {
-                    // Add new
+                    // Add new - include modifier_id for ID-based matching
                     voidItemsList.push({
                         item_id: itemData.item_id,
+                        modifier_id: itemData.modifier_id || null, // Include modifier_id for ID-based matching
                         item_name: itemData.item_name,
                         price: itemData.price,
                         current_quantity: itemData.current_quantity,

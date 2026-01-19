@@ -211,8 +211,10 @@ class MainStockItem extends Model
 
     /**
      * Generate a unique item code.
+     * @param string $type The item type (raw_material, finished_good, other)
+     * @param int $offset Additional offset to add (for bulk creation when codes aren't saved yet)
      */
-    public static function generateItemCode(string $type = 'other'): string
+    public static function generateItemCode(string $type = 'other', int $offset = 0): string
     {
         $prefix = match ($type) {
             'raw_material' => 'RM',
@@ -226,9 +228,9 @@ class MainStockItem extends Model
 
         if ($lastItem) {
             $lastNumber = (int) substr($lastItem->item_code, 2);
-            $newNumber = $lastNumber + 1;
+            $newNumber = $lastNumber + 1 + $offset;
         } else {
-            $newNumber = 1;
+            $newNumber = 1 + $offset;
         }
 
         return $prefix . str_pad($newNumber, 5, '0', STR_PAD_LEFT);

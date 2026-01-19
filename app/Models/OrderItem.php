@@ -14,6 +14,7 @@ class OrderItem extends Model
     protected $fillable = [
         'order_id',
         'item_id',
+        'item_modifier_id',
         'item_display_name',
         'quantity',
         'unit_price',
@@ -55,6 +56,14 @@ class OrderItem extends Model
     public function item(): BelongsTo
     {
         return $this->belongsTo(Item::class);
+    }
+
+    /**
+     * Get the item modifier/portion (for ID-based stock deduction).
+     */
+    public function itemModifier(): BelongsTo
+    {
+        return $this->belongsTo(ItemModifier::class, 'item_modifier_id');
     }
 
     /**

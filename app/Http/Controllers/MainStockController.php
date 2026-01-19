@@ -454,7 +454,8 @@ class MainStockController extends Controller
     public function generateCode(Request $request)
     {
         $type = $request->get('type', 'other');
-        $code = MainStockItem::generateItemCode($type);
+        $offset = (int) $request->get('offset', 0);
+        $code = MainStockItem::generateItemCode($type, $offset);
         return response()->json(['code' => $code]);
     }
 }

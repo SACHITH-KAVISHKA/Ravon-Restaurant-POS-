@@ -294,6 +294,25 @@
 
         let rowCounter = 0;
 
+        // Calculate offset by counting how many codes of each type prefix exist in the form
+        function getCodeOffset(type) {
+            const prefix = {
+                'raw_material': 'RM',
+                'finished_good': 'FG',
+                'other': 'OT'
+            }[type] || 'OT';
+
+            // Count how many item codes in the form start with this prefix
+            const codeInputs = document.querySelectorAll('.item-code-input');
+            let count = 0;
+            codeInputs.forEach(input => {
+                if (input.value && input.value.startsWith(prefix)) {
+                    count++;
+                }
+            });
+            return count;
+        }
+
         // Generate item type options HTML
         function getItemTypeOptions(selectedValue = 'raw_material') {
             let options = '';
@@ -342,10 +361,13 @@
             return options;
         }
 
-        // Fetch new item code from server
+        // Fetch new item code from server (with offset to avoid duplicates)
         async function fetchItemCode(type = 'raw_material', inputElement = null) {
             try {
-                const response = await fetch(`{{ route('main-stock.generate-code') }}?type=${type}`);
+                // Calculate offset dynamically by counting existing codes of this type in the form
+                const offset = getCodeOffset(type);
+
+                const response = await fetch(`{{ route('main-stock.generate-code') }}?type=${type}&offset=${offset}`);
                 const data = await response.json();
                 if (inputElement) {
                     inputElement.value = data.code;

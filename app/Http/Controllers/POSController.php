@@ -192,6 +192,7 @@ class POSController extends Controller
 
                 return [
                     'item_id' => $orderItem->item_id,
+                    'modifier_id' => $orderItem->item_modifier_id, // Include modifier_id for ID-based matching
                     'name' => $orderItem->item_display_name ?? $orderItem->item->name ?? 'Unknown Item',
                     'item_name' => $orderItem->item_display_name ?? $orderItem->item->name ?? 'Unknown Item',
                     'item_code' => $orderItem->item->item_code ?? '',
@@ -249,6 +250,7 @@ class POSController extends Controller
             'pickme_ref_number' => 'nullable|string|max:100',
             'items' => 'required|array|min:1',
             'items.*.item_id' => 'required|exists:items,id',
+            'items.*.modifier_id' => 'nullable|exists:item_modifiers,id', // For ID-based stock deduction
             'items.*.quantity' => 'required|integer|min:0', // Allow 0 for item removal
             'items.*.price' => 'required|numeric|min:0',
             'items.*.name' => 'required|string',
@@ -298,9 +300,9 @@ class POSController extends Controller
                 // Update existing order
                 $order = Order::findOrFail($validated['order_id']);
 
-                // Get existing order items indexed by item_id + display name
+                // Get existing order items indexed by item_id + modifier_id for accurate matching
                 $existingItems = $order->orderItems->keyBy(function ($item) {
-                    return $item->item_id . '_' . ($item->item_display_name ?? $item->item->name);
+                    return $item->item_id . '_' . ($item->item_modifier_id ?? 'null');
                 });
 
                 $itemsToProcess = [];
@@ -308,7 +310,9 @@ class POSController extends Controller
 
                 // Process each item from the request
                 foreach ($validated['items'] as $itemData) {
-                    $key = $itemData['item_id'] . '_' . $itemData['name'];
+                    // Use item_id + modifier_id for accurate item matching (ID-based)
+                    $modifierId = $itemData['modifier_id'] ?? null;
+                    $key = $itemData['item_id'] . '_' . ($modifierId ?? 'null');
                     $processedKeys[] = $key;
 
                     if ($existingItems->has($key)) {
@@ -387,10 +391,11 @@ class POSController extends Controller
                 $item = Item::with('category')->findOrFail($itemData['item_id']);
 
                 if ($processItem['is_new']) {
-                    // Create new order item
+                    // Create new order item with modifier_id for ID-based stock deduction
                     $orderItem = OrderItem::create([
                         'order_id' => $order->id,
                         'item_id' => $item->id,
+                        'item_modifier_id' => $itemData['modifier_id'] ?? null, // Store modifier ID for stock deduction
                         'item_display_name' => $itemData['name'] ?? $item->name,
                         'quantity' => $itemData['quantity'],
                         'unit_price' => $itemData['price'],
@@ -792,21 +797,10 @@ class POSController extends Controller
 
                 // Deduct stock if item qualifies as finished goods
                 if (($isFinishedGoodsItem || $isBeverageOrDessert) && $orderItem->quantity > 0) {
-                    $displayName = $orderItem->item_display_name ?? $orderItem->item->name;
+                    // Use ID-based matching (modifier_id stored directly on order_item)
+                    $modifierId = $orderItem->item_modifier_id;
 
-                    // Extract modifier ID from display name for ID-based matching
-                    $modifierId = null;
-                    if (preg_match('/\(([^)]+)\)$/', $displayName, $matches)) {
-                        $modifierName = trim($matches[1]);
-                        $modifier = ItemModifier::where('item_id', $orderItem->item_id)
-                            ->where('name', $modifierName)
-                            ->first();
-                        if ($modifier) {
-                            $modifierId = $modifier->id;
-                        }
-                    }
-
-                    // Try ID-based matching first (for newly created FG items with linked IDs)
+                    // Try ID-based matching first (most reliable - uses stored modifier_id)
                     $result = CashierSubStock::deductForSaleById(
                         $orderItem->item_id,
                         $modifierId,
@@ -814,8 +808,9 @@ class POSController extends Controller
                         Auth::id()
                     );
 
-                    // Fallback to name-based matching (for existing FG items without linked IDs)
-                    if (!$result) {
+                    // Fallback to name-based matching (for legacy orders without item_modifier_id)
+                    if (!$result && !$modifierId) {
+                        $displayName = $orderItem->item_display_name ?? $orderItem->item->name;
                         CashierSubStock::deductForSaleByDisplayName(
                             $orderItem->item_id,
                             $displayName,
@@ -833,20 +828,8 @@ class POSController extends Controller
 
                 // Only process non-finished goods items that have stock count enabled
                 if (!$orderItem->item->is_finished_goods && $orderItem->item->is_stock_count && $orderItem->quantity > 0) {
-                    // Get modifier/portion ID from display name
-                    $modifierId = null;
-                    $displayName = $orderItem->item_display_name ?? $orderItem->item->name;
-
-                    // Extract modifier/portion name from display name "Item (Portion)"
-                    if (preg_match('/\(([^)]+)\)$/', $displayName, $matches)) {
-                        $modifierName = trim($matches[1]);
-                        $modifier = ItemModifier::where('item_id', $orderItem->item_id)
-                            ->where('name', $modifierName)
-                            ->first();
-                        if ($modifier) {
-                            $modifierId = $modifier->id;
-                        }
-                    }
+                    // Use ID-based matching (modifier_id stored directly on order_item)
+                    $modifierId = $orderItem->item_modifier_id;
 
                     // Get recipes - portion-specific if modifier exists
                     $recipes = ItemRecipe::where('item_id', $orderItem->item_id)
@@ -996,6 +979,7 @@ class POSController extends Controller
             'order_id' => 'required|exists:orders,id',
             'void_items' => 'required|array|min:1',
             'void_items.*.item_id' => 'required|exists:items,id',
+            'void_items.*.modifier_id' => 'nullable|exists:item_modifiers,id', // For ID-based matching
             'void_items.*.item_name' => 'required|string',
             'void_items.*.void_quantity' => 'required|integer|min:1',
             'supervisor_pin' => 'required|string|size:4',
@@ -1031,16 +1015,24 @@ class POSController extends Controller
             $cancelKotItems = []; // Items to print on cancel KOT
 
             foreach ($validated['void_items'] as $voidItem) {
-                // Find the matching order item using filter for complex matching
-                $orderItem = $order->orderItems->filter(function ($item) use ($voidItem) {
+                // Find the matching order item using ID-based matching (item_id + modifier_id)
+                $modifierId = $voidItem['modifier_id'] ?? null;
+                $orderItem = $order->orderItems->filter(function ($item) use ($voidItem, $modifierId) {
                     // Match by item_id
                     if ($item->item_id != $voidItem['item_id']) {
                         return false;
                     }
-                    // Match by name
-                    $itemName = $item->item_display_name ?? ($item->item->name ?? '');
-                    if ($itemName !== $voidItem['item_name']) {
-                        return false;
+                    // Match by modifier_id (ID-based matching - most reliable)
+                    if ($modifierId !== null) {
+                        if ($item->item_modifier_id != $modifierId) {
+                            return false;
+                        }
+                    } else {
+                        // Fallback to name matching for legacy orders without modifier_id
+                        $itemName = $item->item_display_name ?? ($item->item->name ?? '');
+                        if ($itemName !== $voidItem['item_name']) {
+                            return false;
+                        }
                     }
                     // Exclude cancelled/deleted items
                     if (in_array($item->status, ['cancelled', 'deleted'])) {
