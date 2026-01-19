@@ -113,57 +113,129 @@ class MainStockController extends Controller
     }
 
     /**
-     * Store a newly created stock item.
+     * Store newly created stock items (supports bulk creation).
      */
     public function store(Request $request)
     {
+        // Validate items array
         $validated = $request->validate([
-            'item_code' => 'required|string|max:50|unique:main_stock_items,item_code',
-            'item_name' => 'required|string|max:255|unique:main_stock_items,item_name',
-            'unit_type' => ['required', Rule::in(array_keys(MainStockItem::UNIT_TYPES))],
-            'item_type' => ['required', Rule::in(array_keys(MainStockItem::ITEM_TYPES))],
-            'quantity' => 'required|numeric|min:0',
-        ], [
-            'item_name.unique' => 'Item Already Exists',
+            'items' => 'required|array|min:1',
+            'items.*.item_code' => 'required|string|max:50',
+            'items.*.item_name' => 'required|string|max:255',
+            'items.*.unit_type' => ['required', Rule::in(array_keys(MainStockItem::UNIT_TYPES))],
+            'items.*.item_type' => ['required', Rule::in(array_keys(MainStockItem::ITEM_TYPES))],
+            'items.*.linked_item_id' => 'nullable|exists:items,id',
+            'items.*.linked_item_modifier_id' => 'nullable|exists:item_modifiers,id',
+            'items.*.quantity' => 'nullable|numeric|min:0',
         ]);
+
+        // Check for duplicate item codes and names within the submitted items
+        $itemCodes = [];
+        $itemNames = [];
+        $errors = [];
+
+        foreach ($validated['items'] as $index => $itemData) {
+            // Check for duplicates within submitted items
+            if (in_array($itemData['item_code'], $itemCodes)) {
+                $errors["items.{$index}.item_code"] = "Duplicate item code in the list";
+            }
+            if (in_array(strtolower($itemData['item_name']), $itemNames)) {
+                $errors["items.{$index}.item_name"] = "Duplicate item name in the list";
+            }
+            $itemCodes[] = $itemData['item_code'];
+            $itemNames[] = strtolower($itemData['item_name']);
+
+            // Check for existing items in database
+            if (MainStockItem::where('item_code', $itemData['item_code'])->exists()) {
+                $errors["items.{$index}.item_code"] = "Item code '{$itemData['item_code']}' already exists";
+            }
+            if (MainStockItem::where('item_name', $itemData['item_name'])->exists()) {
+                $errors["items.{$index}.item_name"] = "Item Already Exists: '{$itemData['item_name']}'";
+            }
+
+            // Check for duplicate linked item + modifier combination (for finished goods)
+            if (!empty($itemData['linked_item_id'])) {
+                $existingLink = MainStockItem::where('linked_item_id', $itemData['linked_item_id'])
+                    ->where('linked_item_modifier_id', $itemData['linked_item_modifier_id'] ?? null)
+                    ->exists();
+                if ($existingLink) {
+                    $errors["items.{$index}.linked_item_id"] = "This menu item/portion is already linked to a stock item";
+                }
+            }
+        }
+
+        if (!empty($errors)) {
+            return back()
+                ->withInput()
+                ->withErrors($errors);
+        }
 
         try {
             DB::beginTransaction();
 
-            $item = MainStockItem::create([
-                'item_code' => $validated['item_code'],
-                'item_name' => $validated['item_name'],
-                'unit_type' => $validated['unit_type'],
-                'item_type' => $validated['item_type'],
-                'quantity' => $validated['quantity'],
-                'is_active' => true,
-                'created_by' => Auth::id(),
-                'updated_by' => Auth::id(),
-            ]);
+            $createdCount = 0;
 
-            // Create initial stock transaction if quantity > 0
-            if ($validated['quantity'] > 0) {
-                MainStockTransaction::create([
-                    'main_stock_item_id' => $item->id,
-                    'transaction_type' => 'stock_in',
-                    'quantity' => $validated['quantity'],
-                    'quantity_before' => 0,
-                    'quantity_after' => $validated['quantity'],
-                    'notes' => 'Initial stock entry',
-                    'performed_by' => Auth::id(),
+            foreach ($validated['items'] as $itemData) {
+                $quantity = $itemData['quantity'] ?? 0;
+
+                // Parse linked_item_id which may contain "itemId_modifierId" format
+                $linkedItemId = null;
+                $linkedModifierId = null;
+
+                if (!empty($itemData['linked_item_id'])) {
+                    $linkedValue = $itemData['linked_item_id'];
+                    if (str_contains($linkedValue, '_')) {
+                        // Format: itemId_modifierId
+                        [$linkedItemId, $linkedModifierId] = explode('_', $linkedValue);
+                    } else {
+                        // Just itemId
+                        $linkedItemId = $linkedValue;
+                    }
+                }
+
+                $item = MainStockItem::create([
+                    'item_code' => $itemData['item_code'],
+                    'item_name' => $itemData['item_name'],
+                    'unit_type' => $itemData['unit_type'],
+                    'item_type' => $itemData['item_type'],
+                    'linked_item_id' => $linkedItemId,
+                    'linked_item_modifier_id' => $linkedModifierId,
+                    'quantity' => $quantity,
+                    'is_active' => true,
+                    'created_by' => Auth::id(),
+                    'updated_by' => Auth::id(),
                 ]);
+
+                // Create initial stock transaction if quantity > 0
+                if ($quantity > 0) {
+                    MainStockTransaction::create([
+                        'main_stock_item_id' => $item->id,
+                        'transaction_type' => 'stock_in',
+                        'quantity' => $quantity,
+                        'quantity_before' => 0,
+                        'quantity_after' => $quantity,
+                        'notes' => 'Initial stock entry',
+                        'performed_by' => Auth::id(),
+                    ]);
+                }
+
+                $createdCount++;
             }
 
             DB::commit();
 
+            $message = $createdCount === 1
+                ? 'Stock item created successfully!'
+                : "{$createdCount} stock items created successfully!";
+
             return redirect()
                 ->route('main-stock.index')
-                ->with('success', 'Stock item created successfully!');
+                ->with('success', $message);
         } catch (\Exception $e) {
             DB::rollBack();
             return back()
                 ->withInput()
-                ->with('error', 'Failed to create stock item: ' . $e->getMessage());
+                ->with('error', 'Failed to create stock items: ' . $e->getMessage());
         }
     }
 

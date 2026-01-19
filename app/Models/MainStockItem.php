@@ -16,6 +16,8 @@ class MainStockItem extends Model
         'item_name',
         'unit_type',
         'item_type',
+        'linked_item_id',
+        'linked_item_modifier_id',
         'quantity',
         'is_active',
         'created_by',
@@ -79,6 +81,22 @@ class MainStockItem extends Model
     public function updater(): BelongsTo
     {
         return $this->belongsTo(User::class, 'updated_by');
+    }
+
+    /**
+     * Get the linked menu item (for finished goods).
+     */
+    public function linkedItem(): BelongsTo
+    {
+        return $this->belongsTo(Item::class, 'linked_item_id');
+    }
+
+    /**
+     * Get the linked modifier/portion (for finished goods with portions).
+     */
+    public function linkedModifier(): BelongsTo
+    {
+        return $this->belongsTo(ItemModifier::class, 'linked_item_modifier_id');
     }
 
     /**

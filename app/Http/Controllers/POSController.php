@@ -765,23 +765,64 @@ class POSController extends Controller
             // Stock is deducted even if not present (creates stock entry with negative quantity)
             $orderItemsForStock = $order->orderItems()
                 ->whereNotIn('status', ['cancelled', 'deleted'])
-                ->with(['item'])
+                ->with(['item.category'])
                 ->get();
 
             foreach ($orderItemsForStock as $orderItem) {
                 if (!$orderItem->item)
                     continue;
 
-                // Only deduct stock for items marked as "Finished Goods" AND "Stock Count"
-                if ($orderItem->item->is_finished_goods && $orderItem->item->is_stock_count && $orderItem->quantity > 0) {
-                    // Use display name to find matching MainStockItem and deduct from CashierSubStock
+                // Check if item should be deducted as Finished Good
+                // Option 1: Item is explicitly marked as finished_goods with stock_count
+                // Option 2: Item belongs to Beverages (21) or Desserts (20) category
+                $isFinishedGoodsItem = $orderItem->item->is_finished_goods && $orderItem->item->is_stock_count;
+
+                // Fallback: Check by category for Beverages/Desserts
+                $isBeverageOrDessert = false;
+                if (!$isFinishedGoodsItem && $orderItem->item->category) {
+                    $categoryId = $orderItem->item->category_id;
+                    $categorySlug = strtolower($orderItem->item->category->slug ?? '');
+                    $categoryName = strtoupper($orderItem->item->category->name ?? '');
+
+                    // Category IDs 20 (Desserts) and 21 (Beverages) or by name/slug
+                    $isBeverageOrDessert = in_array($categoryId, [20, 21]) ||
+                        in_array($categorySlug, ['beverages', 'desserts', 'dessert']) ||
+                        in_array($categoryName, ['BEVERAGES', 'DESSERTS', 'DESSERT']);
+                }
+
+                // Deduct stock if item qualifies as finished goods
+                if (($isFinishedGoodsItem || $isBeverageOrDessert) && $orderItem->quantity > 0) {
                     $displayName = $orderItem->item_display_name ?? $orderItem->item->name;
-                    CashierSubStock::deductForSaleByDisplayName(
+
+                    // Extract modifier ID from display name for ID-based matching
+                    $modifierId = null;
+                    if (preg_match('/\(([^)]+)\)$/', $displayName, $matches)) {
+                        $modifierName = trim($matches[1]);
+                        $modifier = ItemModifier::where('item_id', $orderItem->item_id)
+                            ->where('name', $modifierName)
+                            ->first();
+                        if ($modifier) {
+                            $modifierId = $modifier->id;
+                        }
+                    }
+
+                    // Try ID-based matching first (for newly created FG items with linked IDs)
+                    $result = CashierSubStock::deductForSaleById(
                         $orderItem->item_id,
-                        $displayName,
+                        $modifierId,
                         $orderItem->quantity,
                         Auth::id()
                     );
+
+                    // Fallback to name-based matching (for existing FG items without linked IDs)
+                    if (!$result) {
+                        CashierSubStock::deductForSaleByDisplayName(
+                            $orderItem->item_id,
+                            $displayName,
+                            $orderItem->quantity,
+                            Auth::id()
+                        );
+                    }
                 }
             }
 

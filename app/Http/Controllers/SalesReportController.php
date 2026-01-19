@@ -343,11 +343,109 @@ class SalesReportController extends Controller
 
     /**
      * Soft delete an order (mark as deleted).
+     * Also restores stock that was deducted when the order was paid.
      */
     public function softDelete(Order $order)
     {
         try {
             DB::beginTransaction();
+
+            // Only restore stock if order was paid (stock was deducted on payment)
+            if ($order->is_paid) {
+                // Load order items with item and category relationships
+                $orderItems = $order->orderItems()
+                    ->whereNotIn('status', ['cancelled', 'deleted'])
+                    ->with(['item.category'])
+                    ->get();
+
+                foreach ($orderItems as $orderItem) {
+                    if (!$orderItem->item || $orderItem->quantity <= 0) {
+                        continue;
+                    }
+
+                    // Check if item is Finished Goods (restore FG stock)
+                    $isFinishedGoodsItem = $orderItem->item->is_finished_goods && $orderItem->item->is_stock_count;
+
+                    // Fallback: Check by category for Beverages/Desserts
+                    $isBeverageOrDessert = false;
+                    if (!$isFinishedGoodsItem && $orderItem->item->category) {
+                        $categoryId = $orderItem->item->category_id;
+                        $categorySlug = strtolower($orderItem->item->category->slug ?? '');
+                        $categoryName = strtoupper($orderItem->item->category->name ?? '');
+
+                        $isBeverageOrDessert = in_array($categoryId, [20, 21]) ||
+                            in_array($categorySlug, ['beverages', 'desserts', 'dessert']) ||
+                            in_array($categoryName, ['BEVERAGES', 'DESSERTS', 'DESSERT']);
+                    }
+
+                    // Restore Finished Goods stock
+                    if ($isFinishedGoodsItem || $isBeverageOrDessert) {
+                        $displayName = $orderItem->item_display_name ?? $orderItem->item->name;
+
+                        // Extract modifier ID from display name
+                        $modifierId = null;
+                        if (preg_match('/\(([^)]+)\)$/', $displayName, $matches)) {
+                            $modifierName = trim($matches[1]);
+                            $modifier = \App\Models\ItemModifier::where('item_id', $orderItem->item_id)
+                                ->where('name', $modifierName)
+                                ->first();
+                            if ($modifier) {
+                                $modifierId = $modifier->id;
+                            }
+                        }
+
+                        // Restore stock using ID-based matching
+                        \App\Models\CashierSubStock::restoreForSaleById(
+                            $orderItem->item_id,
+                            $modifierId,
+                            $orderItem->quantity,
+                            auth()->id()
+                        );
+                    }
+
+                    // Restore Raw Materials stock (for non-finished goods with recipes)
+                    if (!$orderItem->item->is_finished_goods && $orderItem->item->is_stock_count) {
+                        $displayName = $orderItem->item_display_name ?? $orderItem->item->name;
+
+                        // Extract modifier/portion ID from display name
+                        $modifierId = null;
+                        if (preg_match('/\(([^)]+)\)$/', $displayName, $matches)) {
+                            $modifierName = trim($matches[1]);
+                            $modifier = \App\Models\ItemModifier::where('item_id', $orderItem->item_id)
+                                ->where('name', $modifierName)
+                                ->first();
+                            if ($modifier) {
+                                $modifierId = $modifier->id;
+                            }
+                        }
+
+                        // Get recipes - portion-specific if modifier exists
+                        $recipes = \App\Models\ItemRecipe::where('item_id', $orderItem->item_id)
+                            ->where('item_modifier_id', $modifierId)
+                            ->get();
+
+                        // Fallback to item-level recipes
+                        if ($recipes->isEmpty() && $modifierId) {
+                            $recipes = \App\Models\ItemRecipe::where('item_id', $orderItem->item_id)
+                                ->whereNull('item_modifier_id')
+                                ->get();
+                        }
+
+                        if ($recipes->isEmpty() && !$modifierId) {
+                            $recipes = \App\Models\ItemRecipe::where('item_id', $orderItem->item_id)
+                                ->whereNull('item_modifier_id')
+                                ->get();
+                        }
+
+                        // Add back each raw material to CashierSubStock
+                        foreach ($recipes as $recipe) {
+                            $totalQuantity = $recipe->quantity * $orderItem->quantity;
+                            $subStock = \App\Models\CashierSubStock::getOrCreateForItem($recipe->main_stock_item_id);
+                            $subStock->addStock($totalQuantity, auth()->id());
+                        }
+                    }
+                }
+            }
 
             // Mark order as deleted
             $order->is_deleted = true;
@@ -357,7 +455,7 @@ class SalesReportController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Order deleted successfully'
+                'message' => 'Order deleted successfully and stock restored'
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
