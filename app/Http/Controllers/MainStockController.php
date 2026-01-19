@@ -73,9 +73,12 @@ class MainStockController extends Controller
 
         // Get beverage and dessert items with their portions/sizes for finished goods dropdown
         // Items must be in Beverage/Dessert category AND marked as "Finished Goods"
-        $finishedGoodsItems = \App\Models\Item::with(['category', 'activeModifiers' => function ($q) {
-            $q->whereIn('type', ['portion', 'size']);
-        }])
+        $finishedGoodsItems = \App\Models\Item::with([
+            'category',
+            'activeModifiers' => function ($q) {
+                $q->whereIn('type', ['portion', 'size']);
+            }
+        ])
             ->whereHas('category', function ($q) {
                 $q->whereIn('slug', ['beverages', 'desserts', 'beverage', 'dessert'])
                     ->orWhereRaw('LOWER(name) LIKE ?', ['%beverage%'])
@@ -116,10 +119,12 @@ class MainStockController extends Controller
     {
         $validated = $request->validate([
             'item_code' => 'required|string|max:50|unique:main_stock_items,item_code',
-            'item_name' => 'required|string|max:255',
+            'item_name' => 'required|string|max:255|unique:main_stock_items,item_name',
             'unit_type' => ['required', Rule::in(array_keys(MainStockItem::UNIT_TYPES))],
             'item_type' => ['required', Rule::in(array_keys(MainStockItem::ITEM_TYPES))],
             'quantity' => 'required|numeric|min:0',
+        ], [
+            'item_name.unique' => 'Item Already Exists',
         ]);
 
         try {
@@ -175,9 +180,12 @@ class MainStockController extends Controller
 
         // Get beverage and dessert items with their portions/sizes for finished goods dropdown
         // Items must be in Beverage/Dessert category AND marked as "Finished Goods"
-        $finishedGoodsItems = \App\Models\Item::with(['category', 'activeModifiers' => function ($q) {
-            $q->whereIn('type', ['portion', 'size']);
-        }])
+        $finishedGoodsItems = \App\Models\Item::with([
+            'category',
+            'activeModifiers' => function ($q) {
+                $q->whereIn('type', ['portion', 'size']);
+            }
+        ])
             ->whereHas('category', function ($q) {
                 $q->whereIn('slug', ['beverages', 'desserts', 'beverage', 'dessert'])
                     ->orWhereRaw('LOWER(name) LIKE ?', ['%beverage%'])
@@ -221,10 +229,12 @@ class MainStockController extends Controller
     {
         $validated = $request->validate([
             'item_code' => ['required', 'string', 'max:50', Rule::unique('main_stock_items', 'item_code')->ignore($mainStock->id)],
-            'item_name' => 'required|string|max:255',
+            'item_name' => ['required', 'string', 'max:255', Rule::unique('main_stock_items', 'item_name')->ignore($mainStock->id)],
             'unit_type' => ['required', Rule::in(array_keys(MainStockItem::UNIT_TYPES))],
             'item_type' => ['required', Rule::in(array_keys(MainStockItem::ITEM_TYPES))],
             'is_active' => 'boolean',
+        ], [
+            'item_name.unique' => 'Item Already Exists',
         ]);
 
         $mainStock->update([

@@ -11,6 +11,8 @@ use App\Models\Payment;
 use App\Models\Kot;
 use App\Models\KotItem;
 use App\Models\CashierSubStock;
+use App\Models\ItemRecipe;
+use App\Models\ItemModifier;
 use App\Models\VoidRecord;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -25,10 +27,12 @@ class POSController extends Controller
     {
         $categories = Category::active()
             ->ordered()
-            ->with(['availableItems' => function ($query) {
-                $query->available()->orderBy('display_order')
-                    ->with(['modifiers.itemPrices', 'itemPrices']);
-            }])
+            ->with([
+                'availableItems' => function ($query) {
+                    $query->available()->orderBy('display_order')
+                        ->with(['modifiers.itemPrices', 'itemPrices']);
+                }
+            ])
             ->get();
 
         $tables = Table::orderByRaw("CAST(SUBSTRING(table_number, 2) AS UNSIGNED)")->get();
@@ -41,9 +45,11 @@ class POSController extends Controller
      */
     public function getItem($id)
     {
-        $item = Item::with(['modifiers' => function ($query) {
-            $query->where('is_active', true);
-        }])->findOrFail($id);
+        $item = Item::with([
+            'modifiers' => function ($query) {
+                $query->where('is_active', true);
+            }
+        ])->findOrFail($id);
 
         return response()->json([
             'success' => true,
@@ -763,7 +769,8 @@ class POSController extends Controller
                 ->get();
 
             foreach ($orderItemsForStock as $orderItem) {
-                if (!$orderItem->item) continue;
+                if (!$orderItem->item)
+                    continue;
 
                 // Only deduct stock for items marked as "Finished Goods" AND "Stock Count"
                 if ($orderItem->item->is_finished_goods && $orderItem->item->is_stock_count && $orderItem->quantity > 0) {
@@ -775,6 +782,56 @@ class POSController extends Controller
                         $orderItem->quantity,
                         Auth::id()
                     );
+                }
+            }
+
+            // Deduct raw materials for NON-Finished Goods items based on recipe
+            foreach ($orderItemsForStock as $orderItem) {
+                if (!$orderItem->item)
+                    continue;
+
+                // Only process non-finished goods items that have stock count enabled
+                if (!$orderItem->item->is_finished_goods && $orderItem->item->is_stock_count && $orderItem->quantity > 0) {
+                    // Get modifier/portion ID from display name
+                    $modifierId = null;
+                    $displayName = $orderItem->item_display_name ?? $orderItem->item->name;
+
+                    // Extract modifier/portion name from display name "Item (Portion)"
+                    if (preg_match('/\(([^)]+)\)$/', $displayName, $matches)) {
+                        $modifierName = trim($matches[1]);
+                        $modifier = ItemModifier::where('item_id', $orderItem->item_id)
+                            ->where('name', $modifierName)
+                            ->first();
+                        if ($modifier) {
+                            $modifierId = $modifier->id;
+                        }
+                    }
+
+                    // Get recipes - portion-specific if modifier exists
+                    $recipes = ItemRecipe::where('item_id', $orderItem->item_id)
+                        ->where('item_modifier_id', $modifierId)
+                        ->get();
+
+                    // Fallback to item-level recipes if no portion-specific recipes found
+                    if ($recipes->isEmpty() && $modifierId) {
+                        $recipes = ItemRecipe::where('item_id', $orderItem->item_id)
+                            ->whereNull('item_modifier_id')
+                            ->get();
+                    }
+
+                    // If no modifier, get item-level recipes directly
+                    if ($recipes->isEmpty() && !$modifierId) {
+                        $recipes = ItemRecipe::where('item_id', $orderItem->item_id)
+                            ->whereNull('item_modifier_id')
+                            ->get();
+                    }
+
+                    // Deduct each raw material from CashierSubStock
+                    foreach ($recipes as $recipe) {
+                        $totalQuantity = $recipe->quantity * $orderItem->quantity;
+                        $subStock = CashierSubStock::getOrCreateForItem($recipe->main_stock_item_id);
+                        $subStock->deductStockForSale($totalQuantity, Auth::id());
+                    }
                 }
             }
 
