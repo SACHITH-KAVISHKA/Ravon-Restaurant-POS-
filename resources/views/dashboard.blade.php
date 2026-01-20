@@ -16,6 +16,16 @@
                     Welcome back, {{ Auth::user()->name }}!
                 </h1>
                 <p class="text-gray-600">Here's what's happening with your restaurant today.</p>
+                
+                @if(Auth::user()->hasRole('supervisor'))
+                <div class="mt-3 inline-flex items-center bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white px-4 py-2 rounded-lg shadow-md">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                    <span class="font-semibold">Your PIN:</span>
+                    <span class="ml-2 text-2xl font-bold tracking-wider">{{ Auth::user()->dynamic_pin }}</span>
+                </div>
+                @endif
             </div>
             @if(Auth::user()->hasRole('cashier'))
             <div>
