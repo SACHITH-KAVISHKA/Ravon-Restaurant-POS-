@@ -364,35 +364,14 @@ class SalesReportController extends Controller
                     }
 
                     // Check if item is Finished Goods (restore FG stock)
+                    // BOTH conditions must be true: is_finished_goods AND is_stock_count
+                    // No fallback by category - only explicit checkbox settings matter
                     $isFinishedGoodsItem = $orderItem->item->is_finished_goods && $orderItem->item->is_stock_count;
 
-                    // Fallback: Check by category for Beverages/Desserts
-                    $isBeverageOrDessert = false;
-                    if (!$isFinishedGoodsItem && $orderItem->item->category) {
-                        $categoryId = $orderItem->item->category_id;
-                        $categorySlug = strtolower($orderItem->item->category->slug ?? '');
-                        $categoryName = strtoupper($orderItem->item->category->name ?? '');
-
-                        $isBeverageOrDessert = in_array($categoryId, [20, 21]) ||
-                            in_array($categorySlug, ['beverages', 'desserts', 'dessert']) ||
-                            in_array($categoryName, ['BEVERAGES', 'DESSERTS', 'DESSERT']);
-                    }
-
-                    // Restore Finished Goods stock
-                    if ($isFinishedGoodsItem || $isBeverageOrDessert) {
-                        $displayName = $orderItem->item_display_name ?? $orderItem->item->name;
-
-                        // Extract modifier ID from display name
-                        $modifierId = null;
-                        if (preg_match('/\(([^)]+)\)$/', $displayName, $matches)) {
-                            $modifierName = trim($matches[1]);
-                            $modifier = \App\Models\ItemModifier::where('item_id', $orderItem->item_id)
-                                ->where('name', $modifierName)
-                                ->first();
-                            if ($modifier) {
-                                $modifierId = $modifier->id;
-                            }
-                        }
+                    // Restore Finished Goods stock ONLY if item has BOTH checkboxes checked
+                    if ($isFinishedGoodsItem) {
+                        // Use stored item_modifier_id for ID-based matching (most reliable)
+                        $modifierId = $orderItem->item_modifier_id;
 
                         // Restore stock using ID-based matching
                         \App\Models\CashierSubStock::restoreForSaleById(

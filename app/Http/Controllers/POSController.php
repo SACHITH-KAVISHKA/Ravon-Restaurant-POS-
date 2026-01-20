@@ -776,25 +776,12 @@ class POSController extends Controller
                     continue;
 
                 // Check if item should be deducted as Finished Good
-                // Option 1: Item is explicitly marked as finished_goods with stock_count
-                // Option 2: Item belongs to Beverages (21) or Desserts (20) category
+                // BOTH conditions must be true: is_finished_goods AND is_stock_count
+                // No fallback by category - only explicit checkbox settings matter
                 $isFinishedGoodsItem = $orderItem->item->is_finished_goods && $orderItem->item->is_stock_count;
 
-                // Fallback: Check by category for Beverages/Desserts
-                $isBeverageOrDessert = false;
-                if (!$isFinishedGoodsItem && $orderItem->item->category) {
-                    $categoryId = $orderItem->item->category_id;
-                    $categorySlug = strtolower($orderItem->item->category->slug ?? '');
-                    $categoryName = strtoupper($orderItem->item->category->name ?? '');
-
-                    // Category ID 21 (Beverages) only - by name/slug
-                    $isBeverageOrDessert = $categoryId === 21 ||
-                        in_array($categorySlug, ['beverages']) ||
-                        in_array($categoryName, ['BEVERAGES']);
-                }
-
-                // Deduct stock if item qualifies as finished goods
-                if (($isFinishedGoodsItem || $isBeverageOrDessert) && $orderItem->quantity > 0) {
+                // Deduct stock ONLY if item has BOTH Finished Goods AND Stock Count checked
+                if ($isFinishedGoodsItem && $orderItem->quantity > 0) {
                     // Use ID-based matching (modifier_id stored directly on order_item)
                     $modifierId = $orderItem->item_modifier_id;
 
