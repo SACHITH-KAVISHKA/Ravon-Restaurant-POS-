@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Item;
+use App\Models\ItemModifier;
 use App\Models\Order;
 use App\Models\OrderItem;
 use Carbon\Carbon;
@@ -49,39 +50,58 @@ class ItemSalesReportController extends Controller
     }
 
     /**
-     * Get detailed transactions for a specific item
+     * Get detailed transactions for a specific item (and optionally portion)
      */
     public function getItemDetails(Request $request)
     {
         $request->validate([
             'item_id' => 'required|exists:items,id',
+            'item_modifier_id' => 'nullable|exists:item_modifiers,id',
             'start_date' => 'required|date',
             'end_date' => 'required|date',
         ]);
 
         $itemId = $request->item_id;
+        $modifierId = $request->item_modifier_id;
         $fromDate = $request->start_date;
         $toDate = $request->end_date;
 
         $item = Item::findOrFail($itemId);
+        $modifier = $modifierId ? ItemModifier::find($modifierId) : null;
 
-        $transactions = OrderItem::with(['order' => function ($query) {
-            $query->select('id', 'order_number', 'completed_at');
-        }])
+        // Build display name
+        $displayName = $item->name;
+        if ($modifier) {
+            $displayName .= ' - ' . $modifier->name;
+        }
+
+        $query = OrderItem::with([
+            'order' => function ($query) {
+                $query->select('id', 'order_number', 'completed_at');
+            }
+        ])
             ->whereHas('order', function ($query) use ($fromDate, $toDate) {
                 $query->where('status', 'completed')
                     ->where('is_paid', true)
                     ->whereBetween(DB::raw('DATE(completed_at)'), [$fromDate, $toDate]);
             })
             ->where('item_id', $itemId)
-            ->where('status', '!=', 'cancelled')
-            ->get()
+            ->where('status', '!=', 'cancelled');
+
+        // Filter by modifier/portion if provided
+        if ($modifierId) {
+            $query->where('item_modifier_id', $modifierId);
+        } else {
+            $query->whereNull('item_modifier_id');
+        }
+
+        $transactions = $query->get()
             ->map(function ($orderItem) {
                 return [
                     'order_number' => $orderItem->order->order_number ?? 'N/A',
-                    'quantity' => (int)$orderItem->quantity,
-                    'unit_price' => (float)$orderItem->unit_price,
-                    'subtotal' => (float)$orderItem->subtotal,
+                    'quantity' => (int) $orderItem->quantity,
+                    'unit_price' => (float) $orderItem->unit_price,
+                    'subtotal' => (float) $orderItem->subtotal,
                     'completed_at' => $orderItem->order->completed_at ?
                         $orderItem->order->completed_at->format('Y-m-d H:i:s') : 'N/A'
                 ];
@@ -93,7 +113,7 @@ class ItemSalesReportController extends Controller
             'success' => true,
             'item' => [
                 'code' => $item->item_code ?? $item->id,
-                'name' => $item->name,
+                'name' => $displayName,
             ],
             'transactions' => $transactions,
             'total_quantity' => $totalQuantity
@@ -163,28 +183,37 @@ class ItemSalesReportController extends Controller
     }
 
     /**
-     * Export item detail transactions to Excel
+     * Export item detail transactions to Excel (with portion support)
      */
     public function exportItemDetails(Request $request)
     {
         $request->validate([
             'item_id' => 'required|exists:items,id',
+            'item_modifier_id' => 'nullable|exists:item_modifiers,id',
             'start_date' => 'required|date',
             'end_date' => 'required|date',
         ]);
 
         $itemId = $request->item_id;
+        $modifierId = $request->item_modifier_id;
         $fromDate = $request->start_date;
         $toDate = $request->end_date;
 
         $item = Item::findOrFail($itemId);
+        $modifier = $modifierId ? ItemModifier::find($modifierId) : null;
+
+        // Build display name
+        $displayName = $item->name;
+        if ($modifier) {
+            $displayName .= ' - ' . $modifier->name;
+        }
 
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
 
         // Title
         $itemCode = $item->item_code ?? $item->id;
-        $sheet->setCellValue('A1', $item->name . ' (Code: ' . $itemCode . ') - Transaction Details');
+        $sheet->setCellValue('A1', $displayName . ' (Code: ' . $itemCode . ') - Transaction Details');
         $sheet->mergeCells('A1:E1');
         $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
 
@@ -203,15 +232,23 @@ class ItemSalesReportController extends Controller
         $row++;
 
         // Get transactions
-        $transactions = OrderItem::with(['order'])
+        $query = OrderItem::with(['order'])
             ->whereHas('order', function ($query) use ($fromDate, $toDate) {
                 $query->where('status', 'completed')
                     ->where('is_paid', true)
                     ->whereBetween(DB::raw('DATE(completed_at)'), [$fromDate, $toDate]);
             })
             ->where('item_id', $itemId)
-            ->where('status', '!=', 'cancelled')
-            ->get();
+            ->where('status', '!=', 'cancelled');
+
+        // Filter by modifier/portion if provided
+        if ($modifierId) {
+            $query->where('item_modifier_id', $modifierId);
+        } else {
+            $query->whereNull('item_modifier_id');
+        }
+
+        $transactions = $query->get();
 
         // Transaction rows
         $totalQty = 0;
@@ -223,7 +260,7 @@ class ItemSalesReportController extends Controller
             $sheet->setCellValue(
                 'E' . $row,
                 $transaction->order->completed_at ?
-                    $transaction->order->completed_at->format('Y-m-d H:i') : 'N/A'
+                $transaction->order->completed_at->format('Y-m-d H:i') : 'N/A'
             );
             $totalQty += $transaction->quantity;
             $row++;
@@ -253,28 +290,37 @@ class ItemSalesReportController extends Controller
     }
 
     /**
-     * Get aggregated sales data for all items
+     * Get aggregated sales data for all items (grouped by item and portion)
      */
     private function getSalesData($fromDate, $toDate)
     {
-        // Get items that have sales in the date range
-        $salesData = OrderItem::with('item')
-            ->select('item_id', DB::raw('SUM(quantity) as total_quantity'))
+        // Get items that have sales in the date range, grouped by item_id and item_modifier_id (portion)
+        $salesData = OrderItem::with(['item', 'itemModifier'])
+            ->select('item_id', 'item_modifier_id', DB::raw('SUM(quantity) as total_quantity'))
             ->whereHas('order', function ($query) use ($fromDate, $toDate) {
                 $query->where('status', 'completed')
                     ->where('is_paid', true)
                     ->whereBetween(DB::raw('DATE(completed_at)'), [$fromDate, $toDate]);
             })
             ->where('status', '!=', 'cancelled')
-            ->groupBy('item_id')
+            ->groupBy('item_id', 'item_modifier_id')
             ->get()
             ->map(function ($orderItem) {
                 $item = $orderItem->item;
+                $modifier = $orderItem->itemModifier;
+
+                // Build display name: "Item Name - Portion" or just "Item Name" if no portion
+                $displayName = $item->name;
+                if ($modifier) {
+                    $displayName .= ' - ' . $modifier->name;
+                }
+
                 return [
                     'item_id' => $item->id,
+                    'item_modifier_id' => $modifier ? $modifier->id : null,
                     'item_code' => $item->id, // Using ID as code since item_code doesn't exist
-                    'item_name' => $item->name,
-                    'total_quantity' => (int)$orderItem->total_quantity
+                    'item_name' => $displayName,
+                    'total_quantity' => (int) $orderItem->total_quantity
                 ];
             })
             ->sortBy('item_name')
