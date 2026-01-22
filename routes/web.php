@@ -138,6 +138,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/verify-supervisor-pin', [App\Http\Controllers\POSController::class, 'verifySupervisorPin'])->name('verifySupervisorPin');
         Route::post('/void-items', [App\Http\Controllers\POSController::class, 'voidItems'])->name('voidItems');
         Route::post('/cancel-voided-order', [App\Http\Controllers\POSController::class, 'cancelVoidedOrder'])->name('cancelVoidedOrder');
+        Route::post('/transfer-table', [App\Http\Controllers\POSController::class, 'transferTable'])->name('transferTable');
     });
 
     // Stock Management Routes

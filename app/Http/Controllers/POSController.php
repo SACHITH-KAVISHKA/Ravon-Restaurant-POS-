@@ -1285,4 +1285,91 @@ class POSController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Transfer an order to a different table
+     */
+    public function transferTable(Request $request)
+    {
+        $validated = $request->validate([
+            'order_id' => 'required|exists:orders,id',
+            'new_table_id' => 'required|exists:tables,id',
+        ]);
+
+        DB::beginTransaction();
+        try {
+            $order = Order::with('table')->findOrFail($validated['order_id']);
+
+            // Validate order type
+            if ($order->order_type !== 'dine_in') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Only dine-in orders can be transferred'
+                ], 400);
+            }
+
+            // Validate order status
+            if ($order->is_paid || $order->status === 'completed') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cannot transfer a completed or paid order'
+                ], 400);
+            }
+
+            // Get the old and new tables
+            $oldTable = Table::find($order->table_id);
+            $newTable = Table::findOrFail($validated['new_table_id']);
+
+            // Check if new table is available
+            if ($newTable->status !== 'available') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'The selected table is not available'
+                ], 400);
+            }
+
+            // Check if trying to transfer to the same table
+            if ($order->table_id === $validated['new_table_id']) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Order is already on this table'
+                ], 400);
+            }
+
+            // Free up the old table
+            if ($oldTable) {
+                $oldTable->update([
+                    'status' => 'available',
+                    'current_order_id' => null,
+                ]);
+            }
+
+            // Reserve the new table
+            $newTable->update([
+                'status' => 'ordered',
+                'current_order_id' => $order->id,
+            ]);
+
+            // Update the order's table
+            $order->update([
+                'table_id' => $validated['new_table_id'],
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Table transferred successfully',
+                'order' => $order->load('table'),
+                'old_table' => $oldTable ? $oldTable->table_number : null,
+                'new_table' => $newTable->table_number,
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Error transferring table: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }

@@ -304,7 +304,7 @@
                 </div>
             </button>
 
-            <button class="w-full h-14 flex items-stretch shadow-sm group mb-2" onclick="transferTable()">
+            <button id="transferTableBtn" class="w-full h-14 flex items-stretch shadow-sm group mb-2" onclick="openTableTransferModal()">
                 <div class="bg-white text-cyan-500 p-3 rounded-l-lg flex items-center justify-center w-14">
                     <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
@@ -342,6 +342,28 @@
                 </div>
                 <div class="overflow-y-auto flex-1">
                     <div class="grid grid-cols-5 gap-4" id="tableGrid">
+                        <!-- Tables will be loaded dynamically -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Table Transfer Modal -->
+        <div id="tableTransferModal" class="hidden fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center">
+            <div class="bg-gray-800 rounded-xl p-6 max-w-4xl w-full mx-4 max-h-[90vh] flex flex-col">
+                <div class="flex justify-between items-center mb-4">
+                    <div>
+                        <h2 class="text-2xl font-bold text-white">Transfer Table</h2>
+                        <p class="text-sm text-gray-400 mt-1">Select a new table for this order</p>
+                    </div>
+                    <button onclick="closeModal('tableTransferModal')" class="text-gray-400 hover:text-white">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="overflow-y-auto flex-1">
+                    <div class="grid grid-cols-5 gap-4" id="tableTransferGrid">
                         <!-- Tables will be loaded dynamically -->
                     </div>
                 </div>
@@ -2010,6 +2032,9 @@
                     pickMeRefNumber = null; // Reset PickMe reference number
                     renderBill();
                     calculateTotals();
+                    
+                    // Update Transfer Table button visibility
+                    updateTransferTableButtonVisibility();
                 });
             }
 
@@ -2154,6 +2179,8 @@
 
             function openTakeAwayModal() {
                 setOrderType('takeaway', 'Take Away');
+                // Update Transfer Table button visibility (hide for non-dine-in orders)
+                updateTransferTableButtonVisibility();
             }
 
             // PickMe Food Modal Functions
@@ -2182,6 +2209,9 @@
 
                 // Set order type and show menu
                 setOrderType('pickme', 'PickMe Food - Ref: ' + refNumber);
+                
+                // Update Transfer Table button visibility (hide for PickMe orders)
+                updateTransferTableButtonVisibility();
             }
 
             async function selectTable(tableNumber, tableId) {
@@ -2201,6 +2231,9 @@
                 if (msg) msg.classList.add('hidden');
 
                 document.getElementById('tableModal').classList.add('hidden');
+                
+                // Update Transfer Table button visibility
+                updateTransferTableButtonVisibility();
             }
 
             function closeModal(modalId) {
@@ -2546,9 +2579,129 @@
                         if (msg) msg.classList.add('hidden');
 
                         showNotification('Order #' + result.order.order_number + ' loaded. You can add more items or close the order.', 'Order Loaded');
+
+                        // Show/hide Transfer Table button based on order type
+                        updateTransferTableButtonVisibility();
                     }
                 } catch (error) {
                     showNotification('Error loading order: ' + error.message, 'Error');
+                }
+            }
+
+            // Update Transfer Table button visibility
+            function updateTransferTableButtonVisibility() {
+                const transferBtn = document.getElementById('transferTableBtn');
+                if (transferBtn) {
+                    // Enable Transfer Table button only for dine-in orders with a table assigned
+                    if (currentOrderType === 'dine_in' && selectedTableId && currentOrderId) {
+                        transferBtn.disabled = false;
+                        transferBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                        transferBtn.classList.add('cursor-pointer');
+                    } else {
+                        transferBtn.disabled = true;
+                        transferBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                        transferBtn.classList.remove('cursor-pointer');
+                    }
+                }
+            }
+
+            // Open Table Transfer Modal
+            async function openTableTransferModal() {
+                if (!currentOrderId) {
+                    showNotification('No active order to transfer', 'No Order');
+                    return;
+                }
+
+                if (currentOrderType !== 'dine_in') {
+                    showNotification('Only dine-in orders can be transferred', 'Invalid Order Type');
+                    return;
+                }
+
+                if (!selectedTableId) {
+                    showNotification('Current order has no table assigned', 'No Table');
+                    return;
+                }
+
+                try {
+                    const response = await fetch('{{ route("pos.tables") }}');
+                    const result = await response.json();
+
+                    if (result.success) {
+                        const tableGrid = document.getElementById('tableTransferGrid');
+                        tableGrid.innerHTML = result.tables.map(table => {
+                            // Determine if this is the current table
+                            const isCurrentTable = table.id === selectedTableId;
+                            
+                            let bgColor = 'bg-green-600 hover:bg-green-700';
+                            let clickable = true;
+                            let label = '';
+
+                            if (isCurrentTable) {
+                                bgColor = 'bg-blue-600 cursor-not-allowed opacity-80';
+                                clickable = false;
+                                label = '<br><span class="text-xs">(Current Table)</span>';
+                            } else if (!table.is_available) {
+                                bgColor = 'bg-red-600 cursor-not-allowed opacity-60';
+                                clickable = false;
+                                label = '<br><span class="text-xs">(Reserved)</span>';
+                            }
+
+                            return `
+                                <button
+                                    ${clickable ? `onclick="confirmTableTransfer('${table.table_number}', ${table.id})"` : 'disabled'}
+                                    class="p-4 ${bgColor} text-white rounded-lg transition font-semibold">
+                                    ${table.table_number}
+                                    ${label}
+                                </button>
+                            `;
+                        }).join('');
+
+                        document.getElementById('tableTransferModal').classList.remove('hidden');
+                    }
+                } catch (error) {
+                    showNotification('Error loading tables: ' + error.message, 'Error');
+                }
+            }
+
+            // Confirm table transfer
+            async function confirmTableTransfer(newTableNumber, newTableId) {
+                if (!currentOrderId) {
+                    showNotification('No active order to transfer', 'No Order');
+                    return;
+                }
+
+                try {
+                    const response = await fetch('{{ route("pos.transferTable") }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                        },
+                        body: JSON.stringify({
+                            order_id: currentOrderId,
+                            new_table_id: newTableId
+                        })
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        // Update local state
+                        selectedTableId = newTableId;
+                        
+                        // Update display
+                        const display = document.getElementById('orderTypeDisplay');
+                        if (display) {
+                            display.textContent = 'Table: ' + newTableNumber;
+                        }
+
+                        closeModal('tableTransferModal');
+                        showNotification(`Order successfully transferred to ${newTableNumber}`, 'Transfer Complete');
+                    } else {
+                        showNotification(result.message || 'Failed to transfer table', 'Transfer Failed');
+                    }
+                } catch (error) {
+                    showNotification('Error transferring table: ' + error.message, 'Error');
                 }
             }
 
@@ -2663,14 +2816,6 @@
 
             function mergeOrder() {
                 showNotification('Merge order feature coming soon', 'Feature Unavailable');
-            }
-
-            function transferTable() {
-                showNotification('Table transfer feature coming soon', 'Feature Unavailable');
-            }
-
-            function printCopy() {
-                showNotification('Print feature coming soon', 'Feature Unavailable');
             }
 
             // Filter by category
@@ -3451,10 +3596,6 @@
 
             function mergeOrder() {
                 showNotification('Merge order feature coming soon', 'Feature Unavailable');
-            }
-
-            function transferTable() {
-                showNotification('Table transfer feature coming soon', 'Feature Unavailable');
             }
 
             function printCopy() {
