@@ -1372,4 +1372,138 @@ class POSController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Merge two orders - move items from source order to target order
+     */
+    public function mergeOrder(Request $request)
+    {
+        $validated = $request->validate([
+            'target_order_id' => 'required|exists:orders,id',
+            'source_order_id' => 'required|exists:orders,id',
+        ]);
+
+        // Prevent merging the same order
+        if ($validated['target_order_id'] === $validated['source_order_id']) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cannot merge an order with itself'
+            ], 400);
+        }
+
+        DB::beginTransaction();
+        try {
+            $targetOrder = Order::with('orderItems.item')->findOrFail($validated['target_order_id']);
+            $sourceOrder = Order::with('orderItems.item')->findOrFail($validated['source_order_id']);
+
+            // Validate both orders are pending and not paid
+            if ($targetOrder->is_paid || $targetOrder->status === 'completed') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cannot merge into a completed or paid order'
+                ], 400);
+            }
+
+            if ($sourceOrder->is_paid || $sourceOrder->status === 'completed') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cannot merge a completed or paid order'
+                ], 400);
+            }
+
+            // Get active items from source order
+            $sourceItems = $sourceOrder->orderItems()
+                ->whereNotIn('status', ['cancelled', 'deleted'])
+                ->get();
+
+            if ($sourceItems->isEmpty()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Source order has no active items to merge'
+                ], 400);
+            }
+
+            // Move items from source to target
+            foreach ($sourceItems as $sourceItem) {
+                // Check if similar item already exists in target order (same item_id and modifier_id)
+                $existingItem = $targetOrder->orderItems()
+                    ->where('item_id', $sourceItem->item_id)
+                    ->where('item_modifier_id', $sourceItem->item_modifier_id)
+                    ->where('item_display_name', $sourceItem->item_display_name)
+                    ->whereNotIn('status', ['cancelled', 'deleted'])
+                    ->first();
+
+                if ($existingItem) {
+                    // Merge quantities for existing item
+                    $newQuantity = $existingItem->quantity + $sourceItem->quantity;
+                    $newSubtotal = $existingItem->unit_price * $newQuantity;
+
+                    $existingItem->update([
+                        'quantity' => $newQuantity,
+                        'subtotal' => $newSubtotal
+                    ]);
+
+                    // Mark source item as merged/cancelled
+                    $sourceItem->update([
+                        'status' => 'cancelled',
+                        'quantity' => 0,
+                        'subtotal' => 0
+                    ]);
+                } else {
+                    // Move item to target order
+                    $sourceItem->update([
+                        'order_id' => $targetOrder->id
+                    ]);
+                }
+            }
+
+            // Recalculate target order totals
+            $targetOrder->refresh();
+            $subtotalFromAllItems = $targetOrder->orderItems()
+                ->whereNotIn('status', ['cancelled', 'deleted'])
+                ->sum('subtotal');
+
+            $targetOrder->update([
+                'subtotal' => $subtotalFromAllItems,
+                'total_amount' => $subtotalFromAllItems,
+            ]);
+
+            // Cancel the source order
+            $sourceOrder->update([
+                'status' => 'cancelled',
+                'cancelled_at' => now(),
+                'cancelled_by' => Auth::id(),
+                'cancellation_reason' => 'Merged into Order #' . $targetOrder->order_number,
+                'subtotal' => 0,
+                'total_amount' => 0,
+            ]);
+
+            // Free up the source table if dine-in
+            if ($sourceOrder->table_id) {
+                $sourceTable = Table::find($sourceOrder->table_id);
+                if ($sourceTable) {
+                    $sourceTable->update([
+                        'status' => 'available',
+                        'current_order_id' => null,
+                    ]);
+                }
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Order #' . $sourceOrder->order_number . ' merged into Order #' . $targetOrder->order_number . ' successfully',
+                'target_order' => $targetOrder->load('orderItems.item'),
+                'new_total' => $targetOrder->total_amount,
+                'merged_items_count' => $sourceItems->count(),
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Error merging orders: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }
