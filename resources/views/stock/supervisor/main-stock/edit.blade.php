@@ -125,6 +125,21 @@
                         @enderror
                     </div>
 
+                    <!-- Normalization (only for Raw Materials) -->
+                    <div id="normalization-field" class="{{ old('item_type', $item->item_type) === 'raw_material' ? '' : 'hidden' }}">
+                        <label for="normalization" class="block text-sm font-medium text-gray-700 mb-1">
+                            Normalization Factor
+                        </label>
+                        <input type="number" name="normalization" id="normalization" 
+                            value="{{ old('normalization', $item->normalization) }}"
+                            class="form-input w-full px-4 py-2.5 border border-gray-200 rounded-lg" 
+                            step="0.0001" min="0" placeholder="Optional - e.g., 1.5">
+                        <p class="mt-1 text-xs text-gray-500">If set, displayed quantity = actual quantity × normalization</p>
+                        @error('normalization')
+                        <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
+                        @enderror
+                    </div>
+
                 </div>
 
                 <!-- Linked Menu Item Row (Only for Finished Goods) -->
@@ -194,16 +209,30 @@
 </div>
 
 <script>
-    // Handle item type change - show/hide finished goods dropdown
+    // Handle item type change - show/hide finished goods dropdown and normalization field
     function handleItemTypeChange() {
         const itemType = document.getElementById('item_type').value;
         const finishedGoodsRow = document.getElementById('finished-goods-row');
+        const normalizationField = document.getElementById('normalization-field');
+        const normalizationInput = document.getElementById('normalization');
 
         if (itemType === 'finished_good') {
             finishedGoodsRow.classList.remove('hidden');
+            normalizationField.classList.add('hidden');
+            if (normalizationInput) {
+                normalizationInput.value = '';
+            }
+        } else if (itemType === 'raw_material') {
+            finishedGoodsRow.classList.add('hidden');
+            document.getElementById('linked_item_id').value = '';
+            normalizationField.classList.remove('hidden');
         } else {
             finishedGoodsRow.classList.add('hidden');
             document.getElementById('linked_item_id').value = '';
+            normalizationField.classList.add('hidden');
+            if (normalizationInput) {
+                normalizationInput.value = '';
+            }
         }
     }
 

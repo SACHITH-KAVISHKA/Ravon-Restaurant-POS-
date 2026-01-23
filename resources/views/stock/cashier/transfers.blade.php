@@ -435,13 +435,14 @@
         }
 
         // Items
-        document.getElementById('modal-items-body').innerHTML = transfer.items.map(item => `
+        document.getElementById('modal-items-body').innerHTML = transfer.items.map(item => {
+            return `
             <tr class="border-b border-gray-100">
                 <td class="py-3 font-medium text-gray-700">${item.item_name}</td>
                 <td class="py-3 text-center text-gray-600 font-semibold">${parseFloat(item.quantity).toFixed(3)}</td>
                 <td class="py-3 text-center text-gray-500">${item.main_stock_item?.unit_abbreviation || 'pcs'}</td>
             </tr>
-        `).join('');
+        `}).join('');
 
         // Show/hide appropriate footer
         const isPending = transfer.status === 'pending';

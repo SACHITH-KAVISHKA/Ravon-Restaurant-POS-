@@ -244,6 +244,7 @@
                                     <th style="width: 180px;">Linked Menu Item</th>
                                     <th style="width: 130px;">Item Type <span class="text-red-500">*</span></th>
                                     <th style="width: 120px;">Unit <span class="text-red-500">*</span></th>
+                                    <th style="width: 100px;">Normalization</th>
                                     <th style="width: 40px;"></th>
                                 </tr>
                             </thead>
@@ -502,6 +503,9 @@
                                         ${getUnitTypeOptions()}
                                     </select>
                                 </td>
+                                <td class="normalization-cell" id="normalization-cell-${rowCounter}">
+                                    <input type="number" name="items[${rowCounter}][normalization]" class="normalization-input" step="0.0001" min="0" placeholder="Optional" title="Normalization factor for raw materials">
+                                </td>
                                 <td>
                                     <button type="button" class="remove-row-btn" onclick="removeRow(${rowCounter})" title="Remove row">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -580,6 +584,8 @@
             const linkedCell = document.getElementById(`linked-cell-${rowId}`);
             const linkedSelect = linkedCell.querySelector('.linked-item-select');
             const itemNameInput = row.querySelector('.item-name-input');
+            const normalizationCell = document.getElementById(`normalization-cell-${rowId}`);
+            const normalizationInput = normalizationCell ? normalizationCell.querySelector('.normalization-input') : null;
             const newType = selectElement.value;
 
             // Regenerate item code based on type
@@ -594,6 +600,15 @@
                 itemNameInput.readOnly = true;
                 itemNameInput.placeholder = 'Auto-filled';
                 itemNameInput.style.backgroundColor = '#f3f4f6';
+                // Hide normalization for finished goods
+                if (normalizationCell) {
+                    normalizationCell.style.opacity = '0.5';
+                    if (normalizationInput) {
+                        normalizationInput.disabled = true;
+                        normalizationInput.value = '';
+                        normalizationInput.placeholder = 'N/A';
+                    }
+                }
             } else {
                 linkedCell.classList.remove('show');
                 linkedSelect.required = false;
@@ -601,6 +616,23 @@
                 itemNameInput.readOnly = false;
                 itemNameInput.placeholder = 'e.g., Rice, Oil';
                 itemNameInput.style.backgroundColor = '';
+                // Show normalization only for raw materials
+                if (normalizationCell) {
+                    if (newType === 'raw_material') {
+                        normalizationCell.style.opacity = '1';
+                        if (normalizationInput) {
+                            normalizationInput.disabled = false;
+                            normalizationInput.placeholder = 'Optional';
+                        }
+                    } else {
+                        normalizationCell.style.opacity = '0.5';
+                        if (normalizationInput) {
+                            normalizationInput.disabled = true;
+                            normalizationInput.value = '';
+                            normalizationInput.placeholder = 'N/A';
+                        }
+                    }
+                }
             }
         }
 

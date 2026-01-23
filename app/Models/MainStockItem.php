@@ -19,6 +19,7 @@ class MainStockItem extends Model
         'linked_item_id',
         'linked_item_modifier_id',
         'quantity',
+        'normalization',
         'is_active',
         'created_by',
         'updated_by',
@@ -26,6 +27,7 @@ class MainStockItem extends Model
 
     protected $casts = [
         'quantity' => 'decimal:3',
+        'normalization' => 'decimal:4',
         'is_active' => 'boolean',
     ];
 
@@ -34,6 +36,7 @@ class MainStockItem extends Model
      */
     protected $appends = [
         'unit_abbreviation',
+        'normalized_quantity',
     ];
 
     /**
@@ -113,6 +116,16 @@ class MainStockItem extends Model
     public function getUnitAbbreviationAttribute(): string
     {
         return self::UNIT_ABBREVIATIONS[$this->unit_type] ?? $this->unit_type;
+    }
+
+    /**
+     * Get normalized quantity.
+     * Since quantity is already stored as normalized (input * normalization),
+     * this just returns the quantity. This accessor is kept for compatibility.
+     */
+    public function getNormalizedQuantityAttribute(): float
+    {
+        return (float) $this->quantity;
     }
 
     /**

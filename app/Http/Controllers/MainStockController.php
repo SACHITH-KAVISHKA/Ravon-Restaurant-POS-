@@ -127,6 +127,7 @@ class MainStockController extends Controller
             'items.*.linked_item_id' => 'nullable|exists:items,id',
             'items.*.linked_item_modifier_id' => 'nullable|exists:item_modifiers,id',
             'items.*.quantity' => 'nullable|numeric|min:0',
+            'items.*.normalization' => 'nullable|numeric|min:0',
         ]);
 
         // Check for duplicate item codes and names within the submitted items
@@ -193,6 +194,11 @@ class MainStockController extends Controller
                     }
                 }
 
+                // Normalization only applies to raw materials
+                $normalization = ($itemData['item_type'] === 'raw_material' && !empty($itemData['normalization']))
+                    ? $itemData['normalization']
+                    : null;
+
                 $item = MainStockItem::create([
                     'item_code' => $itemData['item_code'],
                     'item_name' => $itemData['item_name'],
@@ -201,6 +207,7 @@ class MainStockController extends Controller
                     'linked_item_id' => $linkedItemId,
                     'linked_item_modifier_id' => $linkedModifierId,
                     'quantity' => $quantity,
+                    'normalization' => $normalization,
                     'is_active' => true,
                     'created_by' => Auth::id(),
                     'updated_by' => Auth::id(),
@@ -304,16 +311,23 @@ class MainStockController extends Controller
             'item_name' => ['required', 'string', 'max:255', Rule::unique('main_stock_items', 'item_name')->ignore($mainStock->id)],
             'unit_type' => ['required', Rule::in(array_keys(MainStockItem::UNIT_TYPES))],
             'item_type' => ['required', Rule::in(array_keys(MainStockItem::ITEM_TYPES))],
+            'normalization' => 'nullable|numeric|min:0',
             'is_active' => 'boolean',
         ], [
             'item_name.unique' => 'Item Already Exists',
         ]);
+
+        // Normalization only applies to raw materials
+        $normalization = ($validated['item_type'] === 'raw_material' && !empty($validated['normalization']))
+            ? $validated['normalization']
+            : null;
 
         $mainStock->update([
             'item_code' => $validated['item_code'],
             'item_name' => $validated['item_name'],
             'unit_type' => $validated['unit_type'],
             'item_type' => $validated['item_type'],
+            'normalization' => $normalization,
             'is_active' => $validated['is_active'] ?? true,
             'updated_by' => Auth::id(),
         ]);
@@ -379,7 +393,14 @@ class MainStockController extends Controller
 
             foreach ($validated['items'] as $itemData) {
                 $item = MainStockItem::findOrFail($itemData['item_id']);
-                $qty = $itemData['quantity'];
+                $inputQty = $itemData['quantity'];
+                
+                // Apply normalization if item is raw material and has normalization value
+                $qty = $inputQty;
+                if ($item->item_type === 'raw_material' && $item->normalization) {
+                    $qty = $inputQty * (float) $item->normalization;
+                }
+                
                 $quantityBefore = $item->quantity;
 
                 // Add to main stock
@@ -402,6 +423,8 @@ class MainStockController extends Controller
                 $updatedItems[] = [
                     'item_name' => $item->item_name,
                     'quantity_added' => $qty,
+                    'input_quantity' => $inputQty,
+                    'normalization' => $item->normalization,
                     'new_quantity' => $quantityAfter,
                     'unit' => $item->unit_abbreviation,
                 ];

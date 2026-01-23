@@ -395,6 +395,8 @@
                                     data-qty="${i.quantity}" 
                                     data-unit="${i.unit_abbreviation}"
                                     data-name="${i.item_name}"
+                                    data-normalization="${i.normalization || ''}"
+                                    data-item-type="${i.item_type || ''}"
                                     ${i.id === item.id ? 'selected' : ''}>${i.item_code} - ${i.item_name}</option>
                         `).join('')}
                     </select>
