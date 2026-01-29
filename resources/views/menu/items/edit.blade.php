@@ -623,43 +623,42 @@
             recipeDiv.id = `recipe-new-${recipeCount}`;
             recipeDiv.className = 'flex gap-2 items-center bg-white p-2 rounded border border-amber-200 shadow-sm';
 
-            let optionsHtml = getRecipeOptionsHtml('recipesList');
-
             recipeDiv.innerHTML = `
-                    <div class="flex-1 grid grid-cols-3 gap-2">
-                        <div class="col-span-1">
-                            <select name="recipes[new][${recipeCount}][main_stock_item_id]" required
-                                onchange="updateNewRecipeUnit(${recipeCount}); refreshRecipeDropdowns('recipesList');"
-                                class="w-full px-3 py-2 bg-gray-50 text-gray-800 rounded-lg border border-amber-300 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200 text-sm">
-                                ${optionsHtml}
-                            </select>
+                        <div class="flex-1 grid grid-cols-3 gap-2">
+                            <div class="col-span-1 relative">
+                                <input type="hidden" name="recipes[new][${recipeCount}][main_stock_item_id]" id="recipeHidden-new-${recipeCount}" required>
+                                <input type="text" id="recipeSearch-new-${recipeCount}" placeholder="Type to search..."
+                                    autocomplete="off"
+                                    class="w-full px-3 py-2 bg-gray-50 text-gray-800 rounded-lg border border-amber-300 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200 text-sm">
+                                <div id="recipeDropdown-new-${recipeCount}" class="absolute z-50 w-full mt-1 bg-white border border-amber-300 rounded-lg shadow-lg max-h-40 overflow-y-auto hidden">
+                                </div>
+                            </div>
+                            <div>
+                                <input type="number" name="recipes[new][${recipeCount}][quantity]" step="0.001" min="0.001" required
+                                    placeholder="Quantity"
+                                    onkeydown="handleNewRecipeTabKey(event, ${recipeCount})"
+                                    class="w-full px-3 py-2 bg-gray-50 text-gray-800 rounded-lg border border-amber-300 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200 text-sm">
+                            </div>
+                            <div class="flex items-center">
+                                <span id="recipeUnit-new-${recipeCount}" class="text-sm text-gray-600 font-medium px-2">--</span>
+                            </div>
                         </div>
-                        <div>
-                            <input type="number" name="recipes[new][${recipeCount}][quantity]" step="0.001" min="0.001" required
-                                placeholder="Quantity"
-                                onkeydown="handleNewRecipeTabKey(event, ${recipeCount})"
-                                class="w-full px-3 py-2 bg-gray-50 text-gray-800 rounded-lg border border-amber-300 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200 text-sm">
-                        </div>
-                        <div class="flex items-center">
-                            <span id="recipeUnit-new-${recipeCount}" class="text-sm text-gray-600 font-medium px-2">--</span>
-                        </div>
-                    </div>
-                    <button type="button" onclick="removeNewRecipe(${recipeCount})" 
-                        class="px-2 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition shadow-sm hover:shadow-md">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
-                `;
+                        <button type="button" onclick="removeNewRecipe(${recipeCount})" 
+                            class="px-2 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition shadow-sm hover:shadow-md">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    `;
 
             container.appendChild(recipeDiv);
+            initSearchableRecipeDropdownEdit(recipeCount);
         }
 
         function removeNewRecipe(id) {
             const element = document.getElementById(`recipe-new-${id}`);
             if (element) {
                 element.remove();
-                refreshRecipeDropdowns('recipesList');
             }
         }
 
@@ -672,15 +671,119 @@
                 deleteInput.value = id;
                 document.querySelector('form').appendChild(deleteInput);
                 element.remove();
-                refreshRecipeDropdowns('recipesList');
             }
         }
 
-        function updateNewRecipeUnit(rowId) {
-            const select = document.querySelector(`select[name="recipes[new][${rowId}][main_stock_item_id]"]`);
+        function updateNewRecipeUnit(rowId, unit) {
             const unitSpan = document.getElementById(`recipeUnit-new-${rowId}`);
-            const selectedOption = select.options[select.selectedIndex];
-            unitSpan.textContent = selectedOption.dataset.unit || '--';
+            if (unitSpan) {
+                unitSpan.textContent = unit || '--';
+            }
+        }
+
+        // Searchable Recipe Dropdown Initialization for Edit page
+        function initSearchableRecipeDropdownEdit(rowId) {
+            const searchInput = document.getElementById(`recipeSearch-new-${rowId}`);
+            const dropdown = document.getElementById(`recipeDropdown-new-${rowId}`);
+            const hiddenInput = document.getElementById(`recipeHidden-new-${rowId}`);
+
+            function getSelectedIds() {
+                const selectedIds = [];
+                // Get IDs from new recipe rows
+                document.querySelectorAll(`[id^="recipeHidden-new-"]`).forEach(input => {
+                    if (input.id !== `recipeHidden-new-${rowId}` && input.value) {
+                        selectedIds.push(parseInt(input.value));
+                    }
+                });
+                // Get IDs from existing recipe rows
+                document.querySelectorAll(`select[name^="recipes[existing]"]`).forEach(select => {
+                    if (select.value) {
+                        selectedIds.push(parseInt(select.value));
+                    }
+                });
+                return selectedIds;
+            }
+
+            function populateOptions(searchTerm = '') {
+                const selectedIds = getSelectedIds();
+                dropdown.innerHTML = '';
+
+                rawMaterials.forEach(item => {
+                    if (selectedIds.includes(item.id)) return;
+
+                    const name = item.item_name.toLowerCase();
+                    if (searchTerm && !name.includes(searchTerm.toLowerCase())) return;
+
+                    const optionDiv = document.createElement('div');
+                    optionDiv.className = 'recipe-option px-3 py-2 hover:bg-amber-100 cursor-pointer transition text-sm';
+                    optionDiv.dataset.id = item.id;
+                    optionDiv.dataset.name = item.item_name;
+                    optionDiv.dataset.unit = item.unit_abbreviation || '';
+                    optionDiv.textContent = item.item_name;
+
+                    optionDiv.addEventListener('click', function () {
+                        searchInput.value = this.dataset.name;
+                        hiddenInput.value = this.dataset.id;
+                        updateNewRecipeUnit(rowId, this.dataset.unit);
+                        dropdown.classList.add('hidden');
+                    });
+
+                    dropdown.appendChild(optionDiv);
+                });
+            }
+
+            searchInput.addEventListener('focus', function () {
+                populateOptions('');
+                dropdown.classList.remove('hidden');
+            });
+
+            searchInput.addEventListener('input', function () {
+                populateOptions(this.value);
+                dropdown.classList.remove('hidden');
+                hiddenInput.value = '';
+                updateNewRecipeUnit(rowId, '--');
+            });
+
+            document.addEventListener('click', function (e) {
+                if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
+                    dropdown.classList.add('hidden');
+                }
+            });
+
+            searchInput.addEventListener('keydown', function (e) {
+                const options = dropdown.querySelectorAll('.recipe-option');
+                const currentIndex = [...options].findIndex(o => o.classList.contains('bg-amber-200'));
+
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    options.forEach(o => o.classList.remove('bg-amber-200'));
+                    const nextIndex = currentIndex < options.length - 1 ? currentIndex + 1 : 0;
+                    options[nextIndex]?.classList.add('bg-amber-200');
+                    options[nextIndex]?.scrollIntoView({ block: 'nearest' });
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    options.forEach(o => o.classList.remove('bg-amber-200'));
+                    const prevIndex = currentIndex > 0 ? currentIndex - 1 : options.length - 1;
+                    options[prevIndex]?.classList.add('bg-amber-200');
+                    options[prevIndex]?.scrollIntoView({ block: 'nearest' });
+                } else if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const highlighted = [...options].find(o => o.classList.contains('bg-amber-200'));
+                    if (highlighted) {
+                        searchInput.value = highlighted.dataset.name;
+                        hiddenInput.value = highlighted.dataset.id;
+                        updateNewRecipeUnit(rowId, highlighted.dataset.unit);
+                        dropdown.classList.add('hidden');
+                    } else if (options.length === 1) {
+                        searchInput.value = options[0].dataset.name;
+                        hiddenInput.value = options[0].dataset.id;
+                        updateNewRecipeUnit(rowId, options[0].dataset.unit);
+                        dropdown.classList.add('hidden');
+                    }
+                } else if (e.key === 'Escape') {
+                    dropdown.classList.add('hidden');
+                }
+            });
         }
 
         function handleNewRecipeTabKey(event, currentId) {
@@ -690,8 +793,8 @@
                     event.preventDefault();
                     addRecipeRow();
                     setTimeout(() => {
-                        const newSelect = document.querySelector(`select[name="recipes[new][${recipeCount}][main_stock_item_id]"]`);
-                        if (newSelect) newSelect.focus();
+                        const newInput = document.getElementById(`recipeSearch-new-${recipeCount}`);
+                        if (newInput) newInput.focus();
                     }, 50);
                 }
             }
@@ -748,25 +851,25 @@
             priceDiv.className = 'flex gap-2 items-center bg-white p-2 rounded border border-purple-200 shadow-sm';
 
             priceDiv.innerHTML = `
-                <div class="flex-1 grid grid-cols-2 gap-2">
-                    <div>
-                        <select name="special_prices[new][${specialPriceCount}][type]" required
-                            class="w-full px-3 py-2 bg-gray-50 text-gray-800 rounded-lg border border-purple-300 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 text-sm">
-                            <option value="pickme" selected>Pick Me</option>
-                        </select>
+                    <div class="flex-1 grid grid-cols-2 gap-2">
+                        <div>
+                            <select name="special_prices[new][${specialPriceCount}][type]" required
+                                class="w-full px-3 py-2 bg-gray-50 text-gray-800 rounded-lg border border-purple-300 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 text-sm">
+                                <option value="pickme" selected>Pick Me</option>
+                            </select>
+                        </div>
+                        <div>
+                            <input type="number" name="special_prices[new][${specialPriceCount}][price]" step="0.01" min="0" required
+                                placeholder="Price" class="w-full px-3 py-2 bg-gray-50 text-gray-800 rounded-lg border border-purple-300 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 text-sm">
+                        </div>
                     </div>
-                    <div>
-                        <input type="number" name="special_prices[new][${specialPriceCount}][price]" step="0.01" min="0" required
-                            placeholder="Price" class="w-full px-3 py-2 bg-gray-50 text-gray-800 rounded-lg border border-purple-300 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 text-sm">
-                    </div>
-                </div>
-                <button type="button" onclick="removeSpecialPrice(${specialPriceCount})" 
-                    class="px-2 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition shadow-sm hover:shadow-md">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
-            `;
+                    <button type="button" onclick="removeSpecialPrice(${specialPriceCount})" 
+                        class="px-2 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition shadow-sm hover:shadow-md">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                `;
 
             container.appendChild(priceDiv);
             updateItemSpecialPriceInputs();
@@ -834,19 +937,19 @@
             priceDiv.className = 'flex gap-1 items-center';
 
             priceDiv.innerHTML = `
-                <select name="portion_special_prices[${newPortionSpecialPriceCount}][type]" required
-                    class="px-2 py-1.5 bg-purple-50 text-gray-800 rounded-lg border border-purple-200 focus:outline-none focus:border-purple-500 text-xs">
-                    <option value="pickme" selected>Pick Me</option>
-                </select>
-                <input type="number" name="portion_special_prices[${newPortionSpecialPriceCount}][price]" step="0.01" min="0" required
-                    placeholder="Price" class="w-20 px-2 py-1.5 bg-purple-50 text-gray-800 rounded-lg border border-purple-200 focus:outline-none focus:border-purple-500 text-xs">
-                <button type="button" onclick="removeNewPortionSpecialPrice(${newPortionSpecialPriceCount})" 
-                    class="px-1.5 py-1.5 bg-red-500 text-white rounded hover:bg-red-600 transition">
-                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
-            `;
+                    <select name="portion_special_prices[${newPortionSpecialPriceCount}][type]" required
+                        class="px-2 py-1.5 bg-purple-50 text-gray-800 rounded-lg border border-purple-200 focus:outline-none focus:border-purple-500 text-xs">
+                        <option value="pickme" selected>Pick Me</option>
+                    </select>
+                    <input type="number" name="portion_special_prices[${newPortionSpecialPriceCount}][price]" step="0.01" min="0" required
+                        placeholder="Price" class="w-20 px-2 py-1.5 bg-purple-50 text-gray-800 rounded-lg border border-purple-200 focus:outline-none focus:border-purple-500 text-xs">
+                    <button type="button" onclick="removeNewPortionSpecialPrice(${newPortionSpecialPriceCount})" 
+                        class="px-1.5 py-1.5 bg-red-500 text-white rounded hover:bg-red-600 transition">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                `;
 
             container.appendChild(priceDiv);
             updateNewPortionSpecialPrices();
@@ -893,193 +996,185 @@
             newPortionRecipeCount++;
             const container = document.getElementById('newPortionRecipes');
 
-            let optionsHtml = '<option value="">-- Select --</option>';
-            rawMaterials.forEach(item => {
-                optionsHtml += `<option value="${item.id}" data-unit="${item.unit_abbreviation}">${item.item_name}</option>`;
-            });
-
             const recipeDiv = document.createElement('div');
-            recipeDiv.id = `newPortionRecipe-${newPortionRecipeCount}`;
-            recipeDiv.className = 'flex gap-1 items-center';
+                recipeDiv.id = `newPortionRecipe-${newPortionRecipeCount}`;
+                recipeDiv.className = 'flex gap-1 items-center';
 
-            recipeDiv.innerHTML = `
-                    <select name="portion_recipes[${newPortionRecipeCount}][main_stock_item_id]" required
-                        onchange="updateNewPortionRecipeUnit(${newPortionRecipeCount})"
-                        class="flex-1 px-2 py-1.5 bg-amber-50 text-gray-800 rounded-lg border border-amber-200 focus:outline-none focus:border-amber-500 text-xs">
-                        ${optionsHtml}
-                    </select>
-                    <input type="number" name="portion_recipes[${newPortionRecipeCount}][quantity]" step="0.001" min="0.001" required
-                        placeholder="Qty"
-                        onkeydown="handleNewPortionRecipeTabKey(event, ${newPortionRecipeCount})"
-                        class="w-16 px-2 py-1.5 bg-amber-50 text-gray-800 rounded-lg border border-amber-200 focus:outline-none focus:border-amber-500 text-xs">
-                    <span id="newPortionRecipeUnit-${newPortionRecipeCount}" class="text-xs text-gray-600 w-8">--</span>
-                    <button type="button" onclick="removeNewPortionRecipe(${newPortionRecipeCount})" 
-                        class="px-1.5 py-1.5 bg-red-500 text-white rounded hover:bg-red-600 transition">
-                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
-                `;
+                recipeDiv.innerHTML = `
+                        <div class="relative flex-1">
+                            <input type="hidden" name="portion_recipes[${newPortionRecipeCount}][main_stock_item_id]" 
+                                id="newPortionRecipeHidden-${newPortionRecipeCount}" required>
+                            <input type="text" id="newPortionRecipeSearch-${newPortionRecipeCount}" placeholder="Search..."
+                                autocomplete="off"
+                                class="w-full px-2 py-1.5 bg-amber-50 text-gray-800 rounded-lg border border-amber-200 focus:outline-none focus:border-amber-500 text-xs">
+                            <div id="newPortionRecipeDropdown-${newPortionRecipeCount}" 
+                                class="absolute z-50 w-full mt-1 bg-white border border-amber-200 rounded-lg shadow-lg max-h-32 overflow-y-auto hidden">
+                            </div>
+                        </div>
+                        <input type="number" name="portion_recipes[${newPortionRecipeCount}][quantity]" step="0.001" min="0.001" required
+                            placeholder="Qty"
+                            onkeydown="handleNewPortionRecipeTabKey(event, ${newPortionRecipeCount})"
+                            class="w-16 px-2 py-1.5 bg-amber-50 text-gray-800 rounded-lg border border-amber-200 focus:outline-none focus:border-amber-500 text-xs">
+                        <span id="newPortionRecipeUnit-${newPortionRecipeCount}" class="text-xs text-gray-600 w-8">--</span>
+                        <button type="button" onclick="removeNewPortionRecipe(${newPortionRecipeCount})" 
+                            class="px-1.5 py-1.5 bg-red-500 text-white rounded hover:bg-red-600 transition">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    `;
 
-            container.appendChild(recipeDiv);
-        }
+                container.appendChild(recipeDiv);
+                initNewPortionRecipeDropdown(newPortionRecipeCount);
+            }
 
-        function removeNewPortionRecipe(id) {
-            const element = document.getElementById(`newPortionRecipe-${id}`);
-            if (element) element.remove();
-        }
+            function removeNewPortionRecipe(id) {
+                const element = document.getElementById(`newPortionRecipe-${id}`);
+                if (element) element.remove();
+            }
 
-        function updateNewPortionRecipeUnit(recipeId) {
-            const select = document.querySelector(`select[name="portion_recipes[${recipeId}][main_stock_item_id]"]`);
-            const unitSpan = document.getElementById(`newPortionRecipeUnit-${recipeId}`);
-            const selectedOption = select.options[select.selectedIndex];
-            unitSpan.textContent = selectedOption.dataset.unit || '--';
-        }
-
-        function handleNewPortionRecipeTabKey(event, currentId) {
-            if (event.key === 'Tab' && !event.shiftKey) {
-                const container = document.getElementById('newPortionRecipes');
-                const lastRecipe = container.querySelector(':scope > div:last-child');
-                if (lastRecipe && lastRecipe.id === `newPortionRecipe-${currentId}`) {
-                    event.preventDefault();
-                    addNewPortionRecipe();
-                    setTimeout(() => {
-                        const newSelect = document.querySelector(`select[name="portion_recipes[${newPortionRecipeCount}][main_stock_item_id]"]`);
-                        if (newSelect) newSelect.focus();
-                    }, 50);
+            function updateNewPortionRecipeUnit(recipeId, unit) {
+                const unitSpan = document.getElementById(`newPortionRecipeUnit-${recipeId}`);
+                if (unitSpan) {
+                    unitSpan.textContent = unit || '--';
                 }
             }
-        }
 
-        // Special Price Management for Edit Portion
-        function addEditPortionSpecialPrice(modifierId) {
-            if (!editPortionSpecialPriceCounts[modifierId]) {
-                editPortionSpecialPriceCounts[modifierId] = 0;
-            }
-            editPortionSpecialPriceCounts[modifierId]++;
+            function initNewPortionRecipeDropdown(recipeId) {
+                const searchInput = document.getElementById(`newPortionRecipeSearch-${recipeId}`);
+                const dropdown = document.getElementById(`newPortionRecipeDropdown-${recipeId}`);
+                const hiddenInput = document.getElementById(`newPortionRecipeHidden-${recipeId}`);
 
-            const container = document.getElementById(`editPortionSpecialPrices-${modifierId}`);
-            const priceId = editPortionSpecialPriceCounts[modifierId];
-
-            const priceDiv = document.createElement('div');
-            priceDiv.id = `modifierSpecialPrice-${modifierId}-${priceId}`;
-            priceDiv.className = 'flex gap-1 items-center';
-
-            priceDiv.innerHTML = `
-                <select name="modifier_special_prices[new][${modifierId}][${priceId}][type]" required
-                    class="px-2 py-1.5 bg-purple-50 text-gray-800 rounded-lg border border-purple-200 focus:outline-none focus:border-purple-500 text-xs">
-                    <option value="pickme" selected>Pick Me</option>
-                </select>
-                <input type="number" name="modifier_special_prices[new][${modifierId}][${priceId}][price]" step="0.01" min="0" required
-                    placeholder="Price" class="w-20 px-2 py-1.5 bg-purple-50 text-gray-800 rounded-lg border border-purple-200 focus:outline-none focus:border-purple-500 text-xs">
-                <input type="hidden" name="modifier_special_prices[new][${modifierId}][${priceId}][modifier_id]" value="${modifierId}">
-                <button type="button" onclick="removeEditPortionSpecialPrice(${modifierId}, ${priceId})" 
-                    class="px-1.5 py-1.5 bg-red-500 text-white rounded hover:bg-red-600 transition">
-                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
-            `;
-
-            container.appendChild(priceDiv);
-            updateEditPortionSpecialPrices(modifierId);
-        }
-
-        function removeEditPortionSpecialPrice(modifierId, priceId) {
-            const element = document.getElementById(`modifierSpecialPrice-${modifierId}-${priceId}`);
-            if (element) {
-                element.remove();
-            }
-            updateEditPortionSpecialPrices(modifierId);
-        }
-
-        function removeExistingModifierSpecialPrice(id) {
-            const element = document.getElementById(`modifierSpecialPrice-existing-${id}`);
-            if (element) {
-                const deleteInput = document.createElement('input');
-                deleteInput.type = 'hidden';
-                deleteInput.name = `modifier_special_prices[delete][]`;
-                deleteInput.value = id;
-                document.querySelector('form').appendChild(deleteInput);
-                element.remove();
-            }
-        }
-
-        function updateEditPortionSpecialPrices(modifierId) {
-            const container = document.getElementById(`editPortionSpecialPrices-${modifierId}`);
-            const specialPrices = container.querySelectorAll('[id^="modifierSpecialPrice-"]');
-
-            const pickmePrice = Array.from(specialPrices).find(sp => {
-                const select = sp.querySelector('select');
-                return select && select.value === 'pickme';
-            });
-
-            let hiddenInput = document.getElementById(`edit_portion_pickme_price_hidden_${modifierId}`);
-            if (pickmePrice) {
-                const priceInput = pickmePrice.querySelector('input[type="number"]');
-                if (!hiddenInput) {
-                    hiddenInput = document.createElement('input');
-                    hiddenInput.type = 'hidden';
-                    hiddenInput.id = `edit_portion_pickme_price_hidden_${modifierId}`;
-                    hiddenInput.name = 'pickme_price';
-                    const form = pickmePrice.closest('form');
-                    if (form) form.appendChild(hiddenInput);
+                function getSelectedIds() {
+                    const selectedIds = [];
+                    document.querySelectorAll(`[id^="newPortionRecipeHidden-"]`).forEach(input => {
+                        if (input.id !== `newPortionRecipeHidden-${recipeId}` && input.value) {
+                            selectedIds.push(parseInt(input.value));
+                        }
+                    });
+                    return selectedIds;
                 }
-                if (hiddenInput) {
-                    hiddenInput.value = priceInput.value;
-                    priceInput.addEventListener('input', function () {
-                        hiddenInput.value = this.value;
+
+                function populateOptions(searchTerm = '') {
+                    const selectedIds = getSelectedIds();
+                    dropdown.innerHTML = '';
+
+                    rawMaterials.forEach(item => {
+                        if (selectedIds.includes(item.id)) return;
+
+                        const name = item.item_name.toLowerCase();
+                        if (searchTerm && !name.includes(searchTerm.toLowerCase())) return;
+
+                        const optionDiv = document.createElement('div');
+                        optionDiv.className = 'portion-recipe-option px-2 py-1.5 hover:bg-amber-100 cursor-pointer transition text-xs';
+                        optionDiv.dataset.id = item.id;
+                        optionDiv.dataset.name = item.item_name;
+                        optionDiv.dataset.unit = item.unit_abbreviation || '';
+                        optionDiv.textContent = item.item_name;
+
+                        optionDiv.addEventListener('click', function() {
+                            searchInput.value = this.dataset.name;
+                            hiddenInput.value = this.dataset.id;
+                            updateNewPortionRecipeUnit(recipeId, this.dataset.unit);
+                            dropdown.classList.add('hidden');
+                        });
+
+                        dropdown.appendChild(optionDiv);
                     });
                 }
-            } else if (hiddenInput) {
-                hiddenInput.remove();
+
+                searchInput.addEventListener('focus', function() {
+                    populateOptions('');
+                    dropdown.classList.remove('hidden');
+                });
+
+                searchInput.addEventListener('input', function() {
+                    populateOptions(this.value);
+                    dropdown.classList.remove('hidden');
+                    hiddenInput.value = '';
+                    updateNewPortionRecipeUnit(recipeId, '--');
+                });
+
+                document.addEventListener('click', function(e) {
+                    if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
+                        dropdown.classList.add('hidden');
+                    }
+                });
+
+                searchInput.addEventListener('keydown', function(e) {
+                    const options = dropdown.querySelectorAll('.portion-recipe-option');
+                    const currentIndex = [...options].findIndex(o => o.classList.contains('bg-amber-200'));
+
+                    if (e.key === 'ArrowDown') {
+                        e.preventDefault();
+                        options.forEach(o => o.classList.remove('bg-amber-200'));
+                        const nextIndex = currentIndex < options.length - 1 ? currentIndex + 1 : 0;
+                        options[nextIndex]?.classList.add('bg-amber-200');
+                        options[nextIndex]?.scrollIntoView({ block: 'nearest' });
+                    } else if (e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        options.forEach(o => o.classList.remove('bg-amber-200'));
+                        const prevIndex = currentIndex > 0 ? currentIndex - 1 : options.length - 1;
+                        options[prevIndex]?.classList.add('bg-amber-200');
+                        options[prevIndex]?.scrollIntoView({ block: 'nearest' });
+                    } else if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const highlighted = [...options].find(o => o.classList.contains('bg-amber-200'));
+                        if (highlighted) {
+                            searchInput.value = highlighted.dataset.name;
+                            hiddenInput.value = highlighted.dataset.id;
+                            updateNewPortionRecipeUnit(recipeId, highlighted.dataset.unit);
+                            dropdown.classList.add('hidden');
+                        } else if (options.length === 1) {
+                            searchInput.value = options[0].dataset.name;
+                            hiddenInput.value = options[0].dataset.id;
+                            updateNewPortionRecipeUnit(recipeId, options[0].dataset.unit);
+                            dropdown.classList.add('hidden');
+                        }
+                    } else if (e.key === 'Escape') {
+                        dropdown.classList.add('hidden');
+                    }
+                });
             }
-        }
 
-        function toggleEditMode(modifierId) {
-            const viewMode = document.querySelector('.view-mode-' + modifierId);
-            const editMode = document.querySelector('.edit-mode-' + modifierId);
-
-            if (viewMode.classList.contains('hidden')) {
-                viewMode.classList.remove('hidden');
-                editMode.classList.add('hidden');
-            } else {
-                viewMode.classList.add('hidden');
-                editMode.classList.remove('hidden');
+            function handleNewPortionRecipeTabKey(event, currentId) {
+                if (event.key === 'Tab' && !event.shiftKey) {
+                    const container = document.getElementById('newPortionRecipes');
+                    const lastRecipe = container.querySelector(':scope > div:last-child');
+                    if (lastRecipe && lastRecipe.id === `newPortionRecipe-${currentId}`) {
+                        event.preventDefault();
+                        addNewPortionRecipe();
+                        setTimeout(() => {
+                            const newInput = document.getElementById(`newPortionRecipeSearch-${newPortionRecipeCount}`);
+                            if (newInput) newInput.focus();
+                        }, 50);
+                    }
+                }
             }
-        }
 
-        // Recipe Management for Edit Portion
-        function addEditPortionRecipe(modifierId) {
-            if (!editPortionRecipeCounts[modifierId]) {
-                editPortionRecipeCounts[modifierId] = 0;
-            }
-            editPortionRecipeCounts[modifierId]++;
+            // Special Price Management for Edit Portion
+            function addEditPortionSpecialPrice(modifierId) {
+                if (!editPortionSpecialPriceCounts[modifierId]) {
+                    editPortionSpecialPriceCounts[modifierId] = 0;
+                }
+                editPortionSpecialPriceCounts[modifierId]++;
 
-            const container = document.getElementById(`editPortionRecipes-${modifierId}`);
-            const recipeId = editPortionRecipeCounts[modifierId];
+                const container = document.getElementById(`editPortionSpecialPrices-${modifierId}`);
+                const priceId = editPortionSpecialPriceCounts[modifierId];
 
-            let optionsHtml = '<option value="">-- Select --</option>';
-            rawMaterials.forEach(item => {
-                optionsHtml += `<option value="${item.id}" data-unit="${item.unit_abbreviation}">${item.item_name}</option>`;
-            });
+                const priceDiv = document.createElement('div');
+                priceDiv.id = `modifierSpecialPrice-${modifierId}-${priceId}`;
+                priceDiv.className = 'flex gap-1 items-center';
 
-            const recipeDiv = document.createElement('div');
-            recipeDiv.id = `modifierRecipe-${modifierId}-${recipeId}`;
-            recipeDiv.className = 'flex gap-1 items-center';
-
-            recipeDiv.innerHTML = `
-                    <select name="modifier_recipes[new][${modifierId}][${recipeId}][main_stock_item_id]" required
-                        onchange="updateEditPortionRecipeUnit(${modifierId}, ${recipeId})"
-                        class="flex-1 px-2 py-1.5 bg-amber-50 text-gray-800 rounded-lg border border-amber-200 focus:outline-none focus:border-amber-500 text-xs">
-                        ${optionsHtml}
+                priceDiv.innerHTML = `
+                    <select name="modifier_special_prices[new][${modifierId}][${priceId}][type]" required
+                        class="px-2 py-1.5 bg-purple-50 text-gray-800 rounded-lg border border-purple-200 focus:outline-none focus:border-purple-500 text-xs">
+                        <option value="pickme" selected>Pick Me</option>
                     </select>
-                    <input type="number" name="modifier_recipes[new][${modifierId}][${recipeId}][quantity]" step="0.001" min="0.001" required
-                        placeholder="Qty"
-                        onkeydown="handleEditPortionRecipeTabKey(event, ${modifierId}, ${recipeId})"
-                        class="w-16 px-2 py-1.5 bg-amber-50 text-gray-800 rounded-lg border border-amber-200 focus:outline-none focus:border-amber-500 text-xs">
-                    <span id="editPortionRecipeUnit-${modifierId}-${recipeId}" class="text-xs text-gray-600 w-8">--</span>
-                    <button type="button" onclick="removeEditPortionRecipe(${modifierId}, ${recipeId})" 
+                    <input type="number" name="modifier_special_prices[new][${modifierId}][${priceId}][price]" step="0.01" min="0" required
+                        placeholder="Price" class="w-20 px-2 py-1.5 bg-purple-50 text-gray-800 rounded-lg border border-purple-200 focus:outline-none focus:border-purple-500 text-xs">
+                    <input type="hidden" name="modifier_special_prices[new][${modifierId}][${priceId}][modifier_id]" value="${modifierId}">
+                    <button type="button" onclick="removeEditPortionSpecialPrice(${modifierId}, ${priceId})" 
                         class="px-1.5 py-1.5 bg-red-500 text-white rounded hover:bg-red-600 transition">
                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -1087,50 +1182,262 @@
                     </button>
                 `;
 
-            container.appendChild(recipeDiv);
-        }
-
-        function removeEditPortionRecipe(modifierId, recipeId) {
-            const element = document.getElementById(`modifierRecipe-${modifierId}-${recipeId}`);
-            if (element) element.remove();
-        }
-
-        function removeExistingModifierRecipe(id) {
-            const element = document.getElementById(`modifierRecipe-existing-${id}`);
-            if (element) {
-                const form = element.closest('form');
-                const deleteInput = document.createElement('input');
-                deleteInput.type = 'hidden';
-                deleteInput.name = 'modifier_recipes[delete][]';
-                deleteInput.value = id;
-                if (form) form.appendChild(deleteInput);
-                element.remove();
+                container.appendChild(priceDiv);
+                updateEditPortionSpecialPrices(modifierId);
             }
-        }
 
-        function updateEditPortionRecipeUnit(modifierId, recipeId) {
-            const select = document.querySelector(`select[name="modifier_recipes[new][${modifierId}][${recipeId}][main_stock_item_id]"]`);
-            const unitSpan = document.getElementById(`editPortionRecipeUnit-${modifierId}-${recipeId}`);
-            if (select && unitSpan) {
-                const selectedOption = select.options[select.selectedIndex];
-                unitSpan.textContent = selectedOption.dataset.unit || '--';
+            function removeEditPortionSpecialPrice(modifierId, priceId) {
+                const element = document.getElementById(`modifierSpecialPrice-${modifierId}-${priceId}`);
+                if (element) {
+                    element.remove();
+                }
+                updateEditPortionSpecialPrices(modifierId);
             }
-        }
 
-        function handleEditPortionRecipeTabKey(event, modifierId, currentId) {
-            if (event.key === 'Tab' && !event.shiftKey) {
-                const container = document.getElementById(`editPortionRecipes-${modifierId}`);
-                const lastRecipe = container.querySelector(':scope > div:last-child');
-                if (lastRecipe && lastRecipe.id === `modifierRecipe-${modifierId}-${currentId}`) {
-                    event.preventDefault();
-                    addEditPortionRecipe(modifierId);
-                    setTimeout(() => {
-                        const newRecipeId = editPortionRecipeCounts[modifierId];
-                        const newSelect = document.querySelector(`select[name="modifier_recipes[new][${modifierId}][${newRecipeId}][main_stock_item_id]"]`);
-                        if (newSelect) newSelect.focus();
-                    }, 50);
+            function removeExistingModifierSpecialPrice(id) {
+                const element = document.getElementById(`modifierSpecialPrice-existing-${id}`);
+                if (element) {
+                    const deleteInput = document.createElement('input');
+                    deleteInput.type = 'hidden';
+                    deleteInput.name = `modifier_special_prices[delete][]`;
+                    deleteInput.value = id;
+                    document.querySelector('form').appendChild(deleteInput);
+                    element.remove();
                 }
             }
-        }
-    </script>
+
+            function updateEditPortionSpecialPrices(modifierId) {
+                const container = document.getElementById(`editPortionSpecialPrices-${modifierId}`);
+                const specialPrices = container.querySelectorAll('[id^="modifierSpecialPrice-"]');
+
+                const pickmePrice = Array.from(specialPrices).find(sp => {
+                    const select = sp.querySelector('select');
+                    return select && select.value === 'pickme';
+                });
+
+                let hiddenInput = document.getElementById(`edit_portion_pickme_price_hidden_${modifierId}`);
+                if (pickmePrice) {
+                    const priceInput = pickmePrice.querySelector('input[type="number"]');
+                    if (!hiddenInput) {
+                        hiddenInput = document.createElement('input');
+                        hiddenInput.type = 'hidden';
+                        hiddenInput.id = `edit_portion_pickme_price_hidden_${modifierId}`;
+                        hiddenInput.name = 'pickme_price';
+                        const form = pickmePrice.closest('form');
+                        if (form) form.appendChild(hiddenInput);
+                    }
+                    if (hiddenInput) {
+                        hiddenInput.value = priceInput.value;
+                        priceInput.addEventListener('input', function () {
+                            hiddenInput.value = this.value;
+                        });
+                    }
+                } else if (hiddenInput) {
+                    hiddenInput.remove();
+                }
+            }
+
+            function toggleEditMode(modifierId) {
+                const viewMode = document.querySelector('.view-mode-' + modifierId);
+                const editMode = document.querySelector('.edit-mode-' + modifierId);
+
+                if (viewMode.classList.contains('hidden')) {
+                    viewMode.classList.remove('hidden');
+                    editMode.classList.add('hidden');
+                } else {
+                    viewMode.classList.add('hidden');
+                    editMode.classList.remove('hidden');
+                }
+            }
+
+            // Recipe Management for Edit Portion
+            function addEditPortionRecipe(modifierId) {
+                if (!editPortionRecipeCounts[modifierId]) {
+                    editPortionRecipeCounts[modifierId] = 0;
+                }
+                editPortionRecipeCounts[modifierId]++;
+
+                const container = document.getElementById(`editPortionRecipes-${modifierId}`);
+                const recipeId = editPortionRecipeCounts[modifierId];
+
+                const recipeDiv = document.createElement('div');
+                recipeDiv.id = `modifierRecipe-${modifierId}-${recipeId}`;
+                recipeDiv.className = 'flex gap-1 items-center';
+
+                recipeDiv.innerHTML = `
+                        <div class="relative flex-1">
+                            <input type="hidden" name="modifier_recipes[new][${modifierId}][${recipeId}][main_stock_item_id]" 
+                                id="modifierRecipeHidden-${modifierId}-${recipeId}" required>
+                            <input type="text" id="modifierRecipeSearch-${modifierId}-${recipeId}" placeholder="Search..."
+                                autocomplete="off"
+                                class="w-full px-2 py-1.5 bg-amber-50 text-gray-800 rounded-lg border border-amber-200 focus:outline-none focus:border-amber-500 text-xs">
+                            <div id="modifierRecipeDropdown-${modifierId}-${recipeId}" 
+                                class="absolute z-50 w-full mt-1 bg-white border border-amber-200 rounded-lg shadow-lg max-h-32 overflow-y-auto hidden">
+                            </div>
+                        </div>
+                        <input type="number" name="modifier_recipes[new][${modifierId}][${recipeId}][quantity]" step="0.001" min="0.001" required
+                            placeholder="Qty"
+                            onkeydown="handleEditPortionRecipeTabKey(event, ${modifierId}, ${recipeId})"
+                            class="w-16 px-2 py-1.5 bg-amber-50 text-gray-800 rounded-lg border border-amber-200 focus:outline-none focus:border-amber-500 text-xs">
+                        <span id="editPortionRecipeUnit-${modifierId}-${recipeId}" class="text-xs text-gray-600 w-8">--</span>
+                        <button type="button" onclick="removeEditPortionRecipe(${modifierId}, ${recipeId})" 
+                            class="px-1.5 py-1.5 bg-red-500 text-white rounded hover:bg-red-600 transition">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    `;
+
+                container.appendChild(recipeDiv);
+                initEditPortionRecipeDropdown(modifierId, recipeId);
+            }
+
+            function removeEditPortionRecipe(modifierId, recipeId) {
+                const element = document.getElementById(`modifierRecipe-${modifierId}-${recipeId}`);
+                if (element) element.remove();
+            }
+
+            function removeExistingModifierRecipe(id) {
+                const element = document.getElementById(`modifierRecipe-existing-${id}`);
+                if (element) {
+                    const form = element.closest('form');
+                    const deleteInput = document.createElement('input');
+                    deleteInput.type = 'hidden';
+                    deleteInput.name = 'modifier_recipes[delete][]';
+                    deleteInput.value = id;
+                    if (form) form.appendChild(deleteInput);
+                    element.remove();
+                }
+            }
+
+            function updateEditPortionRecipeUnit(modifierId, recipeId, unit) {
+                const unitSpan = document.getElementById(`editPortionRecipeUnit-${modifierId}-${recipeId}`);
+                if (unitSpan) {
+                    unitSpan.textContent = unit || '--';
+                }
+            }
+
+            function initEditPortionRecipeDropdown(modifierId, recipeId) {
+                const searchInput = document.getElementById(`modifierRecipeSearch-${modifierId}-${recipeId}`);
+                const dropdown = document.getElementById(`modifierRecipeDropdown-${modifierId}-${recipeId}`);
+                const hiddenInput = document.getElementById(`modifierRecipeHidden-${modifierId}-${recipeId}`);
+
+                function getSelectedIds() {
+                    const selectedIds = [];
+                    // Get IDs from new recipes for this modifier
+                    document.querySelectorAll(`[id^="modifierRecipeHidden-${modifierId}-"]`).forEach(input => {
+                        if (input.id !== `modifierRecipeHidden-${modifierId}-${recipeId}` && input.value) {
+                            selectedIds.push(parseInt(input.value));
+                        }
+                    });
+                    // Get IDs from existing recipes for this modifier
+                    const container = document.getElementById(`editPortionRecipes-${modifierId}`);
+                    if (container) {
+                        container.querySelectorAll(`select[name^="modifier_recipes[existing]"]`).forEach(select => {
+                            if (select.value) {
+                                selectedIds.push(parseInt(select.value));
+                            }
+                        });
+                    }
+                    return selectedIds;
+                }
+
+                function populateOptions(searchTerm = '') {
+                    const selectedIds = getSelectedIds();
+                    dropdown.innerHTML = '';
+                    
+                    rawMaterials.forEach(item => {
+                        if (selectedIds.includes(item.id)) return;
+                        
+                        const name = item.item_name.toLowerCase();
+                        if (searchTerm && !name.includes(searchTerm.toLowerCase())) return;
+                        
+                        const optionDiv = document.createElement('div');
+                        optionDiv.className = 'modifier-recipe-option px-2 py-1.5 hover:bg-amber-100 cursor-pointer transition text-xs';
+                        optionDiv.dataset.id = item.id;
+                        optionDiv.dataset.name = item.item_name;
+                        optionDiv.dataset.unit = item.unit_abbreviation || '';
+                        optionDiv.textContent = item.item_name;
+                        
+                        optionDiv.addEventListener('click', function() {
+                            searchInput.value = this.dataset.name;
+                            hiddenInput.value = this.dataset.id;
+                            updateEditPortionRecipeUnit(modifierId, recipeId, this.dataset.unit);
+                            dropdown.classList.add('hidden');
+                        });
+                        
+                        dropdown.appendChild(optionDiv);
+                    });
+                }
+
+                searchInput.addEventListener('focus', function() {
+                    populateOptions('');
+                    dropdown.classList.remove('hidden');
+                });
+
+                searchInput.addEventListener('input', function() {
+                    populateOptions(this.value);
+                    dropdown.classList.remove('hidden');
+                    hiddenInput.value = '';
+                    updateEditPortionRecipeUnit(modifierId, recipeId, '--');
+                });
+
+                document.addEventListener('click', function(e) {
+                    if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
+                        dropdown.classList.add('hidden');
+                    }
+                });
+
+                searchInput.addEventListener('keydown', function(e) {
+                    const options = dropdown.querySelectorAll('.modifier-recipe-option');
+                    const currentIndex = [...options].findIndex(o => o.classList.contains('bg-amber-200'));
+
+                    if (e.key === 'ArrowDown') {
+                        e.preventDefault();
+                        options.forEach(o => o.classList.remove('bg-amber-200'));
+                        const nextIndex = currentIndex < options.length - 1 ? currentIndex + 1 : 0;
+                        options[nextIndex]?.classList.add('bg-amber-200');
+                        options[nextIndex]?.scrollIntoView({ block: 'nearest' });
+                    } else if (e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        options.forEach(o => o.classList.remove('bg-amber-200'));
+                        const prevIndex = currentIndex > 0 ? currentIndex - 1 : options.length - 1;
+                        options[prevIndex]?.classList.add('bg-amber-200');
+                        options[prevIndex]?.scrollIntoView({ block: 'nearest' });
+                    } else if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const highlighted = [...options].find(o => o.classList.contains('bg-amber-200'));
+                        if (highlighted) {
+                            searchInput.value = highlighted.dataset.name;
+                            hiddenInput.value = highlighted.dataset.id;
+                            updateEditPortionRecipeUnit(modifierId, recipeId, highlighted.dataset.unit);
+                            dropdown.classList.add('hidden');
+                        } else if (options.length === 1) {
+                            searchInput.value = options[0].dataset.name;
+                            hiddenInput.value = options[0].dataset.id;
+                            updateEditPortionRecipeUnit(modifierId, recipeId, options[0].dataset.unit);
+                            dropdown.classList.add('hidden');
+                        }
+                    } else if (e.key === 'Escape') {
+                        dropdown.classList.add('hidden');
+                    }
+                });
+            }
+
+            function handleEditPortionRecipeTabKey(event, modifierId, currentId) {
+                if (event.key === 'Tab' && !event.shiftKey) {
+                    const container = document.getElementById(`editPortionRecipes-${modifierId}`);
+                    const lastRecipe = container.querySelector(':scope > div:last-child');
+                    if (lastRecipe && lastRecipe.id === `modifierRecipe-${modifierId}-${currentId}`) {
+                        event.preventDefault();
+                        addEditPortionRecipe(modifierId);
+                        setTimeout(() => {
+                            const newRecipeId = editPortionRecipeCounts[modifierId];
+                            const newInput = document.getElementById(`modifierRecipeSearch-${modifierId}-${newRecipeId}`);
+                            if (newInput) newInput.focus();
+                        }, 50);
+                    }
+                }
+            }
+        </script>
 @endsection

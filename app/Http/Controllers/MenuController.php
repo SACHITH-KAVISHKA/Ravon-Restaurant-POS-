@@ -31,7 +31,8 @@ class MenuController extends Controller
     public function indexCategories()
     {
         $categories = Category::withCount('items')->orderBy('display_order')->get();
-        return view('menu.categories.index', compact('categories'));
+        $nextDisplayOrder = (Category::max('display_order') ?? 0) + 1;
+        return view('menu.categories.index', compact('categories', 'nextDisplayOrder'));
     }
 
     /**
@@ -55,6 +56,24 @@ class MenuController extends Controller
 
         $validated['slug'] = Str::slug($validated['name']);
 
+        // Handle display order collision - shift existing categories up if needed
+        if (isset($validated['display_order'])) {
+            $displayOrder = $validated['display_order'];
+
+            // Check if this display order is already used
+            $existingCategory = Category::where('display_order', $displayOrder)->first();
+
+            if ($existingCategory) {
+                // Shift all categories with display_order >= the requested order up by 1
+                Category::where('display_order', '>=', $displayOrder)
+                    ->orderBy('display_order', 'desc')
+                    ->each(function ($cat) {
+                        $cat->display_order = $cat->display_order + 1;
+                        $cat->save();
+                    });
+            }
+        }
+
         Category::create($validated);
 
         return redirect()->route('menu.categories.index')->with('success', 'Category created successfully!');
@@ -72,6 +91,32 @@ class MenuController extends Controller
         ]);
 
         $validated['slug'] = Str::slug($validated['name']);
+
+        // Handle display order collision - shift existing categories if needed
+        if (isset($validated['display_order'])) {
+            $newDisplayOrder = $validated['display_order'];
+            $oldDisplayOrder = $category->display_order;
+
+            // Only handle collision if the display order actually changed
+            if ($newDisplayOrder != $oldDisplayOrder) {
+                // Check if this display order is already used by another category
+                $existingCategory = Category::where('display_order', $newDisplayOrder)
+                    ->where('id', '!=', $category->id)
+                    ->first();
+
+                if ($existingCategory) {
+                    // Shift all categories with display_order >= the new order (except current) up by 1
+                    Category::where('display_order', '>=', $newDisplayOrder)
+                        ->where('id', '!=', $category->id)
+                        ->orderBy('display_order', 'desc')
+                        ->each(function ($cat) {
+                            $cat->display_order = $cat->display_order + 1;
+                            $cat->save();
+                        });
+                }
+            }
+        }
+
         $category->update($validated);
 
         return redirect()->route('menu.categories.index')->with('success', 'Category updated successfully!');
@@ -86,7 +131,19 @@ class MenuController extends Controller
             return redirect()->route('menu.categories.index')->with('error', 'Cannot delete category with existing items!');
         }
 
+        $deletedDisplayOrder = $category->display_order;
         $category->delete();
+
+        // Shift all categories with display_order > deleted order down by 1 to fill the gap
+        if ($deletedDisplayOrder) {
+            Category::where('display_order', '>', $deletedDisplayOrder)
+                ->orderBy('display_order', 'asc')
+                ->each(function ($cat) {
+                    $cat->display_order = $cat->display_order - 1;
+                    $cat->save();
+                });
+        }
+
         return redirect()->route('menu.categories.index')->with('success', 'Category deleted successfully!');
     }
 
@@ -95,7 +152,7 @@ class MenuController extends Controller
      */
     public function createItem()
     {
-        $categories = Category::all();
+        $categories = Category::orderBy('name', 'asc')->get();
         $kitchenStations = KitchenStation::all();
         $rawMaterials = MainStockItem::active()
             ->ofType('raw_material')
@@ -206,7 +263,7 @@ class MenuController extends Controller
      */
     public function editItem(Item $item)
     {
-        $categories = Category::all();
+        $categories = Category::orderBy('name', 'asc')->get();
         $kitchenStations = KitchenStation::all();
         $rawMaterials = MainStockItem::active()
             ->ofType('raw_material')

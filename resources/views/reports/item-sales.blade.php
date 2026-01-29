@@ -285,15 +285,15 @@
                 beforeSend: function () {
                     console.log('AJAX request starting...');
                     $('#salesTableBody').html(`
-                        <tr>
-                            <td colspan="5" class="text-center py-12">
-                                <div class="flex flex-col items-center justify-center">
-                                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mb-4"></div>
-                                    <p class="text-gray-600">Loading data...</p>
-                                </div>
-                            </td>
-                        </tr>
-                    `);
+                            <tr>
+                                <td colspan="5" class="text-center py-12">
+                                    <div class="flex flex-col items-center justify-center">
+                                        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mb-4"></div>
+                                        <p class="text-gray-600">Loading data...</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        `);
                 },
                 success: function (response) {
                     console.log('=== AJAX SUCCESS ===');
@@ -309,18 +309,18 @@
                     console.error('Response:', xhr.responseJSON || xhr.responseText);
                     console.error('Full XHR:', xhr);
                     $('#salesTableBody').html(`
-                        <tr>
-                            <td colspan="5" class="text-center py-12">
-                                <div class="flex flex-col items-center justify-center">
-                                    <svg class="w-12 h-12 text-red-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                    </svg>
-                                    <p class="text-gray-600">Error loading data. Please try again.</p>
-                                    <p class="text-red-600 text-sm mt-2">Status: ${xhr.status}</p>
-                                </div>
-                            </td>
-                        </tr>
-                    `);
+                            <tr>
+                                <td colspan="5" class="text-center py-12">
+                                    <div class="flex flex-col items-center justify-center">
+                                        <svg class="w-12 h-12 text-red-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                        <p class="text-gray-600">Error loading data. Please try again.</p>
+                                        <p class="text-red-600 text-sm mt-2">Status: ${xhr.status}</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        `);
                 }
             });
         }
@@ -338,38 +338,38 @@
 
             if (data.length === 0) {
                 bodyHtml = `
-                    <tr>
-                        <td colspan="5" class="text-center py-12">
-                            <div class="flex flex-col items-center justify-center">
-                                <svg class="w-16 h-16 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
-                                </svg>
-                                <p class="text-gray-600">No sales data found for the selected period.</p>
-                            </div>
-                        </td>
-                    </tr>
-                `;
+                        <tr>
+                            <td colspan="5" class="text-center py-12">
+                                <div class="flex flex-col items-center justify-center">
+                                    <svg class="w-16 h-16 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
+                                    </svg>
+                                    <p class="text-gray-600">No sales data found for the selected period.</p>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
             } else {
                 data.forEach((item, index) => {
                     const modifierId = item.item_modifier_id || 'null';
                     bodyHtml += `
-                        <tr class="hover:bg-purple-50 transition">
-                            <td class="text-center py-3 px-4 text-gray-600">${index + 1}</td>
-                            <td class="py-3 px-4 text-gray-600">${item.item_code}</td>
-                            <td class="py-3 px-4"><span class="text-gray-800 font-semibold">${item.item_name}</span></td>
-                            <td class="text-center py-3 px-4"><span class="text-purple-600 font-bold">${item.total_quantity}</span></td>
-                            <td class="text-center py-3 px-4">
-                                <button class="bg-gradient-to-r from-[#667eea] to-[#764ba2] hover:shadow-lg hover:shadow-purple-500/50 text-white px-4 py-2 rounded-lg transition duration-200 flex items-center justify-center mx-auto" 
-                                        onclick="showItemDetails(${item.item_id}, ${modifierId}, '${item.item_name.replace(/'/g, "\\'")}')"> 
-                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                                    </svg>
-                                    View
-                                </button>
-                            </td>
-                        </tr>
-                    `;
+                            <tr class="hover:bg-purple-50 transition">
+                                <td class="text-center py-3 px-4 text-gray-600">${index + 1}</td>
+                                <td class="py-3 px-4 text-gray-600">${item.item_code}</td>
+                                <td class="py-3 px-4"><span class="text-gray-800 font-semibold">${item.item_name}</span></td>
+                                <td class="text-center py-3 px-4"><span class="text-purple-600 font-bold">${item.total_quantity}</span></td>
+                                <td class="text-center py-3 px-4">
+                                    <button class="bg-gradient-to-r from-[#667eea] to-[#764ba2] hover:shadow-lg hover:shadow-purple-500/50 text-white px-4 py-2 rounded-lg transition duration-200 flex items-center justify-center mx-auto" 
+                                            onclick="showItemDetails(${item.item_id}, ${modifierId}, '${item.item_name.replace(/'/g, "\\'")}')"> 
+                                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                        </svg>
+                                        View
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
                 });
             }
 
@@ -403,15 +403,15 @@
                 data: requestData,
                 beforeSend: function () {
                     $('#detailsTableBody').html(`
-                        <tr>
-                            <td colspan="6" class="text-center py-8">
-                                <div class="flex flex-col items-center justify-center">
-                                    <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-purple-600 mb-3"></div>
-                                    <p class="text-gray-600">Loading...</p>
-                                </div>
-                            </td>
-                        </tr>
-                    `);
+                            <tr>
+                                <td colspan="6" class="text-center py-8">
+                                    <div class="flex flex-col items-center justify-center">
+                                        <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-purple-600 mb-3"></div>
+                                        <p class="text-gray-600">Loading...</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        `);
                 },
                 success: function (response) {
                     console.log('Item details loaded:', response);
@@ -436,24 +436,24 @@
 
             if (transactions.length === 0) {
                 html = `
-                    <tr>
-                        <td colspan="6" class="text-center py-8">
-                            <p class="text-gray-600">No transaction details found.</p>
-                        </td>
-                    </tr>
-                `;
+                        <tr>
+                            <td colspan="6" class="text-center py-8">
+                                <p class="text-gray-600">No transaction details found.</p>
+                            </td>
+                        </tr>
+                    `;
             } else {
                 transactions.forEach((row, index) => {
                     html += `
-                        <tr class="hover:bg-purple-50 transition">
-                            <td class="text-center py-3 px-4 text-gray-600">${index + 1}</td>
-                            <td class="py-3 px-4"><span class="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm font-medium">${row.order_number}</span></td>
-                            <td class="py-3 px-4 text-gray-600">${row.completed_at}</td>
-                            <td class="text-center py-3 px-4 text-purple-600 font-semibold">${row.quantity}</td>
-                            <td class="text-right py-3 px-4 text-gray-600">Rs. ${parseFloat(row.unit_price).toFixed(2)}</td>
-                            <td class="text-right py-3 px-4 text-gray-800 font-semibold">Rs. ${parseFloat(row.subtotal).toFixed(2)}</td>
-                        </tr>
-                    `;
+                            <tr class="hover:bg-purple-50 transition">
+                                <td class="text-center py-3 px-4 text-gray-600">${index + 1}</td>
+                                <td class="py-3 px-4"><span class="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm font-medium">${row.order_number}</span></td>
+                                <td class="py-3 px-4 text-gray-600">${row.completed_at}</td>
+                                <td class="text-center py-3 px-4 text-purple-600 font-semibold">${row.quantity}</td>
+                                <td class="text-right py-3 px-4 text-gray-600">Rs. ${parseFloat(row.unit_price).toFixed(2)}</td>
+                                <td class="text-right py-3 px-4 text-gray-800 font-semibold">Rs. ${parseFloat(row.subtotal).toFixed(2)}</td>
+                            </tr>
+                        `;
                 });
             }
 
