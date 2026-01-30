@@ -283,13 +283,13 @@
                 category: @json($fgItem->category->name ?? 'N/A'),
                 portions: [
                     @foreach($fgItem->activeModifiers as $portion)
-                                                            {
+                                                                        {
                             id: {{ $portion->id }},
                             name: @json($portion->name),
                             fullName: @json($fgItem->name . ' - ' . $portion->name)
                         },
                     @endforeach
-                                        ]
+                                                ]
             });
         @endforeach
 
@@ -392,11 +392,11 @@
                         }
                         const selected = value === currentValue ? 'selected' : '';
                         options += `<option value="${value}" ${selected}
-                                            data-name="${portion.fullName}"
-                                            data-item-id="${item.id}"
-                                            data-portion-id="${portion.id}">
-                                            [${item.category}] ${portion.fullName}
-                                        </option>`;
+                                                data-name="${portion.fullName}"
+                                                data-item-id="${item.id}"
+                                                data-portion-id="${portion.id}">
+                                                [${item.category}] ${portion.fullName}
+                                            </option>`;
                     });
                 } else {
                     // Item has no portions
@@ -407,10 +407,10 @@
                     }
                     const selected = value === currentValue ? 'selected' : '';
                     options += `<option value="${value}" ${selected}
-                                        data-name="${item.name}"
-                                        data-item-id="${item.id}">
-                                        [${item.category}] ${item.name}
-                                    </option>`;
+                                            data-name="${item.name}"
+                                            data-item-id="${item.id}">
+                                            [${item.category}] ${item.name}
+                                        </option>`;
                 }
             });
 
@@ -470,56 +470,56 @@
 
             // Fetch item code for the new row
             const itemCode = await fetchItemCode('raw_material');
-            
+
             // Get already selected linked items to exclude from this row's dropdown
             const excludeValues = getSelectedLinkedValues();
 
             const row = document.createElement('tr');
             row.id = `row-${rowCounter}`;
             row.innerHTML = `
-                                <td>
-                                    <span class="row-number">${rowCounter}</span>
-                                </td>
-                                <td>
-                                    <input type="text" name="items[${rowCounter}][item_code]" class="item-code-input" value="${itemCode}" required>
-                                    <input type="hidden" name="items[${rowCounter}][quantity]" value="0">
-                                </td>
-                                <td>
-                                    <input type="text" name="items[${rowCounter}][item_name]" class="item-name-input" placeholder="e.g., Rice, Oil" required>
-                                </td>
-                                <td class="linked-item-cell" id="linked-cell-${rowCounter}">
-                                    <span class="na-text">N/A</span>
-                                    <select name="items[${rowCounter}][linked_item_id]" class="linked-item-select" onchange="onLinkedItemChange(this, ${rowCounter})">
-                                        ${getLinkedItemOptions('', excludeValues)}
-                                    </select>
-                                </td>
-                                <td>
-                                    <select name="items[${rowCounter}][item_type]" class="item-type-select" onchange="onItemTypeChange(this, ${rowCounter})" required>
-                                        ${getItemTypeOptions()}
-                                    </select>
-                                </td>
-                                <td>
-                                    <select name="items[${rowCounter}][unit_type]" class="unit-type-select" required>
-                                        ${getUnitTypeOptions()}
-                                    </select>
-                                </td>
-                                <td class="normalization-cell" id="normalization-cell-${rowCounter}">
-                                    <input type="number" name="items[${rowCounter}][normalization]" class="normalization-input" step="0.0001" min="0" placeholder="Optional" title="Normalization factor for raw materials">
-                                </td>
-                                <td>
-                                    <button type="button" class="remove-row-btn" onclick="removeRow(${rowCounter})" title="Remove row">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                        </svg>
-                                    </button>
-                                </td>
-                            `;
+                                    <td>
+                                        <span class="row-number">${rowCounter}</span>
+                                    </td>
+                                    <td>
+                                        <input type="text" name="items[${rowCounter}][item_code]" class="item-code-input" value="${itemCode}" required>
+                                        <input type="hidden" name="items[${rowCounter}][quantity]" value="0">
+                                    </td>
+                                    <td>
+                                        <input type="text" name="items[${rowCounter}][item_name]" class="item-name-input" placeholder="e.g., Rice, Oil" required>
+                                    </td>
+                                    <td class="linked-item-cell" id="linked-cell-${rowCounter}">
+                                        <span class="na-text">N/A</span>
+                                        <select name="items[${rowCounter}][linked_item_id]" class="linked-item-select" onchange="onLinkedItemChange(this, ${rowCounter})">
+                                            ${getLinkedItemOptions('', excludeValues)}
+                                        </select>
+                                    </td>
+                                    <td>
+                                        <select name="items[${rowCounter}][item_type]" class="item-type-select" onchange="onItemTypeChange(this, ${rowCounter})" required>
+                                            ${getItemTypeOptions()}
+                                        </select>
+                                    </td>
+                                    <td>
+                                        <select name="items[${rowCounter}][unit_type]" class="unit-type-select" required>
+                                            ${getUnitTypeOptions()}
+                                        </select>
+                                    </td>
+                                    <td class="normalization-cell" id="normalization-cell-${rowCounter}">
+                                        <input type="number" name="items[${rowCounter}][normalization]" class="normalization-input" step="0.0001" min="0" placeholder="Optional" title="Normalization factor for raw materials">
+                                    </td>
+                                    <td>
+                                        <button type="button" class="remove-row-btn" onclick="removeRow(${rowCounter})" title="Remove row">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            </svg>
+                                        </button>
+                                    </td>
+                                `;
 
             tbody.appendChild(row);
 
-            // Add Tab key listener to the last select (unit_type) to trigger new row
-            const unitSelect = row.querySelector('.unit-type-select');
-            unitSelect.addEventListener('keydown', function (e) {
+            // Add Tab key listener to the normalization input to trigger new row
+            const normalizationInput = row.querySelector('.normalization-input');
+            normalizationInput.addEventListener('keydown', function (e) {
                 if (e.key === 'Tab' && !e.shiftKey) {
                     // Check if this is the last row
                     const allRows = tbody.querySelectorAll('tr');
