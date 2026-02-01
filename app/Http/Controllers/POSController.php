@@ -17,6 +17,7 @@ use App\Models\VoidRecord;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class POSController extends Controller
 {
@@ -86,6 +87,13 @@ class POSController extends Controller
      */
     public function getOpenChecks()
     {
+        // Log the request for debugging
+        Log::info('Open Checks requested', [
+            'user_id' => Auth::id(),
+            'user_name' => Auth::user() ? Auth::user()->name : 'Not logged in',
+            'time' => now()->toDateTimeString(),
+        ]);
+
         $openOrders = Order::with(['table', 'activeItems.item'])
             ->where('status', 'pending')
             ->where('is_paid', false)
@@ -301,9 +309,14 @@ class POSController extends Controller
                 $order = Order::findOrFail($validated['order_id']);
 
                 // Get existing order items indexed by item_id + modifier_id for accurate matching
-                $existingItems = $order->orderItems->keyBy(function ($item) {
-                    return $item->item_id . '_' . ($item->item_modifier_id ?? 'null');
-                });
+                // IMPORTANT: Filter out already deleted/cancelled items to prevent re-processing
+                $existingItems = $order->orderItems
+                    ->filter(function ($item) {
+                        return !in_array($item->status, ['deleted', 'cancelled']);
+                    })
+                    ->keyBy(function ($item) {
+                        return $item->item_id . '_' . ($item->item_modifier_id ?? 'null');
+                    });
 
                 $itemsToProcess = [];
                 $processedKeys = []; // Track which items are still in the order
@@ -485,7 +498,11 @@ class POSController extends Controller
                 'table_number' => $order->table ? $order->table->table_number : null,
                 'pickme_ref_number' => $order->pickme_ref_number,
                 'kot_number' => $kotNumbers['kot_number'],
+                'kot_sub_number' => $kotNumbers['kot_sub_number'] ?? null,
+                'kot_display_number' => $kotNumbers['kot_display_number'] ?? $kotNumbers['kot_number'],
                 'bot_number' => $kotNumbers['bot_number'],
+                'bot_sub_number' => $kotNumbers['bot_sub_number'] ?? null,
+                'bot_display_number' => $kotNumbers['bot_display_number'] ?? $kotNumbers['bot_number'],
                 'kot_items' => $kotNumbers['kot_items'] ?? [],
                 'bot_items' => $kotNumbers['bot_items'] ?? [],
                 'is_new' => $isNewOrder,
@@ -501,6 +518,9 @@ class POSController extends Controller
 
     /**
      * Generate KOT/BOT based on item categories
+     * Handles sub-numbering for orders that have items added later:
+     * - First KOT/BOT for an order: sub_number = 0 (primary)
+     * - Subsequent KOT/BOT additions: sub_number = 1, 2, 3... (secondary)
      */
     private function generateKOT($order, $kotItems)
     {
@@ -541,18 +561,26 @@ class POSController extends Controller
 
         // Create KOT for kitchen
         $kotNumber = null;
+        $kotSubNumber = null;
+        $kotDisplayNumber = null;
         if (!empty($kitchenItems)) {
+            // Get the next sub-number for this order's kitchen station KOTs
+            $subNumber = Kot::getNextSubNumber($order->id, 1); // 1 = kitchen station
+
             $kot = Kot::create([
                 'order_id' => $order->id,
                 'table_id' => $order->table_id,
                 'waiter_id' => $order->waiter_id,
                 'kitchen_station_id' => 1, // Default kitchen station
+                'sub_number' => $subNumber,
                 'status' => 'pending',
                 'printed_at' => now(),
                 'print_count' => 1,
             ]);
 
             $kotNumber = $kot->kot_number;
+            $kotSubNumber = $subNumber;
+            $kotDisplayNumber = $kot->getDisplayNumber();
 
             foreach ($kitchenItems as $kotItem) {
                 KotItem::create([
@@ -569,18 +597,26 @@ class POSController extends Controller
 
         // Create BOT for bar (using same KOT structure)
         $botNumber = null;
+        $botSubNumber = null;
+        $botDisplayNumber = null;
         if (!empty($barItems)) {
+            // Get the next sub-number for this order's bar station BOTs
+            $subNumber = Kot::getNextSubNumber($order->id, 2); // 2 = bar station
+
             $bot = Kot::create([
                 'order_id' => $order->id,
                 'table_id' => $order->table_id,
                 'waiter_id' => $order->waiter_id,
                 'kitchen_station_id' => 2, // Bar station
+                'sub_number' => $subNumber,
                 'status' => 'pending',
                 'printed_at' => now(),
                 'print_count' => 1,
             ]);
 
             $botNumber = $bot->kot_number;
+            $botSubNumber = $subNumber;
+            $botDisplayNumber = $bot->getDisplayNumber();
 
             foreach ($barItems as $botItem) {
                 KotItem::create([
@@ -619,7 +655,11 @@ class POSController extends Controller
 
         return [
             'kot_number' => $kotNumber,
+            'kot_sub_number' => $kotSubNumber,
+            'kot_display_number' => $kotDisplayNumber,
             'bot_number' => $botNumber,
+            'bot_sub_number' => $botSubNumber,
+            'bot_display_number' => $botDisplayNumber,
             'kot_items' => $kotItemsData,
             'bot_items' => $botItemsData
         ];
@@ -1146,7 +1186,8 @@ class POSController extends Controller
                         'printed_at' => now(),
                         'print_count' => 1,
                     ]);
-                    $cancelKotNumber = 'CANCEL-' . $cancelKot->kot_number;
+                    // Use getDisplayNumber() to include sub-number if applicable
+                    $cancelKotNumber = 'CANCEL-' . $cancelKot->getDisplayNumber();
 
                     // Update void records with cancel KOT number
                     foreach ($kitchenCancelItems as $cancelItem) {
@@ -1168,7 +1209,8 @@ class POSController extends Controller
                         'printed_at' => now(),
                         'print_count' => 1,
                     ]);
-                    $cancelBotNumber = 'CANCEL-' . $cancelBot->kot_number;
+                    // Use getDisplayNumber() to include sub-number if applicable
+                    $cancelBotNumber = 'CANCEL-' . $cancelBot->getDisplayNumber();
 
                     // Update void records with cancel BOT number
                     foreach ($barCancelItems as $cancelItem) {

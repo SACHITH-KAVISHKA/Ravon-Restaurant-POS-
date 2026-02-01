@@ -936,27 +936,27 @@
                 // 1. Given Certificate
                 qz.security.setCertificatePromise(function (resolve, reject) {
                     resolve(`-----BEGIN CERTIFICATE-----
-                            MIIDozCCAougAwIBAgIUWJpvpJOkleU6lWsqrMKfsq9u6OowDQYJKoZIhvcNAQEL
-                            BQAwYTELMAkGA1UEBhMCTEsxEDAOBgNVBAgMB1dlc3Rlcm4xEDAOBgNVBAcMB0Nv
-                            bG9tYm8xFTATBgNVBAoMDFJhdm9uIEJha2VyczEXMBUGA1UEAwwOMTI3LjAuMC4x
-                            OjgwMDAwHhcNMjUxMTE3MTgwNzI0WhcNMzUxMTE1MTgwNzI0WjBhMQswCQYDVQQG
-                            EwJMSzEQMA4GA1UECAwHV2VzdGVybjEQMA4GA1UEBwwHQ29sb21ibzEVMBMGA1UE
-                            CgwMUmF2b24gQmFrZXJzMRcwFQYDVQQDDA4xMjcuMC4wLjE6ODAwMDCCASIwDQYJ
-                            KoZIhvcNAQEBBQADggEPADCCAQoCggEBANF0JduabBoiZ1M7R28FmCmvUEDYy+2z
-                            uz+zQZiBGT3pm3gD2HgZfvhooGywwX2lmEn5Q5wvq3dodcqpd+Nr7xDE6U2QEcGS
-                            UEi0aDbTCBY2VIRP5HNP33hDqNOq06akEtJRxGQ43hOLxoSWZjYxe7hIstVfp2fU
-                            4j+uycPv9E8Cxo6eIM6NCFfRN1mIbkIIjgVfAmOaJb1y+TbD8z5NxXAfPf31GvXi
-                            7AJ3gnr6khs6XyW5umcesBeOijBL+lUyTRU26GQWiduoaeoTToN9UkX3ZEvfPlR7
-                            YLYqfRHnT4RJxRs+BcTDMsy0JHI5MGD/Ur/u8uXNgK2mqrfPLado9y0CAwEAAaNT
-                            MFEwHQYDVR0OBBYEFMSl/4RhhGD0mRYBD2bH4n+t/cNBMB8GA1UdIwQYMBaAFMSl
-                            /4RhhGD0mRYBD2bH4n+t/cNBMA8GA1UdEwEB/wQFMAMBAf8wDQYJKoZIhvcNAQEL
-                            BQADggEBADlwDYAu7LGzj+pGROVavOeVczrb8RibbIbXrIViV31iKC1uwXRmtTY1
-                            amAX+oEfMry3TIy//BHsJzGkAd6ozfosez33G4bbN8/y1Q9ZvcuaaHPT4DIBYrdR
-                            GX/B6TtAm63VxXyjfwrV4OUbbqwdgMtKuviRprB9A+oCE1QPa74p33hgy8UHYOCK
-                            g9lFgnRkyrLOb4fh2SmtjHhRV4aZf5CM+UbqBQAMiiuhHLAbqbmhBP3BYzVVZ066
-                            9moVkpDvvNADqW3FH6epeBDL8RyQXj2yikCyD3xXJIAih815xLJMh/pOmuqEjHdd
-                            NESCtDma6uLcth74mGaBwU3G3KsOCP4=
-                        -----END CERTIFICATE-----`);
+                                            MIIDozCCAougAwIBAgIUWJpvpJOkleU6lWsqrMKfsq9u6OowDQYJKoZIhvcNAQEL
+                                            BQAwYTELMAkGA1UEBhMCTEsxEDAOBgNVBAgMB1dlc3Rlcm4xEDAOBgNVBAcMB0Nv
+                                            bG9tYm8xFTATBgNVBAoMDFJhdm9uIEJha2VyczEXMBUGA1UEAwwOMTI3LjAuMC4x
+                                            OjgwMDAwHhcNMjUxMTE3MTgwNzI0WhcNMzUxMTE1MTgwNzI0WjBhMQswCQYDVQQG
+                                            EwJMSzEQMA4GA1UECAwHV2VzdGVybjEQMA4GA1UEBwwHQ29sb21ibzEVMBMGA1UE
+                                            CgwMUmF2b24gQmFrZXJzMRcwFQYDVQQDDA4xMjcuMC4wLjE6ODAwMDCCASIwDQYJ
+                                            KoZIhvcNAQEBBQADggEPADCCAQoCggEBANF0JduabBoiZ1M7R28FmCmvUEDYy+2z
+                                            uz+zQZiBGT3pm3gD2HgZfvhooGywwX2lmEn5Q5wvq3dodcqpd+Nr7xDE6U2QEcGS
+                                            UEi0aDbTCBY2VIRP5HNP33hDqNOq06akEtJRxGQ43hOLxoSWZjYxe7hIstVfp2fU
+                                            4j+uycPv9E8Cxo6eIM6NCFfRN1mIbkIIjgVfAmOaJb1y+TbD8z5NxXAfPf31GvXi
+                                            7AJ3gnr6khs6XyW5umcesBeOijBL+lUyTRU26GQWiduoaeoTToN9UkX3ZEvfPlR7
+                                            YLYqfRHnT4RJxRs+BcTDMsy0JHI5MGD/Ur/u8uXNgK2mqrfPLado9y0CAwEAAaNT
+                                            MFEwHQYDVR0OBBYEFMSl/4RhhGD0mRYBD2bH4n+t/cNBMB8GA1UdIwQYMBaAFMSl
+                                            /4RhhGD0mRYBD2bH4n+t/cNBMA8GA1UdEwEB/wQFMAMBAf8wDQYJKoZIhvcNAQEL
+                                            BQADggEBADlwDYAu7LGzj+pGROVavOeVczrb8RibbIbXrIViV31iKC1uwXRmtTY1
+                                            amAX+oEfMry3TIy//BHsJzGkAd6ozfosez33G4bbN8/y1Q9ZvcuaaHPT4DIBYrdR
+                                            GX/B6TtAm63VxXyjfwrV4OUbbqwdgMtKuviRprB9A+oCE1QPa74p33hgy8UHYOCK
+                                            g9lFgnRkyrLOb4fh2SmtjHhRV4aZf5CM+UbqBQAMiiuhHLAbqbmhBP3BYzVVZ066
+                                            9moVkpDvvNADqW3FH6epeBDL8RyQXj2yikCyD3xXJIAih815xLJMh/pOmuqEjHdd
+                                            NESCtDma6uLcth74mGaBwU3G3KsOCP4=
+                                        -----END CERTIFICATE-----`);
                 });
 
                 // 2. Retrieve Signature from the Server
@@ -1605,7 +1605,7 @@
                 /**
                  * Generate and Print KOT (Kitchen Order Ticket)
                  * @param {Array} foodItems - Array of food items to print
-                 * @param {Object} orderInfo - Order information (order_number, table_number, etc.)
+                 * @param {Object} orderInfo - Order information (order_number, table_number, kot_display_number, kot_sub_number, etc.)
                  */
                 async function printKOT(foodItems, orderInfo) {
                     if (!foodItems || foodItems.length === 0) {
@@ -1637,6 +1637,9 @@
                         const leftMargin = 5;
                         const rightMargin = 5;
 
+                        // Determine if this is an addition (sub_number > 0)
+                        const isAddition = orderInfo.kot_sub_number && orderInfo.kot_sub_number > 0;
+
                         // Header
                         pdf.setFont('courier', 'bold');
                         pdf.setFontSize(18);
@@ -1646,7 +1649,9 @@
                         yPosition += 8;
 
                         pdf.setFontSize(14);
-                        pdf.text('(KOT)', pageWidth / 2, yPosition, {
+                        // Show (KOT) or (KOT - ADDITION) for sub-KOTs
+                        const kotLabel = isAddition ? '(KOT - ADDITION #' + orderInfo.kot_sub_number + ')' : '(KOT)';
+                        pdf.text(kotLabel, pageWidth / 2, yPosition, {
                             align: 'center'
                         });
                         yPosition += 10;
@@ -1667,7 +1672,9 @@
                         pdf.setFontSize(11);
                         pdf.setFont('courier', 'bold');
                         pdf.text('KOT NO:', leftMargin, yPosition);
-                        pdf.text(String(orderInfo.kot_number || orderInfo.order_number || 'N/A'), pageWidth - rightMargin, yPosition, {
+                        // Use kot_display_number which includes sub-number if applicable
+                        const kotNumber = orderInfo.kot_display_number || orderInfo.kot_number || orderInfo.order_number || 'N/A';
+                        pdf.text(String(kotNumber), pageWidth - rightMargin, yPosition, {
                             align: 'right'
                         });
                         yPosition += 6;
@@ -1772,7 +1779,7 @@
                 /**
                  * Generate and Print BOT (Bar Order Ticket)
                  * @param {Array} beverageItems - Array of beverage items to print
-                 * @param {Object} orderInfo - Order information
+                 * @param {Object} orderInfo - Order information (order_number, table_number, bot_display_number, bot_sub_number, etc.)
                  */
                 async function printBOT(beverageItems, orderInfo) {
                     if (!beverageItems || beverageItems.length === 0) {
@@ -1804,6 +1811,9 @@
                         const leftMargin = 5;
                         const rightMargin = 5;
 
+                        // Determine if this is an addition (sub_number > 0)
+                        const isAddition = orderInfo.bot_sub_number && orderInfo.bot_sub_number > 0;
+
                         // Header
                         pdf.setFont('courier', 'bold');
                         pdf.setFontSize(18);
@@ -1813,7 +1823,9 @@
                         yPosition += 8;
 
                         pdf.setFontSize(14);
-                        pdf.text('(BOT)', pageWidth / 2, yPosition, {
+                        // Show (BOT) or (BOT - ADDITION) for sub-BOTs
+                        const botLabel = isAddition ? '(BOT - ADDITION #' + orderInfo.bot_sub_number + ')' : '(BOT)';
+                        pdf.text(botLabel, pageWidth / 2, yPosition, {
                             align: 'center'
                         });
                         yPosition += 10;
@@ -1834,7 +1846,9 @@
                         pdf.setFontSize(11);
                         pdf.setFont('courier', 'bold');
                         pdf.text('BOT NO:', leftMargin, yPosition);
-                        pdf.text(String(orderInfo.bot_number || orderInfo.order_number || 'N/A'), pageWidth - rightMargin, yPosition, {
+                        // Use bot_display_number which includes sub-number if applicable
+                        const botNumber = orderInfo.bot_display_number || orderInfo.bot_number || orderInfo.order_number || 'N/A';
+                        pdf.text(String(botNumber), pageWidth - rightMargin, yPosition, {
                             align: 'right'
                         });
                         yPosition += 6;
@@ -2050,13 +2064,13 @@
 
                     if (billItems.length === 0) {
                         billItemsDiv.innerHTML = `
-                                <div class="text-center text-gray-500 py-8">
-                                    <svg class="w-16 h-16 mx-auto mb-2 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
-                                    </svg>
-                                    <p>No items added</p>
-                                </div>
-                            `;
+                                                <div class="text-center text-gray-500 py-8">
+                                                    <svg class="w-16 h-16 mx-auto mb-2 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+                                                    </svg>
+                                                    <p>No items added</p>
+                                                </div>
+                                            `;
                         return;
                     }
 
@@ -2082,26 +2096,26 @@
                             'disabled title="Use VOID to reduce previously ordered items"';
 
                         return `
-                            <div class="bg-gray-700 rounded-lg p-3 border border-gray-600 ${isOriginalItem && item.quantity <= originalQty ? 'border-l-4 border-l-orange-500' : ''}">
-                                <div class="grid grid-cols-3 gap-2 text-sm">
-                                    <div class="col-span-2">
-                                        <div class="font-semibold text-white">${index + 1}. ${item.name}</div>
-                                        <div class="text-xs text-gray-400">Rs. ${item.price.toFixed(2)} each</div>
-                                        ${isOriginalItem && item.quantity <= originalQty ? '<div class="text-xs text-orange-400 mt-1"></div>' : ''}
-                                    </div>
-                                    <div class="text-center">
-                                        <div class="flex items-center justify-center space-x-2">
-                                            <button ${decrementOnclick} class="${decrementBtnClass}">-</button>
-                                            <span class="text-white font-semibold">${item.quantity}</span>
-                                            <button onclick="incrementQuantity(${index})" class="w-6 h-6 bg-green-600 text-white rounded hover:bg-green-700">+</button>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="text-right mt-2 text-white font-semibold">
-                                    Rs. ${(item.price * item.quantity).toFixed(2)}
-                                </div>
-                            </div>
-                        `
+                                            <div class="bg-gray-700 rounded-lg p-3 border border-gray-600 ${isOriginalItem && item.quantity <= originalQty ? 'border-l-4 border-l-orange-500' : ''}">
+                                                <div class="grid grid-cols-3 gap-2 text-sm">
+                                                    <div class="col-span-2">
+                                                        <div class="font-semibold text-white">${index + 1}. ${item.name}</div>
+                                                        <div class="text-xs text-gray-400">Rs. ${item.price.toFixed(2)} each</div>
+                                                        ${isOriginalItem && item.quantity <= originalQty ? '<div class="text-xs text-orange-400 mt-1"></div>' : ''}
+                                                    </div>
+                                                    <div class="text-center">
+                                                        <div class="flex items-center justify-center space-x-2">
+                                                            <button ${decrementOnclick} class="${decrementBtnClass}">-</button>
+                                                            <span class="text-white font-semibold">${item.quantity}</span>
+                                                            <button onclick="incrementQuantity(${index})" class="w-6 h-6 bg-green-600 text-white rounded hover:bg-green-700">+</button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="text-right mt-2 text-white font-semibold">
+                                                    Rs. ${(item.price * item.quantity).toFixed(2)}
+                                                </div>
+                                            </div>
+                                        `
                     }).join('');
                 }
 
@@ -2250,11 +2264,11 @@
                         }
 
                         return `
-                            <button class="p-3 bg-blue-700 text-white rounded-lg hover:bg-blue-600 transition font-semibold"
-                                    onclick="addPortionToBill(${itemId}, '${itemName}', ${portionPrice}, '${p.name}', ${p.id})">
-                                ${p.name}
-                            </button>
-                        `;
+                                            <button class="p-3 bg-blue-700 text-white rounded-lg hover:bg-blue-600 transition font-semibold"
+                                                    onclick="addPortionToBill(${itemId}, '${itemName}', ${portionPrice}, '${p.name}', ${p.id})">
+                                                ${p.name}
+                                            </button>
+                                        `;
                     }).join('');
 
                     closeBtn.classList.remove('hidden');
@@ -2464,7 +2478,11 @@
                                     table_number: String(result.table_number || ''),
                                     pickme_ref: String(result.pickme_ref_number || pickMeRefNumber || ''),
                                     kot_number: String(result.kot_number || 'N/A'),
+                                    kot_sub_number: result.kot_sub_number || 0,
+                                    kot_display_number: String(result.kot_display_number || result.kot_number || 'N/A'),
                                     bot_number: String(result.bot_number || 'N/A'),
+                                    bot_sub_number: result.bot_sub_number || 0,
+                                    bot_display_number: String(result.bot_display_number || result.bot_number || 'N/A'),
                                     kot_items: result.kot_items || [],
                                     bot_items: result.bot_items || [],
                                     user_name: String('{{ Auth::user()->name }}')
@@ -2548,13 +2566,13 @@
                                 }
 
                                 return `
-                                        <button
-                                            ${clickable ? `onclick="selectTable('${table.table_number}', ${table.id})"` : 'disabled'}
-                                            class="p-4 ${bgColor} text-white rounded-lg transition font-semibold">
-                                            ${table.table_number}
-                                            ${!table.is_available ? '<br><span class="text-xs">(Reserved)</span>' : ''}
-                                        </button>
-                                    `;
+                                                        <button
+                                                            ${clickable ? `onclick="selectTable('${table.table_number}', ${table.id})"` : 'disabled'}
+                                                            class="p-4 ${bgColor} text-white rounded-lg transition font-semibold">
+                                                            ${table.table_number}
+                                                            ${!table.is_available ? '<br><span class="text-xs">(Reserved)</span>' : ''}
+                                                        </button>
+                                                    `;
                             }).join('');
 
                             document.getElementById('tableModal').classList.remove('hidden');
@@ -2572,6 +2590,22 @@
                         await cancelVoidedOrderIfExists();
 
                         const response = await fetch('{{ route("pos.openChecks") }}');
+
+                        // Check for session/authentication issues
+                        if (response.status === 401 || response.status === 419) {
+                            showNotification('Your session has expired. Please login again.', 'Session Expired');
+                            setTimeout(() => {
+                                window.location.href = '{{ route("login") }}';
+                            }, 2000);
+                            return;
+                        }
+
+                        // Check if response is not OK
+                        if (!response.ok) {
+                            showNotification('Error loading open checks. Status: ' + response.status, 'Error');
+                            return;
+                        }
+
                         const result = await response.json();
 
                         if (result.success) {
@@ -2579,10 +2613,10 @@
 
                             if (result.orders.length === 0) {
                                 container.innerHTML = `
-                                        <div class="text-center text-gray-500 py-8">
-                                            <p>No open checks</p>
-                                        </div>
-                                    `;
+                                                        <div class="text-center text-gray-500 py-8">
+                                                            <p>No open checks</p>
+                                                        </div>
+                                                    `;
                             } else {
                                 container.innerHTML = result.orders.map(order => {
                                     let typeDisplay = '';
@@ -2597,28 +2631,32 @@
                                     }
 
                                     return `
-                                        <div class="bg-gray-700 rounded-lg p-4 hover:bg-gray-600 cursor-pointer transition"
-                                             onclick="loadOrder(${order.id})">
-                                            <div class="flex justify-between items-center">
-                                                <div>
-                                                    <div class="text-white font-semibold">${order.order_number}</div>
-                                                    <div class="text-sm text-gray-400">
-                                                        ${typeDisplay} | ${order.items_count} items
-                                                    </div>
-                                                </div>
-                                                <div class="text-right">
-                                                    <div class="text-white font-bold">Rs. ${parseFloat(order.total_amount).toFixed(2)}</div>
-                                                    <div class="text-xs text-gray-400">${order.created_at}</div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        `;
+                                                        <div class="bg-gray-700 rounded-lg p-4 hover:bg-gray-600 cursor-pointer transition"
+                                                             onclick="loadOrder(${order.id})">
+                                                            <div class="flex justify-between items-center">
+                                                                <div>
+                                                                    <div class="text-white font-semibold">${order.order_number}</div>
+                                                                    <div class="text-sm text-gray-400">
+                                                                        ${typeDisplay} | ${order.items_count} items
+                                                                    </div>
+                                                                </div>
+                                                                <div class="text-right">
+                                                                    <div class="text-white font-bold">Rs. ${parseFloat(order.total_amount).toFixed(2)}</div>
+                                                                    <div class="text-xs text-gray-400">${order.created_at}</div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        `;
                                 }).join('');
                             }
 
                             document.getElementById('openChecksModal').classList.remove('hidden');
+                        } else {
+                            // API returned success: false
+                            showNotification(result.message || 'Failed to load open checks', 'Error');
                         }
                     } catch (error) {
+                        console.error('Open checks error:', error);
                         showNotification('Error loading open checks: ' + error.message, 'Error');
                     }
                 }
@@ -2770,13 +2808,13 @@
                                 }
 
                                 return `
-                                        <button
-                                            ${clickable ? `onclick="confirmTableTransfer('${table.table_number}', ${table.id})"` : 'disabled'}
-                                            class="p-4 ${bgColor} text-white rounded-lg transition font-semibold">
-                                            ${table.table_number}
-                                            ${label}
-                                        </button>
-                                    `;
+                                                        <button
+                                                            ${clickable ? `onclick="confirmTableTransfer('${table.table_number}', ${table.id})"` : 'disabled'}
+                                                            class="p-4 ${bgColor} text-white rounded-lg transition font-semibold">
+                                                            ${table.table_number}
+                                                            ${label}
+                                                        </button>
+                                                    `;
                             }).join('');
 
                             document.getElementById('tableTransferModal').classList.remove('hidden');
@@ -2961,14 +2999,14 @@
 
                             if (availableOrders.length === 0) {
                                 mergeGrid.innerHTML = `
-                                        <div class="col-span-3 text-center text-gray-500 py-8">
-                                            <svg class="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                            </svg>
-                                            <p class="text-lg font-semibold">No other orders available to merge</p>
-                                            <p class="text-sm text-gray-400 mt-1">All open orders are currently unavailable for merging</p>
-                                        </div>
-                                    `;
+                                                        <div class="col-span-3 text-center text-gray-500 py-8">
+                                                            <svg class="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                            </svg>
+                                                            <p class="text-lg font-semibold">No other orders available to merge</p>
+                                                            <p class="text-sm text-gray-400 mt-1">All open orders are currently unavailable for merging</p>
+                                                        </div>
+                                                    `;
                             } else {
                                 mergeGrid.innerHTML = availableOrders.map(order => {
                                     let typeDisplay = '';
@@ -2988,27 +3026,27 @@
                                     }
 
                                     return `
-                                            <button
-                                                onclick="selectOrderToMerge(${order.id})"
-                                                class="p-4 bg-gray-700 hover:bg-teal-600 text-white rounded-lg transition border-2 border-gray-600 hover:border-teal-500 text-left">
-                                                <div class="flex justify-between items-start mb-2">
-                                                    <div class="font-bold text-lg">${order.order_number}</div>
-                                                    <span class="text-xs px-2 py-1 rounded ${typeBadgeColor}">${typeDisplay}</span>
-                                                </div>
-                                                <div class="text-sm text-gray-300 mb-2">
-                                                    <span class="inline-flex items-center">
-                                                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                                                        </svg>
-                                                        ${order.items_count} items
-                                                    </span>
-                                                </div>
-                                                <div class="flex justify-between items-center mt-2 pt-2 border-t border-gray-600">
-                                                    <span class="text-xs text-gray-400">${order.created_at}</span>
-                                                    <span class="font-bold text-teal-400">Rs. ${parseFloat(order.total_amount).toFixed(2)}</span>
-                                                </div>
-                                            </button>
-                                        `;
+                                                            <button
+                                                                onclick="selectOrderToMerge(${order.id})"
+                                                                class="p-4 bg-gray-700 hover:bg-teal-600 text-white rounded-lg transition border-2 border-gray-600 hover:border-teal-500 text-left">
+                                                                <div class="flex justify-between items-start mb-2">
+                                                                    <div class="font-bold text-lg">${order.order_number}</div>
+                                                                    <span class="text-xs px-2 py-1 rounded ${typeBadgeColor}">${typeDisplay}</span>
+                                                                </div>
+                                                                <div class="text-sm text-gray-300 mb-2">
+                                                                    <span class="inline-flex items-center">
+                                                                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                                                                        </svg>
+                                                                        ${order.items_count} items
+                                                                    </span>
+                                                                </div>
+                                                                <div class="flex justify-between items-center mt-2 pt-2 border-t border-gray-600">
+                                                                    <span class="text-xs text-gray-400">${order.created_at}</span>
+                                                                    <span class="font-bold text-teal-400">Rs. ${parseFloat(order.total_amount).toFixed(2)}</span>
+                                                                </div>
+                                                            </button>
+                                                        `;
                                 }).join('');
                             }
 
@@ -3414,29 +3452,29 @@
 
                     if (voidItemsList.length === 0) {
                         tbody.innerHTML = `
-                                <tr id="noVoidItemsRow">
-                                    <td colspan="4" class="px-4 py-6 text-center text-gray-400">
-                                        No items added to void. Select items above.
-                                    </td>
-                                </tr>
-                            `;
+                                                <tr id="noVoidItemsRow">
+                                                    <td colspan="4" class="px-4 py-6 text-center text-gray-400">
+                                                        No items added to void. Select items above.
+                                                    </td>
+                                                </tr>
+                                            `;
                         return;
                     }
 
                     tbody.innerHTML = voidItemsList.map((item, index) => `
-                            <tr class="border-t border-gray-600">
-                                <td class="px-4 py-3 text-white">${item.item_name}</td>
-                                <td class="px-4 py-3 text-center text-gray-300">${item.current_quantity}</td>
-                                <td class="px-4 py-3 text-center text-orange-400 font-bold">-${item.void_quantity}</td>
-                                <td class="px-4 py-3 text-center">
-                                    <button onclick="removeVoidItem(${index})" class="text-red-400 hover:text-red-300 transition">
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                        </svg>
-                                    </button>
-                                </td>
-                            </tr>
-                        `).join('');
+                                            <tr class="border-t border-gray-600">
+                                                <td class="px-4 py-3 text-white">${item.item_name}</td>
+                                                <td class="px-4 py-3 text-center text-gray-300">${item.current_quantity}</td>
+                                                <td class="px-4 py-3 text-center text-orange-400 font-bold">-${item.void_quantity}</td>
+                                                <td class="px-4 py-3 text-center">
+                                                    <button onclick="removeVoidItem(${index})" class="text-red-400 hover:text-red-300 transition">
+                                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                        </svg>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        `).join('');
                 }
 
                 // Process void items - send to server and print cancel KOT
@@ -3634,8 +3672,17 @@
                         });
                         yPosition += 6;
 
+                        // Check if this is a cancel for a sub-KOT/BOT (has sub-number)
+                        // Format: CANCEL-KOT-YYYYMMDD-XXXX-N (where N is the sub-number)
+                        const kotParts = kotNumber ? String(kotNumber).split('-') : [];
+                        const hasSubNumber = kotParts.length > 4; // CANCEL-KOT-DATE-NUM-SUB
+                        const subNumber = hasSubNumber ? kotParts[kotParts.length - 1] : null;
+
                         pdf.setFontSize(12);
-                        pdf.text(station === 'KITCHEN' ? '(CANCEL KOT)' : '(CANCEL BOT)', pageWidth / 2, yPosition, {
+                        const cancelLabel = station === 'KITCHEN' 
+                            ? (hasSubNumber ? `(CANCEL KOT - ADDITION #${subNumber})` : '(CANCEL KOT)')
+                            : (hasSubNumber ? `(CANCEL BOT - ADDITION #${subNumber})` : '(CANCEL BOT)');
+                        pdf.text(cancelLabel, pageWidth / 2, yPosition, {
                             align: 'center'
                         });
                         yPosition += 8;
@@ -4989,18 +5036,18 @@
                             const subtotal = parseFloat(item.subtotal || 0).toFixed(2);
 
                             itemsHTML += `
-                                    <div class="item-row">
-                                        <div class="item-line">
-                                            <span>${itemCount}</span>
-                                            <span>${itemName}</span>
-                                        </div>
-                                        <div class="item-line">
-                                            <span>${itemCode}</span>
-                                            <span>${unitPrice} x ${quantity}</span>
-                                            <span>${subtotal}</span>
-                                        </div>
-                                    </div>
-                                `;
+                                                    <div class="item-row">
+                                                        <div class="item-line">
+                                                            <span>${itemCount}</span>
+                                                            <span>${itemName}</span>
+                                                        </div>
+                                                        <div class="item-line">
+                                                            <span>${itemCode}</span>
+                                                            <span>${unitPrice} x ${quantity}</span>
+                                                            <span>${subtotal}</span>
+                                                        </div>
+                                                    </div>
+                                                `;
                         });
                     }
 
@@ -5019,188 +5066,188 @@
                     });
 
                     return `
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="UTF-8">
-            <title>Receipt - ${order.order_number || 'Order #' + order.id}</title>
-            <style>
-                * {
-                    margin: 0;
-                    padding: 0;
-                    box-sizing: border-box;
-                }
+                        <!DOCTYPE html>
+                        <html>
+                        <head>
+                            <meta charset="UTF-8">
+                            <title>Receipt - ${order.order_number || 'Order #' + order.id}</title>
+                            <style>
+                                * {
+                                    margin: 0;
+                                    padding: 0;
+                                    box-sizing: border-box;
+                                }
 
-                @page {
-                    size: 80mm auto;
-                    margin: 0;
-                }
+                                @page {
+                                    size: 80mm auto;
+                                    margin: 0;
+                                }
 
-                body {
-                    font-family: 'Courier New', Courier, monospace;
-                    font-size: 11px;
-                    line-height: 1.3;
-                    width: 80mm;
-                    padding: 5mm;
-                    margin: 0 auto;
-                    background: white;
-                }
+                                body {
+                                    font-family: 'Courier New', Courier, monospace;
+                                    font-size: 11px;
+                                    line-height: 1.3;
+                                    width: 80mm;
+                                    padding: 5mm;
+                                    margin: 0 auto;
+                                    background: white;
+                                }
 
-                .header {
-                    text-align: center;
-                    margin-bottom: 8px;
-                    padding-bottom: 8px;
-                }
+                                .header {
+                                    text-align: center;
+                                    margin-bottom: 8px;
+                                    padding-bottom: 8px;
+                                }
 
-                .header h1 {
-                    font-size: 16px;
-                    font-weight: bold;
-                    margin-bottom: 2px;
-                    letter-spacing: 1px;
-                }
+                                .header h1 {
+                                    font-size: 16px;
+                                    font-weight: bold;
+                                    margin-bottom: 2px;
+                                    letter-spacing: 1px;
+                                }
 
-                .header .subtitle {
-                    font-size: 10px;
-                    margin-bottom: 2px;
-                }
+                                .header .subtitle {
+                                    font-size: 10px;
+                                    margin-bottom: 2px;
+                                }
 
-                .header .address {
-                    font-size: 9px;
-                    line-height: 1.4;
-                }
+                                .header .address {
+                                    font-size: 9px;
+                                    line-height: 1.4;
+                                }
 
-                .divider {
-                    border-top: 1px dashed #000;
-                    margin: 5px 0;
-                }
+                                .divider {
+                                    border-top: 1px dashed #000;
+                                    margin: 5px 0;
+                                }
 
-                .divider-thick {
-                    border-top: 2px solid #000;
-                    margin: 5px 0;
-                }
+                                .divider-thick {
+                                    border-top: 2px solid #000;
+                                    margin: 5px 0;
+                                }
 
-                .invoice-title {
-                    text-align: center;
-                    font-weight: bold;
-                    font-size: 14px;
-                    margin: 8px 0;
-                }
+                                .invoice-title {
+                                    text-align: center;
+                                    font-weight: bold;
+                                    font-size: 14px;
+                                    margin: 8px 0;
+                                }
 
-                .info-row {
-                    display: flex;
-                    justify-content: space-between;
-                    margin-bottom: 2px;
-                    font-size: 10px;
-                }
+                                .info-row {
+                                    display: flex;
+                                    justify-content: space-between;
+                                    margin-bottom: 2px;
+                                    font-size: 10px;
+                                }
 
-                .info-row .label {
-                    min-width: 80px;
-                }
+                                .info-row .label {
+                                    min-width: 80px;
+                                }
 
-                .section {
-                    margin: 8px 0;
-                }
+                                .section {
+                                    margin: 8px 0;
+                                }
 
-                .items-header {
-                    display: flex;
-                    justify-content: space-between;
-                    font-weight: bold;
-                    margin-bottom: 3px;
-                    padding-bottom: 3px;
-                    border-bottom: 1px dashed #000;
-                }
+                                .items-header {
+                                    display: flex;
+                                    justify-content: space-between;
+                                    font-weight: bold;
+                                    margin-bottom: 3px;
+                                    padding-bottom: 3px;
+                                    border-bottom: 1px dashed #000;
+                                }
 
-                .item-row {
-                    margin-bottom: 5px;
-                }
+                                .item-row {
+                                    margin-bottom: 5px;
+                                }
 
-                .item-line {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: flex-start;
-                    gap: 5px;
-                }
+                                .item-line {
+                                    display: flex;
+                                    justify-content: space-between;
+                                    align-items: flex-start;
+                                    gap: 5px;
+                                }
 
-                .item-line:first-child {
-                    font-weight: bold;
-                }
+                                .item-line:first-child {
+                                    font-weight: bold;
+                                }
 
-                .totals {
-                    margin-top: 8px;
-                }
+                                .totals {
+                                    margin-top: 8px;
+                                }
 
-                .total-row {
-                    display: flex;
-                    justify-content: space-between;
-                    margin-bottom: 3px;
-                }
+                                .total-row {
+                                    display: flex;
+                                    justify-content: space-between;
+                                    margin-bottom: 3px;
+                                }
 
-                .total-row.grand {
-                    font-weight: bold;
-                    font-size: 13px;
-                    padding-top: 3px;
-                    margin-top: 3px;
-                }
+                                .total-row.grand {
+                                    font-weight: bold;
+                                    font-size: 13px;
+                                    padding-top: 3px;
+                                    margin-top: 3px;
+                                }
 
-                .payment-info {
-                    margin-top: 8px;
-                }
+                                .payment-info {
+                                    margin-top: 8px;
+                                }
 
-                .credit-note {
-                    margin-top: 5px;
-                    font-size: 10px;
-                }
+                                .credit-note {
+                                    margin-top: 5px;
+                                    font-size: 10px;
+                                }
 
-                .footer {
-                    text-align: center;
-                    margin-top: 10px;
-                    font-size: 10px;
-                }
+                                .footer {
+                                    text-align: center;
+                                    margin-top: 10px;
+                                    font-size: 10px;
+                                }
 
-                .footer-note {
-                    margin-top: 8px;
-                    padding-top: 8px;
-                    border-top: 1px dashed #000;
-                    font-size: 9px;
-                }
+                                .footer-note {
+                                    margin-top: 8px;
+                                    padding-top: 8px;
+                                    border-top: 1px dashed #000;
+                                    font-size: 9px;
+                                }
 
-                @media print {
-                    body {
-                        width: 80mm;
-                    }
-                }
-            </style>
-        </head>
-        <body>
-            <div class="header">
-                <h1>RAVON RESTAURANT</h1>
-                <div class="subtitle">Ravon Restaurant (Pvt) Ltd</div>
-                <div class="address">
-                    NO 282/A/2, KCTHALAWALA,<br>
-                    KADUWELA.<br>
-                    TEL.016-2006007<br>
-                    Email-ravonrestaurant@gmail.com
-                </div>
-            </div>
+                                @media print {
+                                    body {
+                                        width: 80mm;
+                                    }
+                                }
+                            </style>
+                        </head>
+                        <body>
+                            <div class="header">
+                                <h1>RAVON RESTAURANT</h1>
+                                <div class="subtitle">Ravon Restaurant (Pvt) Ltd</div>
+                                <div class="address">
+                                    NO 282/A/2, KCTHALAWALA,<br>
+                                    KADUWELA.<br>
+                                    TEL.016-2006007<br>
+                                    Email-ravonrestaurant@gmail.com
+                                </div>
+                            </div>
 
-            <div class="invoice-title">INVOICE</div>
+                            <div class="invoice-title">INVOICE</div>
 
-            <div class="section">
-                <div class="info-row">
-                    <span class="label">Invoice #</span>
-                    <span>${order.order_number || order.id}</span>
-                </div>
-                <div class="info-row">
-                    <span class="label">Date</span>
-                    <span>:${dateStr} Time ${timeStr}</span>
-                </div>
-                <div class="info-row">
-                    <span class="label">Terminal:</span>
-                    <span>01</span>
-                </div>
-                <div class="info-row">
-                    <span class="label">Table # :</span>
-                    <span>${(() => {
+                            <div class="section">
+                                <div class="info-row">
+                                    <span class="label">Invoice #</span>
+                                    <span>${order.order_number || order.id}</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="label">Date</span>
+                                    <span>:${dateStr} Time ${timeStr}</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="label">Terminal:</span>
+                                    <span>01</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="label">Table # :</span>
+                                    <span>${(() => {
                             if (order.table && order.table.table_number) {
                                 return order.table.table_number;
                             } else {
@@ -5220,80 +5267,80 @@
                                 }
                             }
                         })()}</span>
-                </div>
-                <div class="info-row">
-                    <span class="label">Cashier :</span>
-                    <span>${order.waiter ? order.waiter.name : 'Cashier'}</span>
-                </div>
-            </div>
+                                </div>
+                                <div class="info-row">
+                                    <span class="label">Cashier :</span>
+                                    <span>${order.waiter ? order.waiter.name : 'Cashier'}</span>
+                                </div>
+                            </div>
 
-            <div class="divider"></div>
+                            <div class="divider"></div>
 
-            <div class="items-header">
-                <span>In Item Price</span>
-                <span>Qty Amount</span>
-            </div>
+                            <div class="items-header">
+                                <span>In Item Price</span>
+                                <span>Qty Amount</span>
+                            </div>
 
-            <div class="divider"></div>
+                            <div class="divider"></div>
 
-            ${itemsHTML}
+                            ${itemsHTML}
 
-            <div class="divider"></div>
+                            <div class="divider"></div>
 
-            <div class="totals">
-                <div class="total-row">
-                    <span>Sub Total</span>
-                    <span>${parseFloat(order.subtotal).toFixed(2)}</span>
-                </div>
-            </div>
+                            <div class="totals">
+                                <div class="total-row">
+                                    <span>Sub Total</span>
+                                    <span>${parseFloat(order.subtotal).toFixed(2)}</span>
+                                </div>
+                            </div>
 
-            <div class="divider-thick"></div>
+                            <div class="divider-thick"></div>
 
-            <div class="total-row grand">
-                <span>Total</span>
-                <span>${parseFloat(order.total_amount).toFixed(2)}</span>
-            </div>
+                            <div class="total-row grand">
+                                <span>Total</span>
+                                <span>${parseFloat(order.total_amount).toFixed(2)}</span>
+                            </div>
 
-            <div class="payment-info">
-                <div class="total-row">
-                    <span>Payment Method</span>
-                    <span>${paymentMethod}</span>
-                </div>
-                ${cashAmount > 0 ? `
-                <div class="total-row">
-                    <span>Cash</span>
-                    <span>${parseFloat(cashAmount).toFixed(2)}</span>
-                </div>
-                ` : ''}
-                ${cardAmount > 0 ? `
-                <div class="total-row">
-                    <span>Card</span>
-                    <span>${parseFloat(cardAmount).toFixed(2)}</span>
-                </div>
-                ` : ''}
-                ${creditAmount > 0 ? `
-                <div class="total-row">
-                    <span>Credit</span>
-                    <span>${parseFloat(creditAmount).toFixed(2)}</span>
-                </div>
-                ` : ''}
-                ${parseFloat(changeAmount) > 0 ? `
-                <div class="total-row">
-                    <span>Change</span>
-                    <span>${parseFloat(changeAmount).toFixed(2)}</span>
-                </div>
-                ` : ''}
-            </div>
+                            <div class="payment-info">
+                                <div class="total-row">
+                                    <span>Payment Method</span>
+                                    <span>${paymentMethod}</span>
+                                </div>
+                                ${cashAmount > 0 ? `
+                                <div class="total-row">
+                                    <span>Cash</span>
+                                    <span>${parseFloat(cashAmount).toFixed(2)}</span>
+                                </div>
+                                ` : ''}
+                                ${cardAmount > 0 ? `
+                                <div class="total-row">
+                                    <span>Card</span>
+                                    <span>${parseFloat(cardAmount).toFixed(2)}</span>
+                                </div>
+                                ` : ''}
+                                ${creditAmount > 0 ? `
+                                <div class="total-row">
+                                    <span>Credit</span>
+                                    <span>${parseFloat(creditAmount).toFixed(2)}</span>
+                                </div>
+                                ` : ''}
+                                ${parseFloat(changeAmount) > 0 ? `
+                                <div class="total-row">
+                                    <span>Change</span>
+                                    <span>${parseFloat(changeAmount).toFixed(2)}</span>
+                                </div>
+                                ` : ''}
+                            </div>
 
-            <div class="footer">
-                <div style="font-weight: bold; margin-bottom: 5px;">THANK YOU, COME AGAIN.</div>
-                <div class="footer-note">
-                    Software By SKM Labs
-                </div>
-            </div>
-        </body>
-        </html>
-                        `;
+                            <div class="footer">
+                                <div style="font-weight: bold; margin-bottom: 5px;">THANK YOU, COME AGAIN.</div>
+                                <div class="footer-note">
+                                    Software By SKM Labs
+                                </div>
+                            </div>
+                        </body>
+                        </html>
+                                        `;
                 }
 
                 // Open Closed Orders Modal
@@ -5307,10 +5354,10 @@
 
                             if (result.orders.length === 0) {
                                 container.innerHTML = `
-                                        <div class="text-center text-gray-500 py-8">
-                                            <p>No closed orders</p>
-                                        </div>
-                                    `;
+                                                        <div class="text-center text-gray-500 py-8">
+                                                            <p>No closed orders</p>
+                                                        </div>
+                                                    `;
                             } else {
                                 container.innerHTML = result.orders.map(order => {
                                     let typeDisplay = '';
@@ -5325,28 +5372,28 @@
                                     }
 
                                     return `
-                                        <div class="bg-gray-700 rounded-lg p-4 mb-2 flex justify-between items-center hover:bg-gray-650 transition">
-                                            <div>
-                                                <div class="text-white font-semibold">${order.order_number}</div>
-                                                <div class="text-sm text-gray-400">
-                                                    ${typeDisplay} | ${order.items_count} items | ${order.payment_method.toUpperCase()}
-                                                </div>
-                                            </div>
-                                            <div class="flex items-center gap-4">
-                                                <div class="text-right">
-                                                    <div class="text-white font-bold">Rs. ${parseFloat(order.total_amount).toFixed(2)}</div>
-                                                    <div class="text-xs text-gray-400">${order.completed_at}</div>
-                                                </div>
-                                                <button onclick="printReceipt(${order.id})"
-                                                        class="bg-rose-500 hover:bg-rose-600 text-white p-2 rounded-lg transition shadow-sm"
-                                                        title="Print Receipt">
-                                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                                                    </svg>
-                                                </button>
-                                            </div>
-                                        </div>
-                                        `;
+                                                        <div class="bg-gray-700 rounded-lg p-4 mb-2 flex justify-between items-center hover:bg-gray-650 transition">
+                                                            <div>
+                                                                <div class="text-white font-semibold">${order.order_number}</div>
+                                                                <div class="text-sm text-gray-400">
+                                                                    ${typeDisplay} | ${order.items_count} items | ${order.payment_method.toUpperCase()}
+                                                                </div>
+                                                            </div>
+                                                            <div class="flex items-center gap-4">
+                                                                <div class="text-right">
+                                                                    <div class="text-white font-bold">Rs. ${parseFloat(order.total_amount).toFixed(2)}</div>
+                                                                    <div class="text-xs text-gray-400">${order.completed_at}</div>
+                                                                </div>
+                                                                <button onclick="printReceipt(${order.id})"
+                                                                        class="bg-rose-500 hover:bg-rose-600 text-white p-2 rounded-lg transition shadow-sm"
+                                                                        title="Print Receipt">
+                                                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                                                                    </svg>
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                        `;
                                 }).join('');
                             }
 
