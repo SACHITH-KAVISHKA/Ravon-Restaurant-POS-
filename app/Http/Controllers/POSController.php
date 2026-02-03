@@ -14,6 +14,7 @@ use App\Models\CashierSubStock;
 use App\Models\ItemRecipe;
 use App\Models\ItemModifier;
 use App\Models\VoidRecord;
+use App\Models\OrderLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -289,6 +290,9 @@ class POSController extends Controller
                     'subtotal' => 0,
                     'total_amount' => 0,
                 ]);
+
+                // Log order creation
+                OrderLog::logCreated($order, 'New order placed via POS');
 
                 // Reserve table if dine-in
                 if ($validated['table_id']) {
@@ -787,11 +791,26 @@ class POSController extends Controller
             }
 
             // Update order
+            $oldStatus = $order->status;
             $order->update([
                 'status' => 'completed',
                 'is_paid' => true,
                 'completed_at' => now(),
             ]);
+
+            // Log payment and status change
+            OrderLog::logPaymentAdded($order, [
+                'payment_id' => $payment->id,
+                'payment_number' => $payment->payment_number,
+                'payment_method' => $payment->payment_method,
+                'total_amount' => $payment->total_amount,
+                'cash_amount' => $payment->cash_amount,
+                'card_amount' => $payment->card_amount,
+                'change_amount' => $payment->change_amount,
+            ], 'Payment processed');
+
+            // Log status change
+            OrderLog::logStatusChanged($order, $oldStatus, 'completed', 'Order completed after payment');
 
             // Free up table if dine-in
             if ($order->table_id) {
@@ -1242,6 +1261,17 @@ class POSController extends Controller
             // Order will be cancelled only when user starts a new order without adding items
             $allItemsVoided = $updatedItems->isEmpty();
 
+            // Log the void operation
+            OrderLog::logAction($order, OrderLog::ACTION_ITEM_REMOVED, [
+                'reason' => $request->input('reason') ?? 'Items voided by supervisor: ' . $supervisor->name,
+                'old_values' => [
+                    'voided_items' => $voidedItems,
+                    'supervisor_id' => $supervisor->id,
+                    'supervisor_name' => $supervisor->name,
+                ],
+                'description' => count($voidedItems) . ' item(s) voided by supervisor ' . $supervisor->name,
+            ]);
+
             DB::commit();
 
             return response()->json([
@@ -1294,12 +1324,17 @@ class POSController extends Controller
             }
 
             // Cancel the order
+            $oldStatus = $order->status;
             $order->update([
                 'status' => 'cancelled',
                 'cancelled_at' => now(),
                 'cancelled_by' => Auth::id(),
                 'cancellation_reason' => 'All items voided - New order started',
             ]);
+
+            // Log the cancellation
+            OrderLog::logStatusChanged($order, $oldStatus, 'cancelled', 'All items voided - New order started');
+            OrderLog::logDeleted($order, 'Order cancelled after all items were voided');
 
             // Free up the table if dine-in
             if ($order->table_id) {
@@ -1393,9 +1428,18 @@ class POSController extends Controller
             ]);
 
             // Update the order's table
+            $oldTableId = $order->table_id;
             $order->update([
                 'table_id' => $validated['new_table_id'],
             ]);
+
+            // Log the table transfer
+            OrderLog::logTableChanged(
+                $order,
+                $oldTableId,
+                $validated['new_table_id'],
+                'Order transferred from ' . ($oldTable ? $oldTable->table_number : 'N/A') . ' to ' . $newTable->table_number
+            );
 
             DB::commit();
 
@@ -1531,6 +1575,13 @@ class POSController extends Controller
                 }
             }
 
+            // Log the merge operation on target order
+            OrderLog::logMerged($targetOrder, $sourceOrder->id, 'Order #' . $sourceOrder->order_number . ' merged into this order');
+
+            // Log the cancellation on source order
+            OrderLog::logStatusChanged($sourceOrder, 'pending', 'cancelled', 'Merged into Order #' . $targetOrder->order_number);
+            OrderLog::logDeleted($sourceOrder, 'Order cancelled after being merged into Order #' . $targetOrder->order_number);
+
             DB::commit();
 
             return response()->json([
@@ -1545,6 +1596,51 @@ class POSController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error merging orders: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get order activity logs
+     */
+    public function getOrderLogs($orderId)
+    {
+        try {
+            $order = Order::with(['logs.performedBy'])->findOrFail($orderId);
+
+            $logs = $order->logs->map(function ($log) {
+                return [
+                    'id' => $log->id,
+                    'action' => $log->action,
+                    'action_label' => $log->action_label,
+                    'action_color' => $log->action_color,
+                    'old_status' => $log->old_status,
+                    'new_status' => $log->new_status,
+                    'reason' => $log->reason,
+                    'description' => $log->description,
+                    'old_values' => $log->old_values,
+                    'new_values' => $log->new_values,
+                    'performed_by' => $log->performedBy ? [
+                        'id' => $log->performedBy->id,
+                        'name' => $log->performedBy->name,
+                    ] : null,
+                    'ip_address' => $log->ip_address,
+                    'created_at' => $log->created_at->format('M d, Y h:i:s A'),
+                    'created_at_human' => $log->created_at->diffForHumans(),
+                ];
+            });
+
+            return response()->json([
+                'success' => true,
+                'order_id' => $order->id,
+                'order_number' => $order->order_number,
+                'logs' => $logs,
+                'total_logs' => $logs->count(),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error fetching order logs: ' . $e->getMessage()
             ], 500);
         }
     }

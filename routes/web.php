@@ -140,6 +140,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/cancel-voided-order', [App\Http\Controllers\POSController::class, 'cancelVoidedOrder'])->name('cancelVoidedOrder');
         Route::post('/transfer-table', [App\Http\Controllers\POSController::class, 'transferTable'])->name('transferTable');
         Route::post('/merge-order', [App\Http\Controllers\POSController::class, 'mergeOrder'])->name('mergeOrder');
+        Route::get('/order/{orderId}/logs', [App\Http\Controllers\POSController::class, 'getOrderLogs'])->name('orderLogs');
     });
 
     // Stock Management Routes

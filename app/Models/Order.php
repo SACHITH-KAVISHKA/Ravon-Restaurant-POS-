@@ -134,6 +134,14 @@ class Order extends Model
     }
 
     /**
+     * Get order activity logs.
+     */
+    public function logs(): HasMany
+    {
+        return $this->hasMany(OrderLog::class)->orderBy('created_at', 'desc');
+    }
+
+    /**
      * Get payment.
      */
     public function payment(): HasOne
