@@ -233,8 +233,8 @@
                 </div>
 
                 <!-- Right Column - Portions -->
-                <div>
-                    <div class="bg-white rounded-lg shadow-lg p-6 border border-gray-200">
+                <div class="overflow-visible">
+                    <div class="bg-white rounded-lg shadow-lg p-6 border border-gray-200 overflow-visible">
                         <h2 class="text-xl font-bold text-gray-800 mb-4">Portions / Sizes</h2>
 
                         <!-- Portions Content (shown when checkbox is checked) -->
@@ -278,7 +278,7 @@
                                     </div>
 
                                     <div
-                                        class="bg-gradient-to-br from-amber-50 to-orange-100/50 p-2 rounded border border-amber-200">
+                                        class="bg-gradient-to-br from-amber-50 to-orange-100/50 p-2 rounded border border-amber-200 overflow-visible">
                                         <div class="flex justify-between items-center mb-2">
                                             <label class="text-xs font-semibold text-amber-700">Recipe (Raw
                                                 Materials)</label>
@@ -291,7 +291,7 @@
                                                 Add
                                             </button>
                                         </div>
-                                        <div id="newPortionRecipes" class="space-y-1">
+                                        <div id="newPortionRecipes" class="space-y-1 overflow-visible">
                                             <!-- Recipes for new portion -->
                                         </div>
                                     </div>
@@ -304,10 +304,10 @@
                             </form>
 
                             <!-- Existing Portions List -->
-                            <div class="space-y-2">
+                            <div class="space-y-2 overflow-visible">
                                 <h3 class="text-sm font-semibold text-gray-800-muted mb-2">Existing Portions</h3>
                                 @forelse($item->modifiers as $modifier)
-                                    <div class="bg-gray-50 rounded-lg p-3 border border-gray-200"
+                                    <div class="bg-gray-50 rounded-lg p-3 border border-gray-200 overflow-visible"
                                         id="portion-{{ $modifier->id }}">
                                         <!-- View Mode -->
                                         <div class="view-mode-{{ $modifier->id }}">
@@ -364,11 +364,11 @@
                                         </div>
 
                                         <!-- Edit Mode -->
-                                        <div class="edit-mode-{{ $modifier->id }} hidden">
-                                            <form action="{{ route('menu.modifiers.update', $modifier) }}" method="POST">
+                                        <div class="edit-mode-{{ $modifier->id }} hidden overflow-visible">
+                                            <form action="{{ route('menu.modifiers.update', $modifier) }}" method="POST" class="overflow-visible">
                                                 @csrf
                                                 @method('PUT')
-                                                <div class="space-y-2">
+                                                <div class="space-y-2 overflow-visible">
                                                     <div>
                                                         <label
                                                             class="block text-xs font-semibold text-gray-800-muted mb-1">Portion
@@ -410,18 +410,18 @@
                                                             @endphp
                                                             @foreach($modifierPrices as $modPrice)
                                                                 <div id="modifierSpecialPrice-existing-{{ $modPrice->id }}"
-                                                                    class="flex gap-1 items-center">
+                                                                    class="flex flex-wrap gap-1 items-center">
                                                                     <select
                                                                         name="modifier_special_prices[existing][{{ $modPrice->id }}][type]"
                                                                         required
-                                                                        class="px-2 py-1.5 bg-purple-50 text-gray-800 rounded-lg border border-purple-200 focus:outline-none focus:border-purple-500 text-xs">
+                                                                        class="min-w-0 flex-1 max-w-[80px] px-2 py-1.5 bg-purple-50 text-gray-800 rounded-lg border border-purple-200 focus:outline-none focus:border-purple-500 text-xs">
                                                                         <option value="pickme" {{ $modPrice->price_type === 'pickme' ? 'selected' : '' }}>Pick Me</option>
                                                                     </select>
                                                                     <input type="number"
                                                                         name="modifier_special_prices[existing][{{ $modPrice->id }}][price]"
                                                                         value="{{ $modPrice->price }}" step="0.01" min="0" required
                                                                         placeholder="Price"
-                                                                        class="w-20 px-2 py-1.5 bg-purple-50 text-gray-800 rounded-lg border border-purple-200 focus:outline-none focus:border-purple-500 text-xs">
+                                                                        class="w-16 px-1 py-1.5 bg-purple-50 text-gray-800 rounded-lg border border-purple-200 focus:outline-none focus:border-purple-500 text-xs">
                                                                     <input type="hidden"
                                                                         name="modifier_special_prices[existing][{{ $modPrice->id }}][id]"
                                                                         value="{{ $modPrice->id }}">
@@ -430,7 +430,7 @@
                                                                         value="{{ $modifier->id }}">
                                                                     <button type="button"
                                                                         onclick="removeExistingModifierSpecialPrice({{ $modPrice->id }})"
-                                                                        class="px-1.5 py-1.5 bg-red-500 text-white rounded hover:bg-red-600 transition">
+                                                                        class="px-1 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition flex-shrink-0">
                                                                         <svg class="w-3 h-3" fill="none" stroke="currentColor"
                                                                             viewBox="0 0 24 24">
                                                                             <path stroke-linecap="round" stroke-linejoin="round"
@@ -443,7 +443,7 @@
                                                     </div>
 
                                                     <div
-                                                        class="col-span-2 bg-gradient-to-br from-amber-50 to-orange-100/50 p-2 rounded border border-amber-200">
+                                                        class="col-span-2 bg-gradient-to-br from-amber-50 to-orange-100/50 p-2 rounded border border-amber-200 overflow-visible">
                                                         <div class="flex justify-between items-center mb-2">
                                                             <label class="text-xs font-semibold text-amber-700">Recipe (Raw
                                                                 Materials)</label>
@@ -458,14 +458,14 @@
                                                                 Add
                                                             </button>
                                                         </div>
-                                                        <div id="editPortionRecipes-{{ $modifier->id }}" class="space-y-1">
+                                                        <div id="editPortionRecipes-{{ $modifier->id }}" class="space-y-1 overflow-visible">
                                                             @foreach($modifier->recipes as $recipe)
                                                                 <div id="modifierRecipe-existing-{{ $recipe->id }}"
-                                                                    class="flex gap-1 items-center">
+                                                                    class="flex flex-wrap gap-1 items-center">
                                                                     <select
                                                                         name="modifier_recipes[existing][{{ $recipe->id }}][main_stock_item_id]"
                                                                         required
-                                                                        class="flex-1 px-2 py-1.5 bg-amber-50 text-gray-800 rounded-lg border border-amber-200 focus:outline-none focus:border-amber-500 text-xs">
+                                                                        class="min-w-0 flex-1 max-w-[120px] px-2 py-1.5 bg-amber-50 text-gray-800 rounded-lg border border-amber-200 focus:outline-none focus:border-amber-500 text-xs truncate">
                                                                         @foreach($rawMaterials as $material)
                                                                             <option value="{{ $material->id }}"
                                                                                 data-unit="{{ $material->unit_abbreviation }}" {{ $recipe->main_stock_item_id == $material->id ? 'selected' : '' }}>
@@ -477,15 +477,15 @@
                                                                         name="modifier_recipes[existing][{{ $recipe->id }}][quantity]"
                                                                         value="{{ $recipe->quantity }}" step="0.001" min="0.001"
                                                                         required placeholder="Qty"
-                                                                        class="w-16 px-2 py-1.5 bg-amber-50 text-gray-800 rounded-lg border border-amber-200 focus:outline-none focus:border-amber-500 text-xs">
+                                                                        class="w-14 px-1 py-1.5 bg-amber-50 text-gray-800 rounded-lg border border-amber-200 focus:outline-none focus:border-amber-500 text-xs">
                                                                     <span
-                                                                        class="text-xs text-gray-600 w-8">{{ $recipe->mainStockItem->unit_abbreviation ?? '--' }}</span>
+                                                                        class="text-xs text-gray-600 w-6 truncate">{{ $recipe->mainStockItem->unit_abbreviation ?? '--' }}</span>
                                                                     <input type="hidden"
                                                                         name="modifier_recipes[existing][{{ $recipe->id }}][id]"
                                                                         value="{{ $recipe->id }}">
                                                                     <button type="button"
                                                                         onclick="removeExistingModifierRecipe({{ $recipe->id }})"
-                                                                        class="px-1.5 py-1.5 bg-red-500 text-white rounded hover:bg-red-600 transition">
+                                                                        class="px-1 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition flex-shrink-0">
                                                                         <svg class="w-3 h-3" fill="none" stroke="currentColor"
                                                                             viewBox="0 0 24 24">
                                                                             <path stroke-linecap="round" stroke-linejoin="round"
@@ -934,22 +934,23 @@
 
             const priceDiv = document.createElement('div');
             priceDiv.id = `newPortionSpecialPrice-${newPortionSpecialPriceCount}`;
-            priceDiv.className = 'flex gap-1 items-center';
+            priceDiv.className = 'flex flex-wrap gap-1 items-center';
 
             priceDiv.innerHTML = `
                     <select name="portion_special_prices[${newPortionSpecialPriceCount}][type]" required
-                        class="px-2 py-1.5 bg-purple-50 text-gray-800 rounded-lg border border-purple-200 focus:outline-none focus:border-purple-500 text-xs">
+                        class="min-w-0 flex-1 max-w-[80px] px-2 py-1.5 bg-purple-50 text-gray-800 rounded-lg border border-purple-200 focus:outline-none focus:border-purple-500 text-xs">
                         <option value="pickme" selected>Pick Me</option>
                     </select>
                     <input type="number" name="portion_special_prices[${newPortionSpecialPriceCount}][price]" step="0.01" min="0" required
-                        placeholder="Price" class="w-20 px-2 py-1.5 bg-purple-50 text-gray-800 rounded-lg border border-purple-200 focus:outline-none focus:border-purple-500 text-xs">
+                        placeholder="Price" class="w-16 px-1 py-1.5 bg-purple-50 text-gray-800 rounded-lg border border-purple-200 focus:outline-none focus:border-purple-500 text-xs">
                     <button type="button" onclick="removeNewPortionSpecialPrice(${newPortionSpecialPriceCount})" 
-                        class="px-1.5 py-1.5 bg-red-500 text-white rounded hover:bg-red-600 transition">
+                        class="px-1 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition flex-shrink-0">
                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>
                 `;
+
 
             container.appendChild(priceDiv);
             updateNewPortionSpecialPrices();
@@ -998,31 +999,32 @@
 
             const recipeDiv = document.createElement('div');
                 recipeDiv.id = `newPortionRecipe-${newPortionRecipeCount}`;
-                recipeDiv.className = 'flex gap-1 items-center';
+                recipeDiv.className = 'flex flex-wrap gap-1 items-center';
 
                 recipeDiv.innerHTML = `
-                        <div class="relative flex-1">
+                        <div class="relative min-w-0 flex-1 max-w-[120px]">
                             <input type="hidden" name="portion_recipes[${newPortionRecipeCount}][main_stock_item_id]" 
                                 id="newPortionRecipeHidden-${newPortionRecipeCount}" required>
                             <input type="text" id="newPortionRecipeSearch-${newPortionRecipeCount}" placeholder="Search..."
                                 autocomplete="off"
-                                class="w-full px-2 py-1.5 bg-amber-50 text-gray-800 rounded-lg border border-amber-200 focus:outline-none focus:border-amber-500 text-xs">
+                                class="w-full px-2 py-1.5 bg-amber-50 text-gray-800 rounded-lg border border-amber-200 focus:outline-none focus:border-amber-500 text-xs truncate">
                             <div id="newPortionRecipeDropdown-${newPortionRecipeCount}" 
-                                class="absolute z-50 w-full mt-1 bg-white border border-amber-200 rounded-lg shadow-lg max-h-32 overflow-y-auto hidden">
+                                class="absolute z-50 w-48 mt-1 bg-white border border-amber-200 rounded-lg shadow-lg max-h-32 overflow-y-auto hidden">
                             </div>
                         </div>
                         <input type="number" name="portion_recipes[${newPortionRecipeCount}][quantity]" step="0.001" min="0.001" required
                             placeholder="Qty"
                             onkeydown="handleNewPortionRecipeTabKey(event, ${newPortionRecipeCount})"
-                            class="w-16 px-2 py-1.5 bg-amber-50 text-gray-800 rounded-lg border border-amber-200 focus:outline-none focus:border-amber-500 text-xs">
-                        <span id="newPortionRecipeUnit-${newPortionRecipeCount}" class="text-xs text-gray-600 w-8">--</span>
+                            class="w-14 px-1 py-1.5 bg-amber-50 text-gray-800 rounded-lg border border-amber-200 focus:outline-none focus:border-amber-500 text-xs">
+                        <span id="newPortionRecipeUnit-${newPortionRecipeCount}" class="text-xs text-gray-600 w-6 truncate">--</span>
                         <button type="button" onclick="removeNewPortionRecipe(${newPortionRecipeCount})" 
-                            class="px-1.5 py-1.5 bg-red-500 text-white rounded hover:bg-red-600 transition">
+                            class="px-1 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition flex-shrink-0">
                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                             </svg>
                         </button>
                     `;
+
 
                 container.appendChild(recipeDiv);
                 initNewPortionRecipeDropdown(newPortionRecipeCount);
@@ -1164,23 +1166,24 @@
 
                 const priceDiv = document.createElement('div');
                 priceDiv.id = `modifierSpecialPrice-${modifierId}-${priceId}`;
-                priceDiv.className = 'flex gap-1 items-center';
+                priceDiv.className = 'flex flex-wrap gap-1 items-center';
 
                 priceDiv.innerHTML = `
                     <select name="modifier_special_prices[new][${modifierId}][${priceId}][type]" required
-                        class="px-2 py-1.5 bg-purple-50 text-gray-800 rounded-lg border border-purple-200 focus:outline-none focus:border-purple-500 text-xs">
+                        class="min-w-0 flex-1 max-w-[80px] px-2 py-1.5 bg-purple-50 text-gray-800 rounded-lg border border-purple-200 focus:outline-none focus:border-purple-500 text-xs">
                         <option value="pickme" selected>Pick Me</option>
                     </select>
                     <input type="number" name="modifier_special_prices[new][${modifierId}][${priceId}][price]" step="0.01" min="0" required
-                        placeholder="Price" class="w-20 px-2 py-1.5 bg-purple-50 text-gray-800 rounded-lg border border-purple-200 focus:outline-none focus:border-purple-500 text-xs">
+                        placeholder="Price" class="w-16 px-1 py-1.5 bg-purple-50 text-gray-800 rounded-lg border border-purple-200 focus:outline-none focus:border-purple-500 text-xs">
                     <input type="hidden" name="modifier_special_prices[new][${modifierId}][${priceId}][modifier_id]" value="${modifierId}">
                     <button type="button" onclick="removeEditPortionSpecialPrice(${modifierId}, ${priceId})" 
-                        class="px-1.5 py-1.5 bg-red-500 text-white rounded hover:bg-red-600 transition">
+                        class="px-1 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition flex-shrink-0">
                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>
                 `;
+
 
                 container.appendChild(priceDiv);
                 updateEditPortionSpecialPrices(modifierId);
@@ -1262,31 +1265,32 @@
 
                 const recipeDiv = document.createElement('div');
                 recipeDiv.id = `modifierRecipe-${modifierId}-${recipeId}`;
-                recipeDiv.className = 'flex gap-1 items-center';
+                recipeDiv.className = 'flex flex-wrap gap-1 items-center';
 
                 recipeDiv.innerHTML = `
-                        <div class="relative flex-1">
+                        <div class="relative min-w-0 flex-1 max-w-[120px]">
                             <input type="hidden" name="modifier_recipes[new][${modifierId}][${recipeId}][main_stock_item_id]" 
                                 id="modifierRecipeHidden-${modifierId}-${recipeId}" required>
                             <input type="text" id="modifierRecipeSearch-${modifierId}-${recipeId}" placeholder="Search..."
                                 autocomplete="off"
-                                class="w-full px-2 py-1.5 bg-amber-50 text-gray-800 rounded-lg border border-amber-200 focus:outline-none focus:border-amber-500 text-xs">
+                                class="w-full px-2 py-1.5 bg-amber-50 text-gray-800 rounded-lg border border-amber-200 focus:outline-none focus:border-amber-500 text-xs truncate">
                             <div id="modifierRecipeDropdown-${modifierId}-${recipeId}" 
-                                class="absolute z-50 w-full mt-1 bg-white border border-amber-200 rounded-lg shadow-lg max-h-32 overflow-y-auto hidden">
+                                class="absolute z-50 w-48 mt-1 bg-white border border-amber-200 rounded-lg shadow-lg max-h-32 overflow-y-auto hidden">
                             </div>
                         </div>
                         <input type="number" name="modifier_recipes[new][${modifierId}][${recipeId}][quantity]" step="0.001" min="0.001" required
                             placeholder="Qty"
                             onkeydown="handleEditPortionRecipeTabKey(event, ${modifierId}, ${recipeId})"
-                            class="w-16 px-2 py-1.5 bg-amber-50 text-gray-800 rounded-lg border border-amber-200 focus:outline-none focus:border-amber-500 text-xs">
-                        <span id="editPortionRecipeUnit-${modifierId}-${recipeId}" class="text-xs text-gray-600 w-8">--</span>
+                            class="w-14 px-1 py-1.5 bg-amber-50 text-gray-800 rounded-lg border border-amber-200 focus:outline-none focus:border-amber-500 text-xs">
+                        <span id="editPortionRecipeUnit-${modifierId}-${recipeId}" class="text-xs text-gray-600 w-6 truncate">--</span>
                         <button type="button" onclick="removeEditPortionRecipe(${modifierId}, ${recipeId})" 
-                            class="px-1.5 py-1.5 bg-red-500 text-white rounded hover:bg-red-600 transition">
+                            class="px-1 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition flex-shrink-0">
                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                             </svg>
                         </button>
                     `;
+
 
                 container.appendChild(recipeDiv);
                 initEditPortionRecipeDropdown(modifierId, recipeId);
