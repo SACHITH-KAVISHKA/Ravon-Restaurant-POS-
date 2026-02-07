@@ -15,8 +15,8 @@ class QZTrayController extends Controller
     {
         $requestData = $request->input('data');
 
-        // Path to private key file: storage/app/keys/private-key.pem
-        $absolutePath = storage_path('app/keys/private-key.pem');
+        // Path to private key file: storage/app/private/private-key.pem
+        $absolutePath = storage_path('app/private/private-key.pem');
 
         // 1. File existence check using 'file_exists'
         if (!file_exists($absolutePath)) {
