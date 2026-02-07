@@ -283,13 +283,13 @@
                 category: @json($fgItem->category->name ?? 'N/A'),
                 portions: [
                     @foreach($fgItem->activeModifiers as $portion)
-                                                                        {
+                                                                                    {
                             id: {{ $portion->id }},
                             name: @json($portion->name),
                             fullName: @json($fgItem->name . ' - ' . $portion->name)
                         },
                     @endforeach
-                                                ]
+                                                        ]
             });
         @endforeach
 
@@ -378,12 +378,17 @@
         }
 
         // Generate linked item options HTML (excluding already selected items)
+        // For items with portions: show ONLY portion names (e.g., "Item - Large"), NOT the main item name
+        // For items without portions: show the main item name
         function getLinkedItemOptions(currentValue = '', excludeValues = new Set()) {
             let options = '<option value="">-- Select Beverage/Dessert --</option>';
 
             finishedGoodsItems.forEach(item => {
-                if (item.portions && item.portions.length > 0) {
-                    // Item has portions - show each portion
+                // Check if item has portions
+                const hasPortions = item.portions && item.portions.length > 0;
+
+                if (hasPortions) {
+                    // Item has portions - show ONLY each portion, NOT the main item name
                     item.portions.forEach(portion => {
                         const value = `${item.id}_${portion.id}`;
                         // Skip if this value is selected in another row (but keep if it's the current row's value)
@@ -392,14 +397,15 @@
                         }
                         const selected = value === currentValue ? 'selected' : '';
                         options += `<option value="${value}" ${selected}
-                                                data-name="${portion.fullName}"
-                                                data-item-id="${item.id}"
-                                                data-portion-id="${portion.id}">
-                                                [${item.category}] ${portion.fullName}
-                                            </option>`;
+                                                    data-name="${portion.fullName}"
+                                                    data-item-id="${item.id}"
+                                                    data-portion-id="${portion.id}">
+                                                    [${item.category}] ${portion.fullName}
+                                                </option>`;
                     });
+                    // DO NOT add the main item for items with portions
                 } else {
-                    // Item has no portions
+                    // Item has NO portions - show main item name only
                     const value = `${item.id}`;
                     // Skip if this value is selected in another row (but keep if it's the current row's value)
                     if (excludeValues.has(value) && value !== currentValue) {
@@ -407,10 +413,10 @@
                     }
                     const selected = value === currentValue ? 'selected' : '';
                     options += `<option value="${value}" ${selected}
-                                            data-name="${item.name}"
-                                            data-item-id="${item.id}">
-                                            [${item.category}] ${item.name}
-                                        </option>`;
+                                                data-name="${item.name}"
+                                                data-item-id="${item.id}">
+                                                [${item.category}] ${item.name}
+                                            </option>`;
                 }
             });
 
@@ -477,43 +483,43 @@
             const row = document.createElement('tr');
             row.id = `row-${rowCounter}`;
             row.innerHTML = `
-                                    <td>
-                                        <span class="row-number">${rowCounter}</span>
-                                    </td>
-                                    <td>
-                                        <input type="text" name="items[${rowCounter}][item_code]" class="item-code-input" value="${itemCode}" required>
-                                        <input type="hidden" name="items[${rowCounter}][quantity]" value="0">
-                                    </td>
-                                    <td>
-                                        <input type="text" name="items[${rowCounter}][item_name]" class="item-name-input" placeholder="e.g., Rice, Oil" required>
-                                    </td>
-                                    <td class="linked-item-cell" id="linked-cell-${rowCounter}">
-                                        <span class="na-text">N/A</span>
-                                        <select name="items[${rowCounter}][linked_item_id]" class="linked-item-select" onchange="onLinkedItemChange(this, ${rowCounter})">
-                                            ${getLinkedItemOptions('', excludeValues)}
-                                        </select>
-                                    </td>
-                                    <td>
-                                        <select name="items[${rowCounter}][item_type]" class="item-type-select" onchange="onItemTypeChange(this, ${rowCounter})" required>
-                                            ${getItemTypeOptions()}
-                                        </select>
-                                    </td>
-                                    <td>
-                                        <select name="items[${rowCounter}][unit_type]" class="unit-type-select" required>
-                                            ${getUnitTypeOptions()}
-                                        </select>
-                                    </td>
-                                    <td class="normalization-cell" id="normalization-cell-${rowCounter}">
-                                        <input type="number" name="items[${rowCounter}][normalization]" class="normalization-input" step="0.0001" min="0" placeholder="Optional" title="Normalization factor for raw materials">
-                                    </td>
-                                    <td>
-                                        <button type="button" class="remove-row-btn" onclick="removeRow(${rowCounter})" title="Remove row">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                            </svg>
-                                        </button>
-                                    </td>
-                                `;
+                                        <td>
+                                            <span class="row-number">${rowCounter}</span>
+                                        </td>
+                                        <td>
+                                            <input type="text" name="items[${rowCounter}][item_code]" class="item-code-input" value="${itemCode}" required>
+                                            <input type="hidden" name="items[${rowCounter}][quantity]" value="0">
+                                        </td>
+                                        <td>
+                                            <input type="text" name="items[${rowCounter}][item_name]" class="item-name-input" placeholder="e.g., Rice, Oil" required>
+                                        </td>
+                                        <td class="linked-item-cell" id="linked-cell-${rowCounter}">
+                                            <span class="na-text">N/A</span>
+                                            <select name="items[${rowCounter}][linked_item_id]" class="linked-item-select" onchange="onLinkedItemChange(this, ${rowCounter})">
+                                                ${getLinkedItemOptions('', excludeValues)}
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <select name="items[${rowCounter}][item_type]" class="item-type-select" onchange="onItemTypeChange(this, ${rowCounter})" required>
+                                                ${getItemTypeOptions()}
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <select name="items[${rowCounter}][unit_type]" class="unit-type-select" required>
+                                                ${getUnitTypeOptions()}
+                                            </select>
+                                        </td>
+                                        <td class="normalization-cell" id="normalization-cell-${rowCounter}">
+                                            <input type="number" name="items[${rowCounter}][normalization]" class="normalization-input" step="0.0001" min="0" placeholder="Optional" title="Normalization factor for raw materials">
+                                        </td>
+                                        <td>
+                                            <button type="button" class="remove-row-btn" onclick="removeRow(${rowCounter})" title="Remove row">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                </svg>
+                                            </button>
+                                        </td>
+                                    `;
 
             tbody.appendChild(row);
 

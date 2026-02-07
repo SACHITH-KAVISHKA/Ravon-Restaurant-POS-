@@ -75,9 +75,7 @@ class MainStockController extends Controller
         // Items must be in Beverage/Dessert category AND marked as "Finished Goods"
         $finishedGoodsItems = \App\Models\Item::with([
             'category',
-            'activeModifiers' => function ($q) {
-                $q->whereIn('type', ['portion', 'size']);
-            }
+            'activeModifiers'  // Load all active modifiers (portions/sizes)
         ])
             ->whereHas('category', function ($q) {
                 $q->whereIn('slug', ['beverages', 'desserts', 'beverage', 'dessert'])
@@ -92,8 +90,12 @@ class MainStockController extends Controller
 
         // Filter out items/portions that are already added as stock items
         $finishedGoodsItems = $finishedGoodsItems->map(function ($item) use ($existingStockItemNames) {
+            // Track if item originally had portions before filtering
+            $originalPortionCount = $item->activeModifiers->count();
+            $item->had_portions_originally = $originalPortionCount > 0;
+
             // Filter out portions that are already added
-            if ($item->activeModifiers->count() > 0) {
+            if ($originalPortionCount > 0) {
                 $item->setRelation('activeModifiers', $item->activeModifiers->filter(function ($portion) use ($item, $existingStockItemNames) {
                     $portionName = $item->name . ' - ' . $portion->name;
                     return !in_array($portionName, $existingStockItemNames);
@@ -101,11 +103,11 @@ class MainStockController extends Controller
             }
             return $item;
         })->filter(function ($item) use ($existingStockItemNames) {
-            // If item has portions, keep it if at least one portion is not added
-            if ($item->activeModifiers->count() > 0) {
+            // If item originally had portions, keep it ONLY if at least one portion remains
+            if ($item->had_portions_originally) {
                 return $item->activeModifiers->count() > 0;
             }
-            // If item has no portions, check if the item itself is already added
+            // If item never had portions, check if the item itself is already added
             return !in_array($item->name, $existingStockItemNames);
         });
 
@@ -261,9 +263,7 @@ class MainStockController extends Controller
         // Items must be in Beverage/Dessert category AND marked as "Finished Goods"
         $finishedGoodsItems = \App\Models\Item::with([
             'category',
-            'activeModifiers' => function ($q) {
-                $q->whereIn('type', ['portion', 'size']);
-            }
+            'activeModifiers'  // Load all active modifiers (portions/sizes)
         ])
             ->whereHas('category', function ($q) {
                 $q->whereIn('slug', ['beverages', 'desserts', 'beverage', 'dessert'])
@@ -278,8 +278,12 @@ class MainStockController extends Controller
 
         // Filter out items/portions that are already added as stock items
         $finishedGoodsItems = $finishedGoodsItems->map(function ($item) use ($existingStockItemNames) {
+            // Track if item originally had portions before filtering
+            $originalPortionCount = $item->activeModifiers->count();
+            $item->had_portions_originally = $originalPortionCount > 0;
+
             // Filter out portions that are already added
-            if ($item->activeModifiers->count() > 0) {
+            if ($originalPortionCount > 0) {
                 $item->setRelation('activeModifiers', $item->activeModifiers->filter(function ($portion) use ($item, $existingStockItemNames) {
                     $portionName = $item->name . ' - ' . $portion->name;
                     return !in_array($portionName, $existingStockItemNames);
@@ -287,11 +291,11 @@ class MainStockController extends Controller
             }
             return $item;
         })->filter(function ($item) use ($existingStockItemNames) {
-            // If item has portions, keep it if at least one portion is not added
-            if ($item->activeModifiers->count() > 0) {
+            // If item originally had portions, keep it ONLY if at least one portion remains
+            if ($item->had_portions_originally) {
                 return $item->activeModifiers->count() > 0;
             }
-            // If item has no portions, check if the item itself is already added
+            // If item never had portions, check if the item itself is already added
             return !in_array($item->name, $existingStockItemNames);
         });
 
@@ -394,13 +398,13 @@ class MainStockController extends Controller
             foreach ($validated['items'] as $itemData) {
                 $item = MainStockItem::findOrFail($itemData['item_id']);
                 $inputQty = $itemData['quantity'];
-                
+
                 // Apply normalization if item is raw material and has normalization value
                 $qty = $inputQty;
                 if ($item->item_type === 'raw_material' && $item->normalization) {
                     $qty = $inputQty * (float) $item->normalization;
                 }
-                
+
                 $quantityBefore = $item->quantity;
 
                 // Add to main stock
