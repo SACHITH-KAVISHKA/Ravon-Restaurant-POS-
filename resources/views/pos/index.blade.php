@@ -1794,7 +1794,7 @@
                         const pdfBase64 = pdf.output('datauristring').split(',')[1];
 
                         // Use configured printer or default printer
-                        const kotPrinterName = "{{ env('KOT_PRINTER', '') }}" || null;
+                        const kotPrinterName = "Microsoft Print to PDF";
                         await printPDFwithQZ(pdfBase64, kotPrinterName, "KOT", false);
                         console.log('KOT sent to thermal printer successfully');
 
@@ -1973,7 +1973,7 @@
                         const pdfBase64 = pdf.output('datauristring').split(',')[1];
 
                         // Use configured printer or default printer
-                        const botPrinterName = "{{ env('BOT_PRINTER', '') }}" || null;
+                        const botPrinterName = "Microsoft Print to PDF";
                         await printPDFwithQZ(pdfBase64, botPrinterName, "BOT", false);
                         console.log('BOT sent to thermal printer successfully');
 
@@ -3838,9 +3838,7 @@
                         const pdfBase64 = pdf.output('datauristring').split(',')[1];
 
                         // Use configured printer or default printer
-                        const cancelPrinterName = station === 'KITCHEN'
-                            ? ("{{ env('KOT_PRINTER', '') }}" || null)
-                            : ("{{ env('BOT_PRINTER', '') }}" || null);
+                        const cancelPrinterName = "Microsoft Print to PDF";
                         await printPDFwithQZ(pdfBase64, cancelPrinterName, `Cancel ${station === 'KITCHEN' ? 'KOT' : 'BOT'}`, false);
                         console.log(`Cancel ${station === 'KITCHEN' ? 'KOT' : 'BOT'} sent to thermal printer successfully`);
 
@@ -4741,7 +4739,7 @@
                         const pdfBase64 = pdf.output('datauristring').split(',')[1];
 
                         // Use configured printer or default printer
-                        const receiptPrinterName = "{{ env('RECEIPT_PRINTER', '') }}" || null;
+                        const receiptPrinterName = "Microsoft Print to PDF";
                         await printPDFwithQZ(pdfBase64, receiptPrinterName, "Receipt", false);
                         console.log('Receipt sent to thermal printer successfully');
 
@@ -5017,7 +5015,7 @@
                         const pdfBase64 = pdf.output('datauristring').split(',')[1];
 
                         // Use configured printer or default printer
-                        const invoicePrinterName = "{{ env('RECEIPT_PRINTER', '') }}" || null;
+                        const invoicePrinterName = "Microsoft Print to PDF";
                         await printPDFwithQZ(pdfBase64, invoicePrinterName, "Invoice", false);
                         console.log('Invoice (without payment) sent to thermal printer successfully');
 
