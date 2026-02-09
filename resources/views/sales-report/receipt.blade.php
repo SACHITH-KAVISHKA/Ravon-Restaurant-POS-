@@ -266,6 +266,7 @@
                     </tr>
                 </thead>
                 <tbody>
+                    {{-- IMPORTANT: Loop through ALL items without any limit - this ensures complete receipts --}}
                     @foreach($order->orderItems->where('status', '!=', 'deleted') as $item)
                         <tr>
                             <td class="item-name">

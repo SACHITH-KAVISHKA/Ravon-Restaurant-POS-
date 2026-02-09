@@ -185,7 +185,9 @@ class SalesReportController extends Controller
         $order->load([
             'orderItems' => function ($query) {
                 $query->where('status', '!=', 'deleted')
+                    ->orderBy('id', 'asc')  // Ensure consistent ordering
                     ->with(['item', 'modifiers']);
+                // NO LIMIT - fetch ALL items for printing
             },
             'payment.splits',
             'waiter',

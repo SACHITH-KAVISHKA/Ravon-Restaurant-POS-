@@ -219,6 +219,7 @@
     </div>
 
     <div class="items">
+        {{-- IMPORTANT: Loop through ALL items without any limit - this ensures complete receipts --}}
         @foreach($order->orderItems->where('status', '!=', 'deleted') as $item)
             <div class="item">
                 <div class="item-header">

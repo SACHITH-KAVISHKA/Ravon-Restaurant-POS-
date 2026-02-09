@@ -113,17 +113,21 @@ class Order extends Model
 
     /**
      * Get order items.
+     * Returns ALL order items with no limit - essential for printing complete receipts.
      */
     public function orderItems(): HasMany
     {
-        return $this->hasMany(OrderItem::class);
+        return $this->hasMany(OrderItem::class)->orderBy('id', 'asc');
     }
     /**
      * Get active (non-deleted) order items.
+     * Returns ALL active items with no limit - essential for printing complete receipts.
      */
     public function activeItems(): HasMany
     {
-        return $this->hasMany(OrderItem::class)->where('status', '!=', 'deleted');
+        return $this->hasMany(OrderItem::class)
+            ->where('status', '!=', 'deleted')
+            ->orderBy('id', 'asc');
     }
     /**
      * Get KOTs.

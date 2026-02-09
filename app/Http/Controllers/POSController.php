@@ -176,7 +176,9 @@ class POSController extends Controller
         $order = Order::with([
             'orderItems' => function ($query) {
                 $query->where('status', '!=', 'deleted')
+                    ->orderBy('id', 'asc')  // Ensure consistent ordering
                     ->with(['item', 'modifiers.modifier']);
+                // NO LIMIT - fetch ALL items
             },
             'table',
             'waiter',
@@ -970,7 +972,9 @@ class POSController extends Controller
         $order = Order::with([
             'orderItems' => function ($query) {
                 $query->where('status', '!=', 'deleted')
+                    ->orderBy('id', 'asc')  // Ensure consistent ordering
                     ->with(['item', 'modifiers.modifier']);
+                // NO LIMIT - fetch ALL items for printing
             },
             'table',
             'waiter',
