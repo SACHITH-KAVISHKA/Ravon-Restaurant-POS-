@@ -129,6 +129,7 @@ class MainStockController extends Controller
             'items.*.linked_item_id' => 'nullable|exists:items,id',
             'items.*.linked_item_modifier_id' => 'nullable|exists:item_modifiers,id',
             'items.*.quantity' => 'nullable|numeric|min:0',
+            'items.*.price' => 'nullable|numeric|min:0',
             'items.*.normalization' => 'nullable|numeric|min:0',
         ]);
 
@@ -184,6 +185,7 @@ class MainStockController extends Controller
                 // Parse linked_item_id which may contain "itemId_modifierId" format
                 $linkedItemId = null;
                 $linkedModifierId = null;
+                $price = null;
 
                 if (!empty($itemData['linked_item_id'])) {
                     $linkedValue = $itemData['linked_item_id'];
@@ -193,6 +195,23 @@ class MainStockController extends Controller
                     } else {
                         // Just itemId
                         $linkedItemId = $linkedValue;
+                    }
+                }
+
+                // Determine price: Use manual input if provided, otherwise fetch from POS for finished goods
+                $inputPrice = !empty($itemData['price']) ? $itemData['price'] : null;
+                $price = $inputPrice;
+
+                if ($itemData['item_type'] === 'finished_good' && $linkedItemId && empty($inputPrice)) {
+                    // For finished goods without manual price, get from POS items table
+                    $posItem = \App\Models\Item::find($linkedItemId);
+                    if ($posItem) {
+                        if ($linkedModifierId) {
+                            $modifier = \App\Models\ItemModifier::find($linkedModifierId);
+                            $price = $modifier ? $modifier->getPriceByType('default') : $posItem->getPriceByType('default');
+                        } else {
+                            $price = $posItem->getPriceByType('default');
+                        }
                     }
                 }
 
@@ -209,6 +228,7 @@ class MainStockController extends Controller
                     'linked_item_id' => $linkedItemId,
                     'linked_item_modifier_id' => $linkedModifierId,
                     'quantity' => $quantity,
+                    'price' => $price,
                     'normalization' => $normalization,
                     'is_active' => true,
                     'created_by' => Auth::id(),
@@ -315,11 +335,44 @@ class MainStockController extends Controller
             'item_name' => ['required', 'string', 'max:255', Rule::unique('main_stock_items', 'item_name')->ignore($mainStock->id)],
             'unit_type' => ['required', Rule::in(array_keys(MainStockItem::UNIT_TYPES))],
             'item_type' => ['required', Rule::in(array_keys(MainStockItem::ITEM_TYPES))],
+            'linked_item_id' => 'nullable|string',
+            'price' => 'nullable|numeric|min:0',
             'normalization' => 'nullable|numeric|min:0',
             'is_active' => 'boolean',
         ], [
             'item_name.unique' => 'Item Already Exists',
         ]);
+
+        // Parse linked_item_id if present
+        $linkedItemId = null;
+        $linkedModifierId = null;
+        $price = null;
+
+        if (!empty($validated['linked_item_id'])) {
+            $linkedValue = $validated['linked_item_id'];
+            if (str_contains($linkedValue, '_')) {
+                [$linkedItemId, $linkedModifierId] = explode('_', $linkedValue);
+            } else {
+                $linkedItemId = $linkedValue;
+            }
+        }
+
+        // Determine price: Use manual input if provided, otherwise fetch from POS for finished goods
+        $inputPrice = !empty($validated['price']) ? $validated['price'] : null;
+        $price = $inputPrice ?? $mainStock->price;
+
+        if ($validated['item_type'] === 'finished_good' && $linkedItemId && empty($inputPrice)) {
+            // For finished goods without manual price, get from POS items table
+            $posItem = \App\Models\Item::find($linkedItemId);
+            if ($posItem) {
+                if ($linkedModifierId) {
+                    $modifier = \App\Models\ItemModifier::find($linkedModifierId);
+                    $price = $modifier ? $modifier->getPriceByType('default') : $posItem->getPriceByType('default');
+                } else {
+                    $price = $posItem->getPriceByType('default');
+                }
+            }
+        }
 
         // Normalization only applies to raw materials
         $normalization = ($validated['item_type'] === 'raw_material' && !empty($validated['normalization']))
@@ -331,6 +384,9 @@ class MainStockController extends Controller
             'item_name' => $validated['item_name'],
             'unit_type' => $validated['unit_type'],
             'item_type' => $validated['item_type'],
+            'linked_item_id' => $linkedItemId,
+            'linked_item_modifier_id' => $linkedModifierId,
+            'price' => $price,
             'normalization' => $normalization,
             'is_active' => $validated['is_active'] ?? true,
             'updated_by' => Auth::id(),

@@ -244,6 +244,7 @@
                                     <th style="width: 180px;">Linked Menu Item</th>
                                     <th style="width: 130px;">Item Type <span class="text-red-500">*</span></th>
                                     <th style="width: 120px;">Unit <span class="text-red-500">*</span></th>
+                                    <th style="width: 100px;">Price</th>
                                     <th style="width: 100px;">Normalization</th>
                                     <th style="width: 40px;"></th>
                                 </tr>
@@ -281,11 +282,13 @@
                 id: {{ $fgItem->id }},
                 name: @json($fgItem->name),
                 category: @json($fgItem->category->name ?? 'N/A'),
+                price: {{ $fgItem->getPriceByType('default') ?? 0 }},
                 portions: [
                     @foreach($fgItem->activeModifiers as $portion)
                                                                                     {
                             id: {{ $portion->id }},
                             name: @json($portion->name),
+                            price: {{ $portion->getPriceByType('default') ?? $fgItem->getPriceByType('default') ?? 0 }},
                             fullName: @json($fgItem->name . ' - ' . $portion->name)
                         },
                     @endforeach
@@ -397,11 +400,12 @@
                         }
                         const selected = value === currentValue ? 'selected' : '';
                         options += `<option value="${value}" ${selected}
-                                                    data-name="${portion.fullName}"
-                                                    data-item-id="${item.id}"
-                                                    data-portion-id="${portion.id}">
-                                                    [${item.category}] ${portion.fullName}
-                                                </option>`;
+                                                data-name="${portion.fullName}"
+                                                data-price="${portion.price}"
+                                                data-item-id="${item.id}"
+                                                data-portion-id="${portion.id}">
+                                                [${item.category}] ${portion.fullName}
+                                            </option>`;
                     });
                     // DO NOT add the main item for items with portions
                 } else {
@@ -413,10 +417,11 @@
                     }
                     const selected = value === currentValue ? 'selected' : '';
                     options += `<option value="${value}" ${selected}
-                                                data-name="${item.name}"
-                                                data-item-id="${item.id}">
-                                                [${item.category}] ${item.name}
-                                            </option>`;
+                                            data-name="${item.name}"
+                                            data-price="${item.price}"
+                                            data-item-id="${item.id}">
+                                            [${item.category}] ${item.name}
+                                        </option>`;
                 }
             });
 
@@ -483,43 +488,46 @@
             const row = document.createElement('tr');
             row.id = `row-${rowCounter}`;
             row.innerHTML = `
-                                        <td>
-                                            <span class="row-number">${rowCounter}</span>
-                                        </td>
-                                        <td>
-                                            <input type="text" name="items[${rowCounter}][item_code]" class="item-code-input" value="${itemCode}" required>
-                                            <input type="hidden" name="items[${rowCounter}][quantity]" value="0">
-                                        </td>
-                                        <td>
-                                            <input type="text" name="items[${rowCounter}][item_name]" class="item-name-input" placeholder="e.g., Rice, Oil" required>
-                                        </td>
-                                        <td class="linked-item-cell" id="linked-cell-${rowCounter}">
-                                            <span class="na-text">N/A</span>
-                                            <select name="items[${rowCounter}][linked_item_id]" class="linked-item-select" onchange="onLinkedItemChange(this, ${rowCounter})">
-                                                ${getLinkedItemOptions('', excludeValues)}
-                                            </select>
-                                        </td>
-                                        <td>
-                                            <select name="items[${rowCounter}][item_type]" class="item-type-select" onchange="onItemTypeChange(this, ${rowCounter})" required>
-                                                ${getItemTypeOptions()}
-                                            </select>
-                                        </td>
-                                        <td>
-                                            <select name="items[${rowCounter}][unit_type]" class="unit-type-select" required>
-                                                ${getUnitTypeOptions()}
-                                            </select>
-                                        </td>
-                                        <td class="normalization-cell" id="normalization-cell-${rowCounter}">
-                                            <input type="number" name="items[${rowCounter}][normalization]" class="normalization-input" step="0.0001" min="0" placeholder="Optional" title="Normalization factor for raw materials">
-                                        </td>
-                                        <td>
-                                            <button type="button" class="remove-row-btn" onclick="removeRow(${rowCounter})" title="Remove row">
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                </svg>
-                                            </button>
-                                        </td>
-                                    `;
+                                                                    <td>
+                                                                        <span class="row-number">${rowCounter}</span>
+                                                                    </td>
+                                                                    <td>
+                                                                        <input type="text" name="items[${rowCounter}][item_code]" class="item-code-input" value="${itemCode}" required>
+                                                                        <input type="hidden" name="items[${rowCounter}][quantity]" value="0">
+                                                                    </td>
+                                                                    <td>
+                                                                        <input type="text" name="items[${rowCounter}][item_name]" class="item-name-input" placeholder="e.g., Rice, Oil" required>
+                                                                    </td>
+                                                                    <td class="linked-item-cell" id="linked-cell-${rowCounter}">
+                                                                        <span class="na-text">N/A</span>
+                                                                        <select name="items[${rowCounter}][linked_item_id]" class="linked-item-select" onchange="onLinkedItemChange(this, ${rowCounter})">
+                                                                            ${getLinkedItemOptions('', excludeValues)}
+                                                                        </select>
+                                                                    </td>
+                                                                    <td>
+                                                                        <select name="items[${rowCounter}][item_type]" class="item-type-select" onchange="onItemTypeChange(this, ${rowCounter})" required>
+                                                                            ${getItemTypeOptions()}
+                                                                        </select>
+                                                                    </td>
+                                                                    <td>
+                                                                        <select name="items[${rowCounter}][unit_type]" class="unit-type-select" required>
+                                                                            ${getUnitTypeOptions()}
+                                                                        </select>
+                                                                    </td>
+                                                                    <td class="price-cell" id="price-cell-${rowCounter}">
+                                                                        <input type="number" name="items[${rowCounter}][price]" class="price-input" step="0.01" min="0" placeholder="0.00" title="Price per unit">
+                                                                    </td>
+                                                                    <td class="normalization-cell" id="normalization-cell-${rowCounter}">
+                                                                        <input type="number" name="items[${rowCounter}][normalization]" class="normalization-input" step="0.0001" min="0" placeholder="Optional" title="Normalization factor for raw materials">
+                                                                    </td>
+                                                                    <td>
+                                                                        <button type="button" class="remove-row-btn" onclick="removeRow(${rowCounter})" title="Remove row">
+                                                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                                            </svg>
+                                                                        </button>
+                                                                    </td>
+                                                                `;
 
             tbody.appendChild(row);
 
@@ -592,6 +600,8 @@
             const itemNameInput = row.querySelector('.item-name-input');
             const normalizationCell = document.getElementById(`normalization-cell-${rowId}`);
             const normalizationInput = normalizationCell ? normalizationCell.querySelector('.normalization-input') : null;
+            const priceCell = document.getElementById(`price-cell-${rowId}`);
+            const priceInput = priceCell ? priceCell.querySelector('.price-input') : null;
             const newType = selectElement.value;
 
             // Regenerate item code based on type
@@ -606,6 +616,13 @@
                 itemNameInput.readOnly = true;
                 itemNameInput.placeholder = 'Auto-filled';
                 itemNameInput.style.backgroundColor = '#f3f4f6';
+                // Enable price input for finished goods (auto-filled but editable)
+                if (priceInput) {
+                    priceInput.readOnly = false;
+                    priceInput.value = '';
+                    priceInput.placeholder = 'Auto-filled';
+                    priceInput.style.backgroundColor = '';
+                }
                 // Hide normalization for finished goods
                 if (normalizationCell) {
                     normalizationCell.style.opacity = '0.5';
@@ -622,6 +639,12 @@
                 itemNameInput.readOnly = false;
                 itemNameInput.placeholder = 'e.g., Rice, Oil';
                 itemNameInput.style.backgroundColor = '';
+                // Enable price input for raw materials
+                if (priceInput) {
+                    priceInput.readOnly = false;
+                    priceInput.placeholder = '0.00';
+                    priceInput.style.backgroundColor = '';
+                }
                 // Show normalization only for raw materials
                 if (normalizationCell) {
                     if (newType === 'raw_material') {
@@ -642,21 +665,30 @@
             }
         }
 
-        // Handle linked item selection - auto-fill item name and refresh dropdowns
+        // Handle linked item selection - auto-fill item name, price and refresh dropdowns
         function onLinkedItemChange(selectElement, rowId) {
             const row = document.getElementById(`row-${rowId}`);
             if (!row) return;
 
             const itemNameInput = row.querySelector('.item-name-input');
+            const priceInput = row.querySelector('.price-input');
 
             if (selectElement.value) {
                 const selectedOption = selectElement.options[selectElement.selectedIndex];
                 const itemName = selectedOption.getAttribute('data-name');
+                const price = selectedOption.getAttribute('data-price');
+
                 if (itemName) {
                     itemNameInput.value = itemName;
                 }
+                if (price !== null && price !== undefined && price !== 'null' && priceInput) {
+                    priceInput.value = parseFloat(price).toFixed(2);
+                }
             } else {
                 itemNameInput.value = '';
+                if (priceInput) {
+                    priceInput.value = '';
+                }
             }
 
             // Refresh all dropdowns to hide/show items based on selections

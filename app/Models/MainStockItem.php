@@ -19,6 +19,7 @@ class MainStockItem extends Model
         'linked_item_id',
         'linked_item_modifier_id',
         'quantity',
+        'price',
         'normalization',
         'is_active',
         'created_by',
@@ -27,6 +28,7 @@ class MainStockItem extends Model
 
     protected $casts = [
         'quantity' => 'decimal:3',
+        'price' => 'decimal:2',
         'normalization' => 'decimal:4',
         'is_active' => 'boolean',
     ];

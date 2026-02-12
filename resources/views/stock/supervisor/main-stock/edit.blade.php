@@ -125,6 +125,21 @@
                         @enderror
                     </div>
 
+                    <!-- Price -->
+                    <div id="price-field">
+                        <label for="price" class="block text-sm font-medium text-gray-700 mb-1">
+                            Price
+                        </label>
+                        <input type="number" name="price" id="price" 
+                            value="{{ old('price', $item->price) }}"
+                            class="form-input w-full px-4 py-2.5 border border-gray-200 rounded-lg" 
+                            step="0.01" min="0" placeholder="0.00">
+                        <p class="mt-1 text-xs text-gray-500" id="price-hint">Price per unit</p>
+                        @error('price')
+                        <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
+                        @enderror
+                    </div>
+
                     <!-- Normalization (only for Raw Materials) -->
                     <div id="normalization-field" class="{{ old('item_type', $item->item_type) === 'raw_material' ? '' : 'hidden' }}">
                         <label for="normalization" class="block text-sm font-medium text-gray-700 mb-1">
@@ -154,22 +169,34 @@
                             @if($fgItem->activeModifiers->count() > 0)
                             {{-- Item has portions - show each portion --}}
                             @foreach($fgItem->activeModifiers as $portion)
-                            <option value="{{ $fgItem->id }}_{{ $portion->id }}"
+                            @php
+                                $currentLinkedValue = $item->linked_item_id && $item->linked_item_modifier_id ? $item->linked_item_id.'_'.$item->linked_item_modifier_id : '';
+                                $optionValue = $fgItem->id.'_'.$portion->id;
+                                $isSelected = old('linked_item_id', $currentLinkedValue) == $optionValue;
+                            @endphp
+                            <option value="{{ $optionValue }}"
                                 data-name="{{ $fgItem->name }} - {{ $portion->name }}"
+                                data-price="{{ $portion->price_adjustment ?? $fgItem->price ?? 0 }}"
                                 data-item-id="{{ $fgItem->id }}"
                                 data-portion-id="{{ $portion->id }}"
                                 data-category="{{ $fgItem->category->name ?? '' }}"
-                                {{ old('linked_item_id') == $fgItem->id.'_'.$portion->id ? 'selected' : '' }}>
+                                {{ $isSelected ? 'selected' : '' }}>
                                 [{{ $fgItem->category->name ?? 'N/A' }}] {{ $fgItem->name }} - {{ $portion->name }}
                             </option>
                             @endforeach
                             @else
                             {{-- Item has no portions - show item name only --}}
-                            <option value="{{ $fgItem->id }}"
+                            @php
+                                $currentLinkedValue = $item->linked_item_id && !$item->linked_item_modifier_id ? $item->linked_item_id : '';
+                                $optionValue = $fgItem->id;
+                                $isSelected = old('linked_item_id', $currentLinkedValue) == $optionValue;
+                            @endphp
+                            <option value="{{ $optionValue }}"
                                 data-name="{{ $fgItem->name }}"
+                                data-price="{{ $fgItem->price ?? 0 }}"
                                 data-item-id="{{ $fgItem->id }}"
                                 data-category="{{ $fgItem->category->name ?? '' }}"
-                                {{ old('linked_item_id') == $fgItem->id ? 'selected' : '' }}>
+                                {{ $isSelected ? 'selected' : '' }}>
                                 [{{ $fgItem->category->name ?? 'N/A' }}] {{ $fgItem->name }}
                             </option>
                             @endif
@@ -209,12 +236,15 @@
 </div>
 
 <script>
-    // Handle item type change - show/hide finished goods dropdown and normalization field
+    // Handle item type change - show/hide finished goods dropdown, price field, and normalization field
     function handleItemTypeChange() {
         const itemType = document.getElementById('item_type').value;
         const finishedGoodsRow = document.getElementById('finished-goods-row');
         const normalizationField = document.getElementById('normalization-field');
         const normalizationInput = document.getElementById('normalization');
+        const priceField = document.getElementById('price-field');
+        const priceInput = document.getElementById('price');
+        const priceHint = document.getElementById('price-hint');
 
         if (itemType === 'finished_good') {
             finishedGoodsRow.classList.remove('hidden');
@@ -222,10 +252,28 @@
             if (normalizationInput) {
                 normalizationInput.value = '';
             }
+            // Make price readonly for finished goods
+            if (priceInput) {
+                priceInput.readOnly = true;
+                priceInput.style.backgroundColor = '#f3f4f6';
+                priceInput.placeholder = 'Auto-filled from menu item';
+            }
+            if (priceHint) {
+                priceHint.textContent = 'Price auto-filled from POS menu item';
+            }
         } else if (itemType === 'raw_material') {
             finishedGoodsRow.classList.add('hidden');
             document.getElementById('linked_item_id').value = '';
             normalizationField.classList.remove('hidden');
+            // Make price editable for raw materials
+            if (priceInput) {
+                priceInput.readOnly = false;
+                priceInput.style.backgroundColor = '';
+                priceInput.placeholder = '0.00';
+            }
+            if (priceHint) {
+                priceHint.textContent = 'Price per unit';
+            }
         } else {
             finishedGoodsRow.classList.add('hidden');
             document.getElementById('linked_item_id').value = '';
@@ -233,26 +281,48 @@
             if (normalizationInput) {
                 normalizationInput.value = '';
             }
-        }
-    }
-
-    // When a linked item is selected, autofill the item name
-    function onLinkedItemChange() {
-        const linkedItemSelect = document.getElementById('linked_item_id');
-        const itemNameInput = document.getElementById('item_name');
-
-        if (linkedItemSelect.value) {
-            const selectedOption = linkedItemSelect.options[linkedItemSelect.selectedIndex];
-            const itemName = selectedOption.getAttribute('data-name');
-            if (itemName) {
-                itemNameInput.value = itemName;
+            // Make price editable for other types
+            if (priceInput) {
+                priceInput.readOnly = false;
+                priceInput.style.backgroundColor = '';
+                priceInput.placeholder = '0.00';
+            }
+            if (priceHint) {
+                priceHint.textContent = 'Price per unit';
             }
         }
     }
 
+    // When a linked item is selected, autofill the item name and price
+    function onLinkedItemChange() {
+        const linkedItemSelect = document.getElementById('linked_item_id');
+        const itemNameInput = document.getElementById('item_name');
+        const priceInput = document.getElementById('price');
+
+        if (linkedItemSelect.value) {
+            const selectedOption = linkedItemSelect.options[linkedItemSelect.selectedIndex];
+            const itemName = selectedOption.getAttribute('data-name');
+            const price = selectedOption.getAttribute('data-price');
+            
+            if (itemName) {
+                itemNameInput.value = itemName;
+            }
+            if (price && priceInput) {
+                priceInput.value = parseFloat(price).toFixed(2);
+            }
+        }
+    }
+
+
     // Initialize on page load
     document.addEventListener('DOMContentLoaded', function() {
         handleItemTypeChange();
+        
+        // Auto-fill price if this is a finished good with a linked item
+        const linkedItemSelect = document.getElementById('linked_item_id');
+        if (linkedItemSelect && linkedItemSelect.value) {
+            onLinkedItemChange();
+        }
     });
 </script>
 @endsection
