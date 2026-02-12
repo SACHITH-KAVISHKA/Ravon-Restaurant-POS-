@@ -25,6 +25,7 @@ class OrderItem extends Model
 
     protected $casts = [
         'quantity' => 'integer',
+        'item_modifier_id' => 'integer',
         'unit_price' => 'decimal:2',
         'subtotal' => 'decimal:2',
     ];

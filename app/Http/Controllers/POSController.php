@@ -314,85 +314,150 @@ class POSController extends Controller
                 // Update existing order
                 $order = Order::findOrFail($validated['order_id']);
 
-                // Get existing order items indexed by item_id + modifier_id for accurate matching
-                // IMPORTANT: Filter out already deleted/cancelled items to prevent re-processing
-                $existingItems = $order->orderItems
+                // Get existing ACTIVE order items (not deleted/cancelled)
+                $existingActiveItems = $order->orderItems
                     ->filter(function ($item) {
                         return !in_array($item->status, ['deleted', 'cancelled']);
-                    })
-                    ->keyBy(function ($item) {
-                        return $item->item_id . '_' . ($item->item_modifier_id ?? 'null');
                     });
 
+                // Build lookup maps for matching
+                // Primary key: item_id + modifier_id (most accurate)
+                $existingByKey = $existingActiveItems->keyBy(function ($item) {
+                    return $item->item_id . '_' . ($item->item_modifier_id ?? 'null');
+                });
+
+                // Secondary lookup: by item_id + display_name (fallback when modifier_id is missing)
+                $existingByName = [];
+                foreach ($existingActiveItems as $item) {
+                    $nameKey = $item->item_id . '_' . ($item->item_display_name ?? '');
+                    if (!isset($existingByName[$nameKey])) {
+                        $existingByName[$nameKey] = $item;
+                    }
+                }
+
+                Log::info('Order update - existing items:', [
+                    'order_id' => $order->id,
+                    'existing_keys' => $existingByKey->keys()->toArray(),
+                    'existing_name_keys' => array_keys($existingByName),
+                ]);
+
                 $itemsToProcess = [];
-                $processedKeys = []; // Track which items are still in the order
+                $matchedExistingIds = []; // Track which existing items were matched
 
                 // Process each item from the request
                 foreach ($validated['items'] as $itemData) {
-                    // Use item_id + modifier_id for accurate item matching (ID-based)
                     $modifierId = $itemData['modifier_id'] ?? null;
-                    $key = $itemData['item_id'] . '_' . ($modifierId ?? 'null');
-                    $processedKeys[] = $key;
+                    $primaryKey = $itemData['item_id'] . '_' . ($modifierId ?? 'null');
+                    $nameKey = $itemData['item_id'] . '_' . ($itemData['name'] ?? '');
 
-                    if ($existingItems->has($key)) {
-                        // Item exists - update it
-                        $existingItem = $existingItems->get($key);
+                    Log::info('Processing request item:', [
+                        'item_id' => $itemData['item_id'],
+                        'modifier_id' => $modifierId,
+                        'name' => $itemData['name'] ?? '',
+                        'quantity' => $itemData['quantity'],
+                        'primary_key' => $primaryKey,
+                        'name_key' => $nameKey,
+                    ]);
+
+                    $matchedItem = null;
+
+                    // Pass 1: Try exact match by item_id + modifier_id
+                    if ($existingByKey->has($primaryKey)) {
+                        $matchedItem = $existingByKey->get($primaryKey);
+                        Log::info('Matched by primary key (item_id+modifier_id)', ['key' => $primaryKey, 'matched_id' => $matchedItem->id]);
+                    }
+
+                    // Pass 2: If no match and modifier_id is null, try matching by item_id + name
+                    // This handles the case where frontend loses modifier_id but the item hasn't changed
+                    if (!$matchedItem && $modifierId === null && isset($existingByName[$nameKey])) {
+                        $candidate = $existingByName[$nameKey];
+                        // Only use name-based match if this existing item hasn't been matched already
+                        if (!in_array($candidate->id, $matchedExistingIds)) {
+                            $matchedItem = $candidate;
+                            // IMPORTANT: Inherit the modifier_id from the existing item
+                            $modifierId = $matchedItem->item_modifier_id;
+                            $itemData['modifier_id'] = $modifierId;
+                            Log::info('Matched by name fallback, inherited modifier_id', [
+                                'name_key' => $nameKey,
+                                'matched_id' => $matchedItem->id,
+                                'inherited_modifier_id' => $modifierId,
+                            ]);
+                        }
+                    }
+
+                    if ($matchedItem && !in_array($matchedItem->id, $matchedExistingIds)) {
+                        // Item exists in the order - track it
+                        $matchedExistingIds[] = $matchedItem->id;
                         $requestedQty = $itemData['quantity'];
-                        $currentQty = $existingItem->quantity;
+                        $currentQty = $matchedItem->quantity;
 
                         // Handle quantity = 0 or removal
                         if ($requestedQty <= 0) {
-                            // Mark item as cancelled or delete it
-                            if ($existingItem->status !== 'pending') {
-                                // If already sent to kitchen, mark as cancelled
-                                $existingItem->update([
+                            if ($matchedItem->status !== 'pending') {
+                                $matchedItem->update([
                                     'status' => 'cancelled',
                                     'quantity' => 0,
                                     'subtotal' => 0
                                 ]);
                             } else {
-                                // If still pending, delete it
-                                $existingItem->delete();
+                                $matchedItem->delete();
                             }
                             continue;
                         }
 
                         if ($requestedQty != $currentQty) {
-                            // Update the existing order item
-                            $existingItem->update([
+                            // Update the existing order item quantity
+                            $matchedItem->update([
                                 'quantity' => $requestedQty,
                                 'subtotal' => $itemData['price'] * $requestedQty
                             ]);
 
-                            // If increased, send difference to KOT
+                            // If increased, send only the DIFFERENCE to KOT
                             if ($requestedQty > $currentQty) {
                                 $itemsToProcess[] = [
                                     'data' => array_merge($itemData, ['quantity' => $requestedQty - $currentQty]),
                                     'is_new' => false,
-                                    'order_item_id' => $existingItem->id
+                                    'order_item_id' => $matchedItem->id
                                 ];
+                                Log::info('Quantity increased, sending difference to KOT', [
+                                    'item_id' => $matchedItem->id,
+                                    'old_qty' => $currentQty,
+                                    'new_qty' => $requestedQty,
+                                    'kot_qty' => $requestedQty - $currentQty,
+                                ]);
                             }
+                            // If decreased, update but don't send to KOT
                         }
-                        // If quantity same or decreased, no KOT needed
+                        // If quantity is the same, do nothing (item unchanged, no KOT needed)
                     } else {
-                        // Completely new item - will create new order_item
+                        // Completely new item - will create new order_item and send to KOT
                         $itemsToProcess[] = ['data' => $itemData, 'is_new' => true];
+                        Log::info('New item to add', [
+                            'item_id' => $itemData['item_id'],
+                            'modifier_id' => $modifierId,
+                            'name' => $itemData['name'] ?? '',
+                            'quantity' => $itemData['quantity'],
+                        ]);
                     }
                 }
 
-                // Handle items that were removed from the order (not in current request)
-                foreach ($existingItems as $key => $existingItem) {
-                    if (!in_array($key, $processedKeys)) {
-                        // Item was removed from the order
+                // Handle items that were in the existing order but NOT in the current request
+                // These items have been removed by the user
+                foreach ($existingActiveItems as $existingItem) {
+                    if (!in_array($existingItem->id, $matchedExistingIds)) {
+                        Log::info('Item removed from order', [
+                            'item_id' => $existingItem->item_id,
+                            'modifier_id' => $existingItem->item_modifier_id,
+                            'name' => $existingItem->item_display_name,
+                            'status' => $existingItem->status,
+                        ]);
                         if ($existingItem->status !== 'pending') {
-                            // If already sent to kitchen, mark as cancelled
                             $existingItem->update([
                                 'status' => 'cancelled',
                                 'quantity' => 0,
                                 'subtotal' => 0
                             ]);
                         } else {
-                            // If still pending, mark as deleted
                             $existingItem->update(['status' => 'deleted']);
                         }
                     }
@@ -402,7 +467,7 @@ class POSController extends Controller
                 $order->update(['placed_at' => now()]);
             }
 
-            // Process items and generate KOT
+            // Process items and generate KOT - ONLY for new/changed items
             $kotItems = [];
 
             foreach ($itemsToProcess as $processItem) {
@@ -425,11 +490,11 @@ class POSController extends Controller
                     $orderItem = OrderItem::find($processItem['order_item_id']);
                 }
 
-                // Add to KOT
+                // Add to KOT - ONLY new/changed items go here
                 $kotItems[] = [
                     'item' => $item,
                     'order_item' => $orderItem,
-                    'quantity' => $itemData['quantity'], // Quantity for KOT
+                    'quantity' => $itemData['quantity'], // Quantity for KOT (difference for updates, full for new)
                 ];
             }
 
@@ -444,10 +509,21 @@ class POSController extends Controller
                 'total_amount' => $subtotalFromAllItems,
             ]);
 
-            // Generate KOT/BOT for new/updated items
+            // Generate KOT/BOT for new/updated items ONLY
             $kotNumbers = ['kot_number' => null, 'bot_number' => null];
             if (!empty($kotItems)) {
+                Log::info('Generating KOT/BOT for ' . count($kotItems) . ' new/changed items', [
+                    'items' => array_map(function ($ki) {
+                        return [
+                            'item_id' => $ki['item']->id,
+                            'name' => $ki['order_item']->item_display_name ?? $ki['item']->name,
+                            'quantity' => $ki['quantity'],
+                        ];
+                    }, $kotItems),
+                ]);
                 $kotNumbers = $this->generateKOT($order, $kotItems);
+            } else {
+                Log::info('No new/changed items - skipping KOT/BOT generation');
             }
 
             // Prepare items payload for frontend printing (non-cancelled, non-deleted)
