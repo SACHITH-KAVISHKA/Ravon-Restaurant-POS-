@@ -321,28 +321,50 @@ class POSController extends Controller
                     });
 
                 // Build lookup maps for matching
-                // Primary key: item_id + modifier_id (most accurate)
-                $existingByKey = $existingActiveItems->keyBy(function ($item) {
-                    return $item->item_id . '_' . ($item->item_modifier_id ?? 'null');
-                });
+                // Primary: groupBy item_id + modifier_id (handles duplicates safely, unlike keyBy)
+                $existingByKey = [];
+                foreach ($existingActiveItems as $item) {
+                    $key = $item->item_id . '_' . ($item->item_modifier_id ?? 'null');
+                    if (!isset($existingByKey[$key])) {
+                        $existingByKey[$key] = [];
+                    }
+                    $existingByKey[$key][] = $item;
+                }
 
                 // Secondary lookup: by item_id + display_name (fallback when modifier_id is missing)
                 $existingByName = [];
                 foreach ($existingActiveItems as $item) {
                     $nameKey = $item->item_id . '_' . ($item->item_display_name ?? '');
                     if (!isset($existingByName[$nameKey])) {
-                        $existingByName[$nameKey] = $item;
+                        $existingByName[$nameKey] = [];
                     }
+                    $existingByName[$nameKey][] = $item;
                 }
 
                 Log::info('Order update - existing items:', [
                     'order_id' => $order->id,
-                    'existing_keys' => $existingByKey->keys()->toArray(),
+                    'existing_keys' => array_keys($existingByKey),
                     'existing_name_keys' => array_keys($existingByName),
+                    'existing_item_count' => $existingActiveItems->count(),
+                    'existing_items_detail' => $existingActiveItems->map(function ($i) {
+                        return ['id' => $i->id, 'item_id' => $i->item_id, 'modifier_id' => $i->item_modifier_id, 'name' => $i->item_display_name, 'qty' => $i->quantity];
+                    })->values()->toArray(),
                 ]);
 
                 $itemsToProcess = [];
                 $matchedExistingIds = []; // Track which existing items were matched
+
+                // Helper: find best unmatched candidate from a group of items
+                $findBestCandidate = function ($candidates) use (&$matchedExistingIds) {
+                    if (empty($candidates))
+                        return null;
+                    foreach ($candidates as $candidate) {
+                        if (!in_array($candidate->id, $matchedExistingIds)) {
+                            return $candidate;
+                        }
+                    }
+                    return null; // All candidates already matched
+                };
 
                 // Process each item from the request
                 foreach ($validated['items'] as $itemData) {
@@ -362,18 +384,18 @@ class POSController extends Controller
                     $matchedItem = null;
 
                     // Pass 1: Try exact match by item_id + modifier_id
-                    if ($existingByKey->has($primaryKey)) {
-                        $matchedItem = $existingByKey->get($primaryKey);
-                        Log::info('Matched by primary key (item_id+modifier_id)', ['key' => $primaryKey, 'matched_id' => $matchedItem->id]);
+                    if (isset($existingByKey[$primaryKey])) {
+                        $matchedItem = $findBestCandidate($existingByKey[$primaryKey]);
+                        if ($matchedItem) {
+                            Log::info('Matched by primary key (item_id+modifier_id)', ['key' => $primaryKey, 'matched_id' => $matchedItem->id]);
+                        }
                     }
 
                     // Pass 2: If no match and modifier_id is null, try matching by item_id + name
                     // This handles the case where frontend loses modifier_id but the item hasn't changed
                     if (!$matchedItem && $modifierId === null && isset($existingByName[$nameKey])) {
-                        $candidate = $existingByName[$nameKey];
-                        // Only use name-based match if this existing item hasn't been matched already
-                        if (!in_array($candidate->id, $matchedExistingIds)) {
-                            $matchedItem = $candidate;
+                        $matchedItem = $findBestCandidate($existingByName[$nameKey]);
+                        if ($matchedItem) {
                             // IMPORTANT: Inherit the modifier_id from the existing item
                             $modifierId = $matchedItem->item_modifier_id;
                             $itemData['modifier_id'] = $modifierId;
@@ -382,6 +404,30 @@ class POSController extends Controller
                                 'matched_id' => $matchedItem->id,
                                 'inherited_modifier_id' => $modifierId,
                             ]);
+                        }
+                    }
+
+                    // Pass 3: If still no match, try matching by item_id + name regardless of modifier_id
+                    // This handles cases where modifier_id changed or was lost
+                    if (!$matchedItem) {
+                        foreach ($existingByName as $nKey => $candidates) {
+                            // Check if the item_id matches and name includes the request name
+                            if (strpos($nKey, $itemData['item_id'] . '_') === 0) {
+                                $matchedItem = $findBestCandidate($candidates);
+                                if ($matchedItem && $matchedItem->item_display_name === ($itemData['name'] ?? '')) {
+                                    // Inherit the modifier_id from the existing item
+                                    $modifierId = $matchedItem->item_modifier_id;
+                                    $itemData['modifier_id'] = $modifierId;
+                                    Log::info('Matched by broad name search, inherited modifier_id', [
+                                        'name_key' => $nKey,
+                                        'matched_id' => $matchedItem->id,
+                                        'inherited_modifier_id' => $modifierId,
+                                    ]);
+                                    break;
+                                } else {
+                                    $matchedItem = null; // Name didn't match, reset
+                                }
+                            }
                         }
                     }
 

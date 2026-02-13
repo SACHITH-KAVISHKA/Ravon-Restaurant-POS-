@@ -22,7 +22,7 @@
             font-size: 12px;
             /* Fixed font size - will NOT scale */
             line-height: 1.4;
-            padding: 5mm;
+            padding: 2mm 6mm 2mm 2mm;
             width: 80mm;
             max-width: 80mm;
             margin: 0 auto;
@@ -146,7 +146,7 @@
             body {
                 width: 80mm;
                 margin: 0;
-                padding: 3mm;
+                padding: 2mm 6mm 2mm 2mm;
                 /* Ensure content flows naturally without scaling */
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
