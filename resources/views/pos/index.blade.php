@@ -925,27 +925,28 @@
                 // 1. Given Certificate
                 qz.security.setCertificatePromise(function (resolve, reject) {
                     resolve(`-----BEGIN CERTIFICATE-----
-                                                                                                                                                                        MIIDozCCAougAwIBAgIUWJpvpJOkleU6lWsqrMKfsq9u6OowDQYJKoZIhvcNAQEL
-                                                                                                                                                                        BQAwYTELMAkGA1UEBhMCTEsxEDAOBgNVBAgMB1dlc3Rlcm4xEDAOBgNVBAcMB0Nv
-                                                                                                                                                                        bG9tYm8xFTATBgNVBAoMDFJhdm9uIEJha2VyczEXMBUGA1UEAwwOMTI3LjAuMC4x
-                                                                                                                                                                        OjgwMDAwHhcNMjUxMTE3MTgwNzI0WhcNMzUxMTE1MTgwNzI0WjBhMQswCQYDVQQG
-                                                                                                                                                                        EwJMSzEQMA4GA1UECAwHV2VzdGVybjEQMA4GA1UEBwwHQ29sb21ibzEVMBMGA1UE
-                                                                                                                                                                        CgwMUmF2b24gQmFrZXJzMRcwFQYDVQQDDA4xMjcuMC4wLjE6ODAwMDCCASIwDQYJ
-                                                                                                                                                                        KoZIhvcNAQEBBQADggEPADCCAQoCggEBANF0JduabBoiZ1M7R28FmCmvUEDYy+2z
-                                                                                                                                                                        uz+zQZiBGT3pm3gD2HgZfvhooGywwX2lmEn5Q5wvq3dodcqpd+Nr7xDE6U2QEcGS
-                                                                                                                                                                        UEi0aDbTCBY2VIRP5HNP33hDqNOq06akEtJRxGQ43hOLxoSWZjYxe7hIstVfp2fU
-                                                                                                                                                                        4j+uycPv9E8Cxo6eIM6NCFfRN1mIbkIIjgVfAmOaJb1y+TbD8z5NxXAfPf31GvXi
-                                                                                                                                                                        7AJ3gnr6khs6XyW5umcesBeOijBL+lUyTRU26GQWiduoaeoTToN9UkX3ZEvfPlR7
-                                                                                                                                                                        YLYqfRHnT4RJxRs+BcTDMsy0JHI5MGD/Ur/u8uXNgK2mqrfPLado9y0CAwEAAaNT
-                                                                                                                                                                        MFEwHQYDVR0OBBYEFMSl/4RhhGD0mRYBD2bH4n+t/cNBMB8GA1UdIwQYMBaAFMSl
-                                                                                                                                                                        /4RhhGD0mRYBD2bH4n+t/cNBMA8GA1UdEwEB/wQFMAMBAf8wDQYJKoZIhvcNAQEL
-                                                                                                                                                                        BQADggEBADlwDYAu7LGzj+pGROVavOeVczrb8RibbIbXrIViV31iKC1uwXRmtTY1
-                                                                                                                                                                        amAX+oEfMry3TIy//BHsJzGkAd6ozfosez33G4bbN8/y1Q9ZvcuaaHPT4DIBYrdR
-                                                                                                                                                                        GX/B6TtAm63VxXyjfwrV4OUbbqwdgMtKuviRprB9A+oCE1QPa74p33hgy8UHYOCK
-                                                                                                                                                                        g9lFgnRkyrLOb4fh2SmtjHhRV4aZf5CM+UbqBQAMiiuhHLAbqbmhBP3BYzVVZ066
-                                                                                                                                                                        9moVkpDvvNADqW3FH6epeBDL8RyQXj2yikCyD3xXJIAih815xLJMh/pOmuqEjHdd
-                                                                                                                                                                        NESCtDma6uLcth74mGaBwU3G3KsOCP4=
-                                                                                                                                                                    -----END CERTIFICATE-----`);
+                        MIIDyTCCArGgAwIBAgIUCq+TagwQ4YFXS6A5QyyM+t//+W4wDQYJKoZIhvcNAQEL
+                        BQAwdDELMAkGA1UEBhMCTEsxEDAOBgNVBAgMB1dlc3Rlcm4xEDAOBgNVBAcMB0Nv
+                        bG9tYm8xHTAbBgNVBAoMFFJhdm9uIFJlc3RhdXJhbnQgUE9TMSIwIAYDVQQDDBly
+                        ZXN0YXVyYW50LnJhdm9uYmFrZXJzLmxrMB4XDTI2MDExMzE3NTM0M1oXDTM2MDEx
+                        MTE3NTM0M1owdDELMAkGA1UEBhMCTEsxEDAOBgNVBAgMB1dlc3Rlcm4xEDAOBgNV
+                        BAcMB0NvbG9tYm8xHTAbBgNVBAoMFFJhdm9uIFJlc3RhdXJhbnQgUE9TMSIwIAYD
+                        VQQDDBlyZXN0YXVyYW50LnJhdm9uYmFrZXJzLmxrMIIBIjANBgkqhkiG9w0BAQEF
+                        AAOCAQ8AMIIBCgKCAQEAsZ+wQ6ybOtZbTCz5WplsOJ3OEKJQHvNHvmSA4fSS24M9
+                        vGF3+Pvil/d9FXeRgUviM27pqoBPcwZav2WjGywCGfB+7fQjCEd36MZT5iKIkmY6
+                        JeoRItLwur9O1M4RAGMAA2qzfOnyOMwVnyjlzeYKXoIEJO/1zJw/DTFny1QDIxmL
+                        gMBZuh+f0H0/gAsGWdcVbKN4iCtUKowruYv5qcSy1vRRquz2DsGCt/3L69jXuXjM
+                        lRL8U6wtdHGe6lIvpE0HAX1wDP/UiRIuWPWLNwgUcOG3qb3QgdTw4NU8fpeipf0e
+                        ZTa/g9cz//Um/02CsNbkOAghV7mB1xecEKsHDykmrwIDAQABo1MwUTAdBgNVHQ4E
+                        FgQUSm42lXw2qpJQLgthv1Vx0lyWjIowHwYDVR0jBBgwFoAUSm42lXw2qpJQLgth
+                        v1Vx0lyWjIowDwYDVR0TAQH/BAUwAwEB/zANBgkqhkiG9w0BAQsFAAOCAQEAp5Ag
+                        fNf9vCg6XxqBSkBpNc5q1LsiizqjTZ1RTO0l5YgBxWO0RT1d32XI5ue5VuSWTqcz
+                        Gfvc745C268wZBgPJNRyraxQm6jiljpYlX6w8uB2Q7tTlt6hzVpasSMRgqtWE5OS
+                        //JotDdJ6P74O1sn/+D3hNLVkuFswL6YRWb8wHdF8yBt7FlxNghP9WKMCx9GJCzu
+                        +NsbAOX7vJ25wD2M0v19RCotmr/uaXNjiJCFkRMITieXRQwU0CdeFavkHZDBBWgJ
+                        7D2lBMwJEDUJhprly5vxwbl9J+pVVcL7m/NRByZQjn9OsZuvGti5EA6Jd6PRf76F
+                        mBiKgCwTSf+AYtVTZw==
+                        -----END CERTIFICATE-----`);
                 });
 
                 // 2. Retrieve Signature from the Server
@@ -1794,7 +1795,7 @@
                         const pdfBase64 = pdf.output('datauristring').split(',')[1];
 
                         // Use configured printer or default printer
-                        const kotPrinterName = "Microsoft Print to PDF";
+                        const kotPrinterName = "OutletPOS";
                         await printPDFwithQZ(pdfBase64, kotPrinterName, "KOT", false);
                         console.log('KOT sent to thermal printer successfully');
 
@@ -1976,7 +1977,7 @@
                         const pdfBase64 = pdf.output('datauristring').split(',')[1];
 
                         // Use configured printer or default printer
-                        const botPrinterName = "Microsoft Print to PDF";
+                        const botPrinterName = "BOT";
                         await printPDFwithQZ(pdfBase64, botPrinterName, "BOT", false);
                         console.log('BOT sent to thermal printer successfully');
 
@@ -3864,7 +3865,7 @@
                             const pdfBase64 = pdf.output('datauristring').split(',')[1];
 
                             // Use configured printer or default printer
-                            const cancelPrinterName = "Microsoft Print to PDF";
+                            const cancelPrinterName = "OutletPOS";
                             await printPDFwithQZ(pdfBase64, cancelPrinterName, `Cancel ${station === 'KITCHEN' ? 'KOT' : 'BOT'}`, false);
                             console.log(`Cancel ${station === 'KITCHEN' ? 'KOT' : 'BOT'} sent to thermal printer successfully`);
 
@@ -4760,7 +4761,7 @@
 
                             pdf.setFont('courier', 'normal');
                             pdf.setFontSize(8);
-                            pdf.text('Software By SKM Labs', pageWidth / 2, yPosition, {
+                            pdf.text('Software By Jayawardena Group', pageWidth / 2, yPosition, {
                                 align: 'center'
                             });
 
@@ -4768,7 +4769,7 @@
                             const pdfBase64 = pdf.output('datauristring').split(',')[1];
 
                             // Use configured printer or default printer
-                            const receiptPrinterName = "Microsoft Print to PDF";
+                            const receiptPrinterName = "OutletPOS";
                             await printPDFwithQZ(pdfBase64, receiptPrinterName, "Receipt", false);
                             console.log('Receipt sent to thermal printer successfully');
 
@@ -5047,7 +5048,7 @@
                             const pdfBase64 = pdf.output('datauristring').split(',')[1];
 
                             // Use configured printer or default printer
-                            const invoicePrinterName = "Microsoft Print to PDF";
+                            const invoicePrinterName = "OutletPOS";
                             await printPDFwithQZ(pdfBase64, invoicePrinterName, "Invoice", false);
                             console.log('Invoice (without payment) sent to thermal printer successfully');
 
