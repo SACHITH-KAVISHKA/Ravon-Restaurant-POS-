@@ -79,6 +79,14 @@
                                             <span class="ml-3 text-gray-800 font-semibold">Stock Count</span>
                                         </label>
                                     </div>
+
+                                    <div class="flex-1 bg-pink-50 p-4 rounded-lg border border-pink-200">
+                                        <label class="flex items-center cursor-pointer">
+                                            <input type="checkbox" name="pork_available" value="1" {{ old('pork_available', $item->pork_available) ? 'checked' : '' }}
+                                                class="w-5 h-5 text-pink-600 bg-gray-50 border-gray-300 rounded focus:ring-pink-500">
+                                            <span class="ml-3 text-gray-800 font-semibold">Pork Available</span>
+                                        </label>
+                                    </div>
                                 </div>
 
                                 <!-- Enable Portions Checkbox -->
@@ -296,6 +304,14 @@
                                         </div>
                                     </div>
 
+                                    <div class="bg-pink-50 p-2 rounded border border-pink-200">
+                                        <label class="flex items-center cursor-pointer">
+                                            <input type="checkbox" name="pork_available" value="1"
+                                                class="w-4 h-4 text-pink-600 bg-gray-50 border-gray-300 rounded focus:ring-pink-500">
+                                            <span class="ml-2 text-xs font-semibold text-gray-700">Pork Available</span>
+                                        </label>
+                                    </div>
+
                                     <button type="submit"
                                         class="w-full px-4 py-2 bg-green-600 hover:bg-green-600/90 text-white rounded-lg transition font-semibold text-sm">
                                         Add Portion
@@ -332,6 +348,9 @@
 
                                             <div class="flex items-center justify-between">
                                                 <span class="text-xs text-green-600">Active</span>
+                                                @if($modifier->pork_available)
+                                                    <span class="text-xs bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full font-medium">🐷 Pork</span>
+                                                @endif
 
                                                 <div class="flex gap-3">
                                                     <button onclick="toggleEditMode({{ $modifier->id }})"
@@ -495,6 +514,14 @@
                                                                 </div>
                                                             @endforeach
                                                         </div>
+                                                    </div>
+
+                                                    <div class="bg-pink-50 p-2 rounded border border-pink-200">
+                                                        <label class="flex items-center cursor-pointer">
+                                                            <input type="checkbox" name="pork_available" value="1" {{ $modifier->pork_available ? 'checked' : '' }}
+                                                                class="w-4 h-4 text-pink-600 bg-gray-50 border-gray-300 rounded focus:ring-pink-500">
+                                                            <span class="ml-2 text-xs font-semibold text-gray-700">Pork Available</span>
+                                                        </label>
                                                     </div>
 
                                                     <div class="flex gap-2">

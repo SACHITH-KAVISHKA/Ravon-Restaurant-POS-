@@ -17,11 +17,13 @@ class ItemModifier extends Model
         'type',
         'price_adjustment',
         'is_active',
+        'pork_available',
     ];
 
     protected $casts = [
         'price_adjustment' => 'decimal:2',
         'is_active' => 'boolean',
+        'pork_available' => 'boolean',
     ];
 
     /**
@@ -57,11 +59,11 @@ class ItemModifier extends Model
         if (!$type || $type === 'default') {
             return $this->price_adjustment;
         }
-        
+
         $itemPrice = $this->itemPrices()
             ->where('price_type', $type)
             ->first();
-        
+
         return $itemPrice ? $itemPrice->price : $this->price_adjustment;
     }
 

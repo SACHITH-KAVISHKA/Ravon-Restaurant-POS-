@@ -26,6 +26,7 @@ class Item extends Model
         'is_featured',
         'is_finished_goods',
         'is_stock_count',
+        'pork_available',
         'display_order',
     ];
 
@@ -37,6 +38,7 @@ class Item extends Model
         'is_featured' => 'boolean',
         'is_finished_goods' => 'boolean',
         'is_stock_count' => 'boolean',
+        'pork_available' => 'boolean',
         'display_order' => 'integer',
     ];
 

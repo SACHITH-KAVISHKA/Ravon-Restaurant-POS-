@@ -11,12 +11,21 @@
     <div class="flex-1 flex flex-col h-full overflow-hidden">
         <!-- Header - Fixed height -->
         <div class="flex-shrink-0 p-6 pb-4">
-            <div class="flex justify-between items-center">
+            <div class="flex flex-col gap-4 lg:flex-row lg:justify-between lg:items-center">
                 <div>
                     <h1 class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#667eea] to-[#764ba2]">Menu Management</h1>
                     <p class="text-gray-600 text-sm mt-1">Manage your restaurant menu items, categories, and modifiers</p>
                 </div>
-                <div class="flex gap-3">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+                    <div class="relative">
+                        <label for="menu-search" class="sr-only">Search items</label>
+                        <span class="absolute inset-y-0 left-3 flex items-center text-gray-400">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35m1.6-4.15a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                        </span>
+                        <input id="menu-search" type="search" placeholder="Search items..." class="w-full sm:w-64 pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-purple-300">
+                    </div>
                     <a href="{{ route('menu.items.create') }}" class="bg-gradient-to-r from-[#667eea] to-[#764ba2] hover:shadow-lg hover:shadow-purple-500/50 text-white font-semibold px-5 py-2 rounded-lg transition duration-200 flex items-center gap-2 text-sm">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -37,11 +46,11 @@
         <div class="flex-shrink-0 mx-6 mb-4 bg-white rounded-lg shadow-md border border-gray-200">
             <div class="border-b border-gray-200">
                 <div class="category-tabs-container">
-                    <button onclick="filterCategory('all')" class="category-filter px-5 py-3 text-purple-600 bg-purple-50 font-semibold border-b-2 border-purple-600 whitespace-nowrap flex-shrink-0 text-sm">
+                    <button onclick="filterCategory('all', this)" class="category-filter px-5 py-3 text-purple-600 bg-purple-50 font-semibold border-b-2 border-purple-600 whitespace-nowrap flex-shrink-0 text-sm">
                         All Items
                     </button>
                     @foreach($categories as $category)
-                    <button onclick="filterCategory({{ $category->id }})" class="category-filter px-5 py-3 text-gray-600 hover:text-purple-600 font-semibold border-b-2 border-transparent hover:border-purple-300 whitespace-nowrap flex-shrink-0 transition text-sm">
+                    <button onclick="filterCategory({{ $category->id }}, this)" class="category-filter px-5 py-3 text-gray-600 hover:text-purple-600 font-semibold border-b-2 border-transparent hover:border-purple-300 whitespace-nowrap flex-shrink-0 transition text-sm">
                         {{ $category->name }}
                     </button>
                     @endforeach
@@ -121,7 +130,7 @@
                 <table class="w-full">
                     <tbody class="divide-y divide-gray-200">
                         @forelse($items as $item)
-                        <tr class="item-row hover:bg-purple-50 transition" data-category="{{ $item->category_id }}">
+                        <tr class="item-row hover:bg-purple-50 transition" data-category="{{ $item->category_id }}" data-search="{{ Str::lower($item->name . ' ' . ($item->description ?? '')) }}">
                             <!-- Item Name -->
                             <td class="px-6 py-3" style="width: 50%;">
                                 <div class="flex items-center">
@@ -183,6 +192,17 @@
                             </td>
                         </tr>
                         @endforelse
+                        @if($items->isNotEmpty())
+                        <tr id="menu-search-empty" class="hidden">
+                            <td colspan="3" class="px-6 py-12 text-center">
+                                <svg class="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-2M9 5a2 2 0 012-2h2a2 2 0 012 2M9 5h6m-6 4h6m-6 4h3" />
+                                </svg>
+                                <p class="text-gray-600 text-lg">No items match your search</p>
+                                <p class="text-gray-500 text-sm mt-1">Try a different keyword or clear the search.</p>
+                            </td>
+                        </tr>
+                        @endif
                     </tbody>
                 </table>
             </div>
@@ -191,8 +211,34 @@
 </div>
 
 <script>
-    function filterCategory(categoryId) {
+    let activeCategory = 'all';
+    let searchQuery = '';
+
+    function applyFilters() {
         const items = document.querySelectorAll('.item-row');
+        let visibleCount = 0;
+
+        items.forEach(item => {
+            const matchesCategory = activeCategory === 'all' || item.dataset.category == activeCategory;
+            const haystack = item.dataset.search || '';
+            const matchesSearch = searchQuery === '' || haystack.includes(searchQuery);
+
+            if (matchesCategory && matchesSearch) {
+                item.classList.remove('hidden');
+                visibleCount += 1;
+            } else {
+                item.classList.add('hidden');
+            }
+        });
+
+        const emptyRow = document.getElementById('menu-search-empty');
+        if (emptyRow) {
+            emptyRow.classList.toggle('hidden', visibleCount !== 0);
+        }
+    }
+
+    function filterCategory(categoryId, buttonEl) {
+        activeCategory = categoryId;
         const filters = document.querySelectorAll('.category-filter');
 
         // Update filter buttons
@@ -200,17 +246,24 @@
             btn.classList.remove('bg-purple-50', 'border-purple-600', 'text-purple-600');
             btn.classList.add('text-gray-600', 'border-transparent');
         });
-        event.target.classList.remove('text-gray-600', 'border-transparent');
-        event.target.classList.add('bg-purple-50', 'border-purple-600', 'text-purple-600');
+        if (buttonEl) {
+            buttonEl.classList.remove('text-gray-600', 'border-transparent');
+            buttonEl.classList.add('bg-purple-50', 'border-purple-600', 'text-purple-600');
+        }
 
-        // Filter items
-        items.forEach(item => {
-            if (categoryId === 'all' || item.dataset.category == categoryId) {
-                item.classList.remove('hidden');
-            } else {
-                item.classList.add('hidden');
-            }
-        });
+        applyFilters();
     }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const searchInput = document.getElementById('menu-search');
+        if (!searchInput) {
+            return;
+        }
+
+        searchInput.addEventListener('input', (event) => {
+            searchQuery = event.target.value.trim().toLowerCase();
+            applyFilters();
+        });
+    });
 </script>
 @endsection

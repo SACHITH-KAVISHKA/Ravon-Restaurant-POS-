@@ -21,6 +21,7 @@ class OrderItem extends Model
         'subtotal',
         'status',
         'special_instructions',
+        'excluded_ingredients',
     ];
 
     protected $casts = [
@@ -28,6 +29,7 @@ class OrderItem extends Model
         'item_modifier_id' => 'integer',
         'unit_price' => 'decimal:2',
         'subtotal' => 'decimal:2',
+        'excluded_ingredients' => 'array',
     ];
 
     /**

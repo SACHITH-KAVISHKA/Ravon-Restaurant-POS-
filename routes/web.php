@@ -128,6 +128,7 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware(['role:cashier'])->prefix('pos')->name('pos.')->group(function () {
         Route::get('/', [App\Http\Controllers\POSController::class, 'index'])->name('index');
         Route::get('/item/{id}', [App\Http\Controllers\POSController::class, 'getItem'])->name('getItem');
+        Route::get('/item-recipes', [App\Http\Controllers\POSController::class, 'getItemRecipes'])->name('itemRecipes');
         Route::get('/tables', [App\Http\Controllers\POSController::class, 'getAvailableTables'])->name('tables');
         Route::get('/open-checks', [App\Http\Controllers\POSController::class, 'getOpenChecks'])->name('openChecks');
         Route::get('/closed-orders', [App\Http\Controllers\POSController::class, 'getClosedOrders'])->name('closedOrders');

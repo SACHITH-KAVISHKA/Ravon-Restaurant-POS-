@@ -60,6 +60,55 @@ class POSController extends Controller
     }
 
     /**
+     * Get recipes/ingredients for a menu item or modifier (portion).
+     * Used by the POS ingredient selector modal when pork_available is true.
+     */
+    public function getItemRecipes(Request $request)
+    {
+        $itemId = $request->input('item_id');
+        $modifierId = $request->input('modifier_id');
+
+        $item = Item::findOrFail($itemId);
+
+        // Get recipes for this specific item/modifier
+        $query = ItemRecipe::where('item_id', $itemId)
+            ->with('mainStockItem');
+
+        if ($modifierId) {
+            // If a specific portion/modifier is selected, get its recipes
+            $query->where('item_modifier_id', $modifierId);
+        } else {
+            // For items without portions, get item-level recipes
+            $query->whereNull('item_modifier_id');
+        }
+
+        $recipes = $query->get();
+
+        // Fallback: if modifier was specified but no portion-specific recipes found, try item-level
+        if ($recipes->isEmpty() && $modifierId) {
+            $recipes = ItemRecipe::where('item_id', $itemId)
+                ->whereNull('item_modifier_id')
+                ->with('mainStockItem')
+                ->get();
+        }
+
+        $mappedRecipes = $recipes->map(function ($recipe) {
+            return [
+                'id' => $recipe->id,
+                'main_stock_item_id' => $recipe->main_stock_item_id,
+                'ingredient_name' => $recipe->mainStockItem->item_name ?? 'Unknown',
+                'quantity' => $recipe->quantity,
+                'unit' => $recipe->mainStockItem->unit_abbreviation ?? '',
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'recipes' => $mappedRecipes,
+        ]);
+    }
+
+    /**
      * Get available tables
      */
     public function getAvailableTables()
@@ -265,6 +314,8 @@ class POSController extends Controller
             'items.*.quantity' => 'required|integer|min:0', // Allow 0 for item removal
             'items.*.price' => 'required|numeric|min:0',
             'items.*.name' => 'required|string',
+            'items.*.excluded_ingredients' => 'nullable|array',
+            'items.*.excluded_ingredients.*' => 'integer',
         ]);
 
         DB::beginTransaction();
@@ -530,6 +581,7 @@ class POSController extends Controller
                         'quantity' => $itemData['quantity'],
                         'unit_price' => $itemData['price'],
                         'subtotal' => $itemData['price'] * $itemData['quantity'],
+                        'excluded_ingredients' => !empty($itemData['excluded_ingredients']) ? $itemData['excluded_ingredients'] : null,
                     ]);
                 } else {
                     // Updated item - use existing order_item
@@ -1018,8 +1070,21 @@ class POSController extends Controller
                             ->get();
                     }
 
+                    // Get excluded ingredients for this order item (if any)
+                    $excludedIngredientIds = $orderItem->excluded_ingredients ?? [];
+
                     // Deduct each raw material from CashierSubStock
                     foreach ($recipes as $recipe) {
+                        // Skip excluded ingredients (pork control)
+                        if (!empty($excludedIngredientIds) && in_array($recipe->main_stock_item_id, $excludedIngredientIds)) {
+                            Log::info('Skipping excluded ingredient for stock deduction', [
+                                'order_item_id' => $orderItem->id,
+                                'recipe_id' => $recipe->id,
+                                'main_stock_item_id' => $recipe->main_stock_item_id,
+                            ]);
+                            continue;
+                        }
+
                         $totalQuantity = $recipe->quantity * $orderItem->quantity;
                         $subStock = CashierSubStock::getOrCreateForItem($recipe->main_stock_item_id);
                         $subStock->deductStockForSale($totalQuantity, Auth::id());
