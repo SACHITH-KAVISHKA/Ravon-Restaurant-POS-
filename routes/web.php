@@ -207,6 +207,15 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/{stockTransfer}', [App\Http\Controllers\StockTransferController::class, 'show'])->name('show');
     });
 
+    // Stock Adjustment Routes (Admin only)
+    Route::middleware(['role:admin|supervisor'])->prefix('stock-adjustment')->name('stock-adjustment.')->group(function () {
+        Route::get('/', [App\Http\Controllers\StockAdjustmentController::class, 'index'])->name('index');
+        Route::post('/', [App\Http\Controllers\StockAdjustmentController::class, 'store'])->name('store');
+        Route::get('/item/{item}', [App\Http\Controllers\StockAdjustmentController::class, 'getItemDetails'])->name('item-details');
+        Route::get('/history', [App\Http\Controllers\StockAdjustmentController::class, 'history'])->name('history');
+        Route::get('/history-data', [App\Http\Controllers\StockAdjustmentController::class, 'getHistory'])->name('get-history');
+    });
+
     // QZ Tray Signature Route (for thermal printing)
     Route::post('/qz/sign', [App\Http\Controllers\QZTrayController::class, 'signQzRequest'])->name('qz.sign');
 });
