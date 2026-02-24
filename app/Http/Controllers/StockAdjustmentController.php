@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\StockAdjustment;
 use App\Models\MainStockItem;
 use App\Models\CashierSubStock;
+use App\Models\CashierFgStockLog;
+use App\Models\CashierRmStockLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -202,6 +204,31 @@ class StockAdjustmentController extends Controller
                 $subStockRecord->quantity = $actualQty;
                 $subStockRecord->last_updated_by = $userId;
                 $subStockRecord->save();
+
+                // Log stock change based on item type
+                if ($mainStockItem->item_type === 'finished_good') {
+                    CashierFgStockLog::log(
+                        $mainStockItem->id,
+                        'adjustment',
+                        $systemQty,
+                        $actualQty,
+                        'adjustment',
+                        $adjustmentId,
+                        'Manual adjustment by ' . ($request->cashier_name ?? 'Admin') . ($request->notes ? ' - ' . $request->notes : ''),
+                        $userId
+                    );
+                } else {
+                    CashierRmStockLog::log(
+                        $mainStockItem->id,
+                        'adjustment',
+                        $systemQty,
+                        $actualQty,
+                        'adjustment',
+                        $adjustmentId,
+                        'Manual adjustment by ' . ($request->cashier_name ?? 'Admin') . ($request->notes ? ' - ' . $request->notes : ''),
+                        $userId
+                    );
+                }
 
                 Log::info('Stock Adjustment: Cashier sub-stock updated', [
                     'item' => $mainStockItem->item_name,

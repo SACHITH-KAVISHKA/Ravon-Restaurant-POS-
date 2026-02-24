@@ -375,13 +375,40 @@ class SalesReportController extends Controller
                         // Use stored item_modifier_id for ID-based matching (most reliable)
                         $modifierId = $orderItem->item_modifier_id;
 
+                        // Get the sub stock BEFORE restoring to record the before quantity
+                        $mainStockItem = \App\Models\MainStockItem::where('item_type', 'finished_good')
+                            ->where('is_active', true)
+                            ->where('linked_item_id', $orderItem->item_id)
+                            ->where('linked_item_modifier_id', $modifierId)
+                            ->first();
+
+                        $qtyBefore = 0;
+                        if ($mainStockItem) {
+                            $subStockCheck = \App\Models\CashierSubStock::where('main_stock_item_id', $mainStockItem->id)->first();
+                            $qtyBefore = $subStockCheck ? (float) $subStockCheck->quantity : 0;
+                        }
+
                         // Restore stock using ID-based matching
-                        \App\Models\CashierSubStock::restoreForSaleById(
+                        $result = \App\Models\CashierSubStock::restoreForSaleById(
                             $orderItem->item_id,
                             $modifierId,
                             $orderItem->quantity,
                             auth()->id()
                         );
+
+                        // Log FG stock restore
+                        if ($result && $result->mainStockItem) {
+                            \App\Models\CashierFgStockLog::log(
+                                $result->main_stock_item_id,
+                                'sale_restore',
+                                $qtyBefore,
+                                (float) $result->quantity,
+                                'order',
+                                $order->order_number,
+                                'Stock restored - Order deleted - Qty: ' . $orderItem->quantity,
+                                auth()->id()
+                            );
+                        }
                     }
 
                     // Restore Raw Materials stock (for non-finished goods with recipes)
@@ -422,7 +449,20 @@ class SalesReportController extends Controller
                         foreach ($recipes as $recipe) {
                             $totalQuantity = $recipe->quantity * $orderItem->quantity;
                             $subStock = \App\Models\CashierSubStock::getOrCreateForItem($recipe->main_stock_item_id);
+                            $qtyBefore = (float) $subStock->quantity;
                             $subStock->addStock($totalQuantity, auth()->id());
+
+                            // Log RM stock restore
+                            \App\Models\CashierRmStockLog::log(
+                                $recipe->main_stock_item_id,
+                                'sale_restore',
+                                $qtyBefore,
+                                (float) $subStock->quantity,
+                                'order',
+                                $order->order_number,
+                                'Stock restored - Order deleted - Qty: ' . $totalQuantity,
+                                auth()->id()
+                            );
                         }
                     }
                 }

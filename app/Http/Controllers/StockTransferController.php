@@ -6,6 +6,8 @@ use App\Models\StockTransfer;
 use App\Models\StockTransferItem;
 use App\Models\MainStockItem;
 use App\Models\CashierSubStock;
+use App\Models\CashierFgStockLog;
+use App\Models\CashierRmStockLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -179,7 +181,33 @@ class StockTransferController extends Controller
 
                     // Add to cashier sub stock
                     $subStock = CashierSubStock::getOrCreateForItem($item->main_stock_item_id);
+                    $qtyBefore = (float) $subStock->quantity;
                     $subStock->addStock($item->quantity, Auth::id());
+
+                    // Log stock change based on item type
+                    if ($mainStockItem->item_type === 'finished_good') {
+                        CashierFgStockLog::log(
+                            $mainStockItem->id,
+                            'transfer_in',
+                            $qtyBefore,
+                            (float) $subStock->quantity,
+                            'transfer',
+                            $stockTransfer->transfer_number,
+                            'Transfer received from supervisor - Qty: ' . $item->quantity,
+                            Auth::id()
+                        );
+                    } else {
+                        CashierRmStockLog::log(
+                            $mainStockItem->id,
+                            'transfer_in',
+                            $qtyBefore,
+                            (float) $subStock->quantity,
+                            'transfer',
+                            $stockTransfer->transfer_number,
+                            'Transfer received from supervisor - Qty: ' . $item->quantity,
+                            Auth::id()
+                        );
+                    }
 
                     // Update item status
                     $item->update(['status' => 'accepted']);

@@ -208,7 +208,7 @@ Route::middleware(['auth'])->group(function () {
     });
 
     // Stock Adjustment Routes (Admin only)
-    Route::middleware(['role:admin|supervisor'])->prefix('stock-adjustment')->name('stock-adjustment.')->group(function () {
+    Route::middleware(['role:admin'])->prefix('stock-adjustment')->name('stock-adjustment.')->group(function () {
         Route::get('/', [App\Http\Controllers\StockAdjustmentController::class, 'index'])->name('index');
         Route::post('/', [App\Http\Controllers\StockAdjustmentController::class, 'store'])->name('store');
         Route::get('/item/{item}', [App\Http\Controllers\StockAdjustmentController::class, 'getItemDetails'])->name('item-details');

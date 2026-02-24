@@ -11,6 +11,8 @@ use App\Models\Payment;
 use App\Models\Kot;
 use App\Models\KotItem;
 use App\Models\CashierSubStock;
+use App\Models\CashierFgStockLog;
+use App\Models\CashierRmStockLog;
 use App\Models\ItemRecipe;
 use App\Models\ItemModifier;
 use App\Models\VoidRecord;
@@ -1031,10 +1033,24 @@ class POSController extends Controller
                     // Fallback to name-based matching (for legacy orders without item_modifier_id)
                     if (!$result && !$modifierId) {
                         $displayName = $orderItem->item_display_name ?? $orderItem->item->name;
-                        CashierSubStock::deductForSaleByDisplayName(
+                        $result = CashierSubStock::deductForSaleByDisplayName(
                             $orderItem->item_id,
                             $displayName,
                             $orderItem->quantity,
+                            Auth::id()
+                        );
+                    }
+
+                    // Log FG stock change
+                    if ($result && $result->mainStockItem) {
+                        CashierFgStockLog::log(
+                            $result->main_stock_item_id,
+                            'sale_deduct',
+                            (float) $result->quantity + $orderItem->quantity, // quantity_before
+                            (float) $result->quantity, // quantity_after
+                            'order',
+                            $order->order_number,
+                            'Sale deduction - Qty: ' . $orderItem->quantity,
                             Auth::id()
                         );
                     }
@@ -1087,7 +1103,20 @@ class POSController extends Controller
 
                         $totalQuantity = $recipe->quantity * $orderItem->quantity;
                         $subStock = CashierSubStock::getOrCreateForItem($recipe->main_stock_item_id);
+                        $qtyBefore = (float) $subStock->quantity;
                         $subStock->deductStockForSale($totalQuantity, Auth::id());
+
+                        // Log RM stock change
+                        CashierRmStockLog::log(
+                            $recipe->main_stock_item_id,
+                            'sale_deduct',
+                            $qtyBefore,
+                            (float) $subStock->quantity,
+                            'order',
+                            $order->order_number,
+                            'Recipe deduction for ' . ($orderItem->item_display_name ?? $orderItem->item->name) . ' - Qty: ' . $totalQuantity,
+                            Auth::id()
+                        );
                     }
                 }
             }
