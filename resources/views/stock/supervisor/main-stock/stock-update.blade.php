@@ -287,6 +287,17 @@
                                 </table>
                             </div>
 
+                            <!-- Add Row Button -->
+                            <div class="mt-3 flex">
+                                <button type="button" id="addRowBtn"
+                                    class="flex items-center gap-2 px-4 py-2 text-sm font-medium text-purple-600 hover:text-white border border-purple-300 hover:bg-gradient-to-r hover:from-[#667eea] hover:to-[#764ba2] hover:border-transparent rounded-lg transition-all duration-200">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                                    </svg>
+                                    Add Row
+                                </button>
+                            </div>
+
                             <!-- Reference Number & Notes -->
                             <div class="mt-6 pt-6 border-t border-gray-100 grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
@@ -815,6 +826,11 @@
 
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = 'Update Stock';
+            });
+
+            // Add Row button
+            document.getElementById('addRowBtn').addEventListener('click', function() {
+                addNewRow();
             });
 
             // Initialize all existing dropdowns
