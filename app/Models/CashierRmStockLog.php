@@ -40,6 +40,7 @@ class CashierRmStockLog extends Model
         'sale_restore' => 'Sale Restore (Order Deleted)',
         'transfer_in' => 'Transfer In',
         'adjustment' => 'Stock Adjustment',
+        'wastage' => 'Wastage Deduction',
     ];
 
     /**
@@ -50,6 +51,7 @@ class CashierRmStockLog extends Model
         'sale_restore' => 'blue',
         'transfer_in' => 'green',
         'adjustment' => 'yellow',
+        'wastage' => 'orange',
     ];
 
     /**

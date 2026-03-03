@@ -41,6 +41,7 @@ class CashierFgStockLog extends Model
         'transfer_in' => 'Transfer In',
         'adjustment' => 'Stock Adjustment',
         'void_restore' => 'Void Restore',
+        'wastage' => 'Wastage Deduction',
     ];
 
     /**
@@ -52,6 +53,7 @@ class CashierFgStockLog extends Model
         'transfer_in' => 'green',
         'adjustment' => 'yellow',
         'void_restore' => 'purple',
+        'wastage' => 'orange',
     ];
 
     /**

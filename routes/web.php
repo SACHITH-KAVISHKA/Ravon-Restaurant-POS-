@@ -9,6 +9,8 @@ use App\Http\Controllers\SalesReportController;
 use App\Http\Controllers\ItemSalesReportController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\VoidReportController;
+use App\Http\Controllers\WastageController;
+use App\Http\Controllers\WastageReportController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -214,6 +216,20 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/item/{item}', [App\Http\Controllers\StockAdjustmentController::class, 'getItemDetails'])->name('item-details');
         Route::get('/history', [App\Http\Controllers\StockAdjustmentController::class, 'history'])->name('history');
         Route::get('/history-data', [App\Http\Controllers\StockAdjustmentController::class, 'getHistory'])->name('get-history');
+    });
+
+    // Wastage Routes (Cashier)
+    Route::middleware(['role:cashier'])->prefix('wastage')->name('wastage.')->group(function () {
+        Route::get('/', [WastageController::class, 'index'])->name('index');
+        Route::post('/', [WastageController::class, 'store'])->name('store');
+        Route::get('/item/{item}', [WastageController::class, 'getItemDetails'])->name('item-details');
+        Route::get('/history', [WastageController::class, 'history'])->name('history');
+    });
+
+    // Wastage Report Routes (Admin)
+    Route::middleware(['role:admin'])->prefix('wastage-report')->name('wastage-report.')->group(function () {
+        Route::get('/', [WastageReportController::class, 'index'])->name('index');
+        Route::get('/data', [WastageReportController::class, 'getData'])->name('data');
     });
 
     // QZ Tray Signature Route (for thermal printing)
