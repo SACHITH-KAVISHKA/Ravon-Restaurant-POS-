@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\CashierFgStockLog;
+use Illuminate\Support\Facades\Log;
 
 class CashierSubStock extends Model
 {
@@ -202,7 +204,7 @@ class CashierSubStock extends Model
 
         // If no matching MainStockItem found, log and return null
         if (!$mainStockItem) {
-            \Log::warning('FG Stock Deduction: No matching MainStockItem found', [
+            Log::warning('FG Stock Deduction: No matching MainStockItem found', [
                 'display_name' => $displayName,
                 'extracted_item_name' => $itemName,
                 'extracted_modifier' => $modifierName,
@@ -218,7 +220,7 @@ class CashierSubStock extends Model
         // Deduct the quantity (allows negative stock)
         $subStock->deductStockForSale($quantity, $userId);
 
-        \Log::info('FG Stock Deducted', [
+        Log::info('FG Stock Deducted', [
             'main_stock_item' => $mainStockItem->item_name,
             'main_stock_item_id' => $mainStockItem->id,
             'quantity_deducted' => $quantity,
@@ -239,7 +241,7 @@ class CashierSubStock extends Model
      * @param int|null $userId - User who performed the action
      * @return self|null - The stock record or null if item not found in menu
      */
-    public static function deductForSaleById(int $itemId, ?int $modifierId, float $quantity, ?int $userId = null): ?self
+    public static function deductForSaleById(int $itemId, ?int $modifierId, float $quantity, ?int $userId = null, ?string $orderNumber = null): ?self
     {
         // Find MainStockItem by linked IDs (most reliable method)
         $mainStockItem = MainStockItem::where('item_type', 'finished_good')
@@ -253,7 +255,7 @@ class CashierSubStock extends Model
             // Get the menu item to create stock item
             $menuItem = \App\Models\Item::find($itemId);
             if (!$menuItem) {
-                \Log::warning('FG Stock Deduction by ID: Menu item not found', [
+                Log::warning('FG Stock Deduction by ID: Menu item not found', [
                     'item_id' => $itemId,
                     'modifier_id' => $modifierId,
                     'quantity_to_deduct' => $quantity,
@@ -287,7 +289,7 @@ class CashierSubStock extends Model
                 'updated_by' => $userId,
             ]);
 
-            \Log::info('FG Stock: Auto-created MainStockItem', [
+            Log::info('FG Stock: Auto-created MainStockItem', [
                 'main_stock_item' => $mainStockItem->item_name,
                 'main_stock_item_id' => $mainStockItem->id,
                 'linked_item_id' => $itemId,
@@ -298,16 +300,34 @@ class CashierSubStock extends Model
         // Get or create the CashierSubStock record
         $subStock = self::getOrCreateForItem($mainStockItem->id);
 
+        // Capture qty before deduction for logging
+        $qtyBefore = (float) $subStock->quantity;
+
         // Deduct the quantity (allows negative stock)
         $subStock->deductStockForSale($quantity, $userId);
 
-        \Log::info('FG Stock Deducted by ID', [
+        $qtyAfter = (float) $subStock->quantity;
+
+        // Log the FG sale deduction
+        CashierFgStockLog::log(
+            $mainStockItem->id,
+            'sale_deduct',
+            $qtyBefore,
+            $qtyAfter,
+            'order',
+            $orderNumber,
+            'Sale deduction - Order: ' . ($orderNumber ?? 'N/A') . ' - Qty: ' . $quantity,
+            $userId
+        );
+
+        Log::info('FG Stock Deducted by ID', [
             'main_stock_item' => $mainStockItem->item_name,
             'main_stock_item_id' => $mainStockItem->id,
             'linked_item_id' => $itemId,
             'linked_modifier_id' => $modifierId,
             'quantity_deducted' => $quantity,
-            'new_stock_quantity' => $subStock->quantity,
+            'qty_before' => $qtyBefore,
+            'qty_after' => $qtyAfter,
         ]);
 
         return $subStock;
@@ -342,7 +362,7 @@ class CashierSubStock extends Model
         }
 
         if (!$mainStockItem) {
-            \Log::warning('FG Stock Restore by ID: No matching MainStockItem found', [
+            Log::warning('FG Stock Restore by ID: No matching MainStockItem found', [
                 'item_id' => $itemId,
                 'modifier_id' => $modifierId,
                 'quantity_to_restore' => $quantity,
@@ -356,7 +376,7 @@ class CashierSubStock extends Model
         // Add the quantity back
         $subStock->addStock($quantity, $userId);
 
-        \Log::info('FG Stock Restored by ID', [
+        Log::info('FG Stock Restored by ID', [
             'main_stock_item' => $mainStockItem->item_name,
             'main_stock_item_id' => $mainStockItem->id,
             'linked_item_id' => $itemId,

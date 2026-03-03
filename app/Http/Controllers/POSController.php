@@ -1027,7 +1027,8 @@ class POSController extends Controller
                         $orderItem->item_id,
                         $modifierId,
                         $orderItem->quantity,
-                        Auth::id()
+                        Auth::id(),
+                        $order->order_number
                     );
 
                     // Fallback to name-based matching (for legacy orders without item_modifier_id)
@@ -1041,19 +1042,8 @@ class POSController extends Controller
                         );
                     }
 
-                    // Log FG stock change
-                    if ($result && $result->mainStockItem) {
-                        CashierFgStockLog::log(
-                            $result->main_stock_item_id,
-                            'sale_deduct',
-                            (float) $result->quantity + $orderItem->quantity, // quantity_before
-                            (float) $result->quantity, // quantity_after
-                            'order',
-                            $order->order_number,
-                            'Sale deduction - Qty: ' . $orderItem->quantity,
-                            Auth::id()
-                        );
-                    }
+                    // Stock log is written inside CashierSubStock::deductForSaleById()
+                    // No duplicate log needed here
                 }
             }
 
