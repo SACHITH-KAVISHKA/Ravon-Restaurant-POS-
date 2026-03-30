@@ -100,6 +100,24 @@
                                     </label>
                                 </div>
 
+                                <!-- VAT & SSCL Checkboxes -->
+                                <div class="flex gap-4">
+                                    <div class="flex-1 bg-indigo-50 p-4 rounded-lg border border-indigo-200">
+                                        <label class="flex items-center cursor-pointer">
+                                            <input type="checkbox" name="vat_available" value="1" {{ old('vat_available', $item->vat_available) ? 'checked' : '' }}
+                                                class="w-5 h-5 text-indigo-600 bg-white border-gray-300 rounded focus:ring-indigo-500">
+                                            <span class="ml-3 text-gray-800 font-semibold">Vat available</span>
+                                        </label>
+                                    </div>
+                                    <div class="flex-1 bg-teal-50 p-4 rounded-lg border border-teal-200">
+                                        <label class="flex items-center cursor-pointer">
+                                            <input type="checkbox" name="sscl_available" value="1" {{ old('sscl_available', $item->sscl_available) ? 'checked' : '' }}
+                                                class="w-5 h-5 text-teal-600 bg-white border-gray-300 rounded focus:ring-teal-500">
+                                            <span class="ml-3 text-gray-800 font-semibold">SSCL available</span>
+                                        </label>
+                                    </div>
+                                </div>
+
                                 <!-- Default Price -->
                                 <div>
                                     <label class="block text-sm font-semibold text-gray-800-muted mb-2">Default Price

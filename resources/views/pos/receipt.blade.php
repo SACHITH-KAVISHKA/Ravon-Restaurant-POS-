@@ -181,14 +181,32 @@
 <body>
     <div class="header">
         <h1>RAVON RESTAURANT</h1>
-        <div>Tax Invoice</div>
-        <div>{{ now()->format('d/m/Y h:i A') }}</div>
+        <div>Ravon Restaurant (Pvt) Ltd</div>
+        <div>NO 282/A/2, KCTHALAWALA, KADUWELA.</div>
+        <div>TEL. 016-2006007</div>
+        @if(!empty($vatRegNo))
+            <div>VAT Reg No: {{ $vatRegNo }}</div>
+        @endif
     </div>
 
     <div class="info">
         <div class="info-row">
-            <span>Bill No:</span>
+            <span>Customer:</span>
+            <span>{{ $order->customer_name ?: 'Cash Customer' }}</span>
+        </div>
+        @if(!empty($order->customer_vat_number))
+            <div class="info-row">
+                <span>VAT No:</span>
+                <span>{{ $order->customer_vat_number }}</span>
+            </div>
+        @endif
+        <div class="info-row">
+            <span>Invoice #:</span>
             <span>{{ $order->order_number }}</span>
+        </div>
+        <div class="info-row">
+            <span>Date:</span>
+            <span>{{ ($order->completed_at ?? now())->format('d/m/Y H:i:s') }}</span>
         </div>
         @if($order->table)
             <div class="info-row">
@@ -210,24 +228,37 @@
             <span>Cashier:</span>
             <span>{{ $order->waiter ? $order->waiter->name : 'N/A' }}</span>
         </div>
-        @if($order->customer_name)
-            <div class="info-row">
-                <span>Customer:</span>
-                <span>{{ $order->customer_name }}</span>
-            </div>
-        @endif
     </div>
+
+    @php
+        $taxService   = app(\App\Services\TaxService::class);
+        $activeItems  = $order->orderItems->where('status', '!=', 'deleted');
+        $orderTax     = $taxService->calculateOrderTax(collect($activeItems)->values());
+    @endphp
 
     <div class="items">
         {{-- IMPORTANT: Loop through ALL items without any limit - this ensures complete receipts --}}
-        @foreach($order->orderItems->where('status', '!=', 'deleted') as $item)
+        @foreach($activeItems as $item)
+            @php
+                $vatApplicable  = $item->item?->vat_available  ?? true;
+                $ssclApplicable = $item->item?->sscl_available ?? true;
+                $itemTax        = $taxService->calculateItemTax(
+                    (float) $item->unit_price,
+                    (int)   $item->quantity,
+                    $vatApplicable,
+                    $ssclApplicable
+                );
+                $baseUnitPrice  = $item->quantity > 0
+                    ? $itemTax['base_amount'] / $item->quantity
+                    : 0;
+            @endphp
             <div class="item">
                 <div class="item-header">
                     <span>{{ $item->quantity }} x {{ $item->item->name }}</span>
-                    <span>{{ number_format($item->subtotal, 2) }}</span>
+                    <span>{{ number_format($itemTax['base_amount'], 2) }}</span>
                 </div>
                 <div class="item-details">
-                    @ Rs. {{ number_format($item->unit_price, 2) }} each
+                    @ Rs. {{ number_format($baseUnitPrice, 2) }} each
                 </div>
                 @if($item->modifiers->count() > 0)
                     @php
@@ -251,8 +282,8 @@
 
     <div class="totals">
         <div class="total-row">
-            <span>Subtotal:</span>
-            <span>Rs. {{ number_format($order->subtotal, 2) }}</span>
+            <span>Sub Total (Base):</span>
+            <span>Rs. {{ number_format($orderTax['subtotal'], 2) }}</span>
         </div>
         @if($order->discount_amount > 0)
             <div class="total-row">
@@ -260,16 +291,22 @@
                 <span>- Rs. {{ number_format($order->discount_amount, 2) }}</span>
             </div>
         @endif
-        @if($order->tax_amount > 0)
-            <div class="total-row">
-                <span>Tax:</span>
-                <span>Rs. {{ number_format($order->tax_amount, 2) }}</span>
-            </div>
-        @endif
         @if($order->service_charge > 0)
             <div class="total-row">
                 <span>Service Charge:</span>
                 <span>Rs. {{ number_format($order->service_charge, 2) }}</span>
+            </div>
+        @endif
+        @if($orderTax['sscl_amount'] > 0)
+            <div class="total-row">
+                <span>SSCL ({{ $taxService->getSsclRate() }}%):</span>
+                <span>Rs. {{ number_format($orderTax['sscl_amount'], 2) }}</span>
+            </div>
+        @endif
+        @if($orderTax['vat_amount'] > 0)
+            <div class="total-row">
+                <span>VAT ({{ $taxService->getVatRate() }}%):</span>
+                <span>Rs. {{ number_format($orderTax['vat_amount'], 2) }}</span>
             </div>
         @endif
         <div class="total-row grand">
@@ -300,7 +337,6 @@
     <div class="footer">
         <p>Thank you for dining with us!</p>
         <p>Visit again soon</p>
-        <p style="margin-top: 10px;">www.ravonrestaurant.com</p>
     </div>
 
     <div class="no-print" style="text-align: center; margin-top: 20px;">

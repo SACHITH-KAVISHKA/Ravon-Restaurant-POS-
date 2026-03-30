@@ -187,6 +187,8 @@ class MenuController extends Controller
         $validated['is_featured'] = false;
         $validated['is_finished_goods'] = $request->has('is_finished_goods');
         $validated['is_stock_count'] = $request->has('is_stock_count');
+        $validated['vat_available'] = $request->has('vat_available');
+        $validated['sscl_available'] = $request->has('sscl_available');
         $validated['pork_available'] = $request->has('pork_available');
         $validated['display_order'] = 0;
         $validated['price'] = $validated['price'] ?? 0;
@@ -294,6 +296,8 @@ class MenuController extends Controller
         $validated['price'] = $validated['price'] ?? $item->price;
         $validated['is_finished_goods'] = $request->has('is_finished_goods');
         $validated['is_stock_count'] = $request->has('is_stock_count');
+        $validated['vat_available'] = $request->has('vat_available');
+        $validated['sscl_available'] = $request->has('sscl_available');
         $validated['pork_available'] = $request->has('pork_available');
 
         $item->update($validated);

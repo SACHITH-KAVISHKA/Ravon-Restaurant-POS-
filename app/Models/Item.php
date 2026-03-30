@@ -26,6 +26,8 @@ class Item extends Model
         'is_featured',
         'is_finished_goods',
         'is_stock_count',
+        'vat_available',
+        'sscl_available',
         'pork_available',
         'display_order',
     ];
@@ -38,6 +40,8 @@ class Item extends Model
         'is_featured' => 'boolean',
         'is_finished_goods' => 'boolean',
         'is_stock_count' => 'boolean',
+        'vat_available' => 'boolean',
+        'sscl_available' => 'boolean',
         'pork_available' => 'boolean',
         'display_order' => 'integer',
     ];

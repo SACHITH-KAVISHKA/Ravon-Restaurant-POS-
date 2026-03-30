@@ -7,10 +7,12 @@ use App\Http\Controllers\MenuController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\SalesReportController;
 use App\Http\Controllers\ItemSalesReportController;
+use App\Http\Controllers\ItemTransactionReportController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\VoidReportController;
 use App\Http\Controllers\WastageController;
 use App\Http\Controllers\WastageReportController;
+use App\Http\Controllers\VatCustomerController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -93,6 +95,10 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/item-sales/export', [ItemSalesReportController::class, 'exportSummary'])->name('item-sales.export');
         Route::get('/item-sales/export-details', [ItemSalesReportController::class, 'exportItemDetails'])->name('item-sales.export-details');
 
+        // Item Transaction Details Report
+        Route::get('/item-transactions', [ItemTransactionReportController::class, 'index'])->name('item-transactions');
+        Route::post('/item-transactions/data', [ItemTransactionReportController::class, 'data'])->name('item-transactions.data');
+
         Route::get('/staff-performance', function () {
             return view('dashboard');
         })->name('staff-performance');
@@ -105,6 +111,8 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware(['role:admin'])->prefix('sales-report')->name('sales-report.')->group(function () {
         Route::get('/', [SalesReportController::class, 'index'])->name('index');
         Route::get('/sale-details/{order}', [SalesReportController::class, 'getSaleDetails'])->name('sale-details');
+        Route::get('/order/{order}/edit', [SalesReportController::class, 'edit'])->middleware('role:superadmin')->name('edit');
+        Route::put('/order/{order}', [SalesReportController::class, 'update'])->middleware('role:superadmin')->name('update');
         Route::get('/receipt/{order}', [SalesReportController::class, 'receipt'])->name('receipt');
         Route::get('/export', [SalesReportController::class, 'exportExcel'])->name('export');
         Route::delete('/order/{order}', [SalesReportController::class, 'softDelete'])->name('order.delete');
@@ -124,6 +132,13 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/{user}', [UserController::class, 'show'])->name('show');
         Route::put('/{user}', [UserController::class, 'update'])->name('update');
         Route::delete('/{user}', [UserController::class, 'destroy'])->name('destroy');
+    });
+
+    // VAT Customer Registration (Admin only)
+    Route::middleware(['role:admin'])->prefix('vat-customers')->name('vat-customers.')->group(function () {
+        Route::get('/', [VatCustomerController::class, 'index'])->name('index');
+        Route::post('/', [VatCustomerController::class, 'store'])->name('store');
+        Route::put('/{vatCustomer}', [VatCustomerController::class, 'update'])->name('update');
     });
 
     // POS (Cashier only)
@@ -234,4 +249,10 @@ Route::middleware(['auth'])->group(function () {
 
     // QZ Tray Signature Route (for thermal printing)
     Route::post('/qz/sign', [App\Http\Controllers\QZTrayController::class, 'signQzRequest'])->name('qz.sign');
+
+    // Settings (Admin only)
+    Route::middleware(['role:admin'])->prefix('settings')->name('settings.')->group(function () {
+        Route::get('/', [App\Http\Controllers\SettingController::class, 'index'])->name('index');
+        Route::post('/', [App\Http\Controllers\SettingController::class, 'store'])->name('store');
+    });
 });

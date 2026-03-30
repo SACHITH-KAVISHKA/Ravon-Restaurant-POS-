@@ -214,6 +214,16 @@
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
                                             </svg>
                                         </button>
+                                        @if(auth()->user()->hasRole('superadmin'))
+                                        <a
+                                            href="{{ route('sales-report.edit', $order) }}"
+                                            class="btn-action bg-yellow-500 hover:bg-yellow-600 hover:shadow-lg text-white"
+                                            title="Edit Sale Details">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                            </svg>
+                                        </a>
+                                        @endif
                                         <button
                                             class="btn-action bg-red-600 hover:bg-red-700 hover:shadow-lg text-white delete-order-btn"
                                             data-order-id="{{ $order->id }}"
@@ -628,181 +638,8 @@
                     btn.prop('disabled', true);
 
                     try {
-                        // Fetch order details
-                        const response = await $.get(`/sales-report/sale-details/${orderId}`);
-                        const order = response.order;
-                        const items = response.items;
-
-                        // Generate PDF receipt using jsPDF
-                        const {
-                            jsPDF
-                        } = window.jspdf;
-                        const pdf = new jsPDF({
-                            orientation: 'portrait',
-                            unit: 'mm',
-                            format: [80, 297]
-                        });
-
-                        let yPosition = 10;
-                        const pageWidth = 80;
-                        const leftMargin = 5;
-                        const rightMargin = 5;
-
-                        // Header
-                        pdf.setFont('courier', 'bold');
-                        pdf.setFontSize(14);
-                        pdf.text('RAVON RESTAURANT', pageWidth / 2, yPosition, {
-                            align: 'center'
-                        });
-                        yPosition += 5;
-
-                        pdf.setFontSize(8);
-                        pdf.setFont('courier', 'normal');
-                        pdf.text('Kaduwela', pageWidth / 2, yPosition, {
-                            align: 'center'
-                        });
-                        yPosition += 4;
-                        pdf.text('Tel: 076 200 6007', pageWidth / 2, yPosition, {
-                            align: 'center'
-                        });
-                        yPosition += 6;
-
-                        // Separator
-                        pdf.setLineWidth(0.5);
-                        pdf.line(leftMargin, yPosition, pageWidth - rightMargin, yPosition);
-                        yPosition += 6;
-
-                        // Order Info
-                        pdf.setFontSize(9);
-                        pdf.text('ORDER NO:', leftMargin, yPosition);
-                        pdf.text(order.order_number, pageWidth - rightMargin, yPosition, {
-                            align: 'right'
-                        });
-                        yPosition += 5;
-
-                        pdf.text('WAITER:', leftMargin, yPosition);
-                        pdf.text(order.waiter_name, pageWidth - rightMargin, yPosition, {
-                            align: 'right'
-                        });
-                        yPosition += 5;
-
-                        pdf.text('DATE:', leftMargin, yPosition);
-                        pdf.text(order.completed_at, pageWidth - rightMargin, yPosition, {
-                            align: 'right'
-                        });
-                        yPosition += 8;
-
-                        // Items separator
-                        pdf.setLineWidth(0.3);
-                        pdf.line(leftMargin, yPosition, pageWidth - rightMargin, yPosition);
-                        yPosition += 6;
-
-                        // Items
-                        items.forEach(item => {
-                            pdf.setFont('courier', 'bold');
-                            pdf.setFontSize(9);
-
-                            let itemName = item.item_name;
-                            if (itemName.length > 22) {
-                                itemName = itemName.substring(0, 19) + '...';
-                            }
-
-                            pdf.text(itemName, leftMargin, yPosition);
-                            pdf.text(`LKR ${parseFloat(item.subtotal).toFixed(2)}`, pageWidth - rightMargin, yPosition, {
-                                align: 'right'
-                            });
-                            yPosition += 4;
-
-                            pdf.setFont('courier', 'normal');
-                            pdf.setFontSize(8);
-                            pdf.text(`${item.quantity} x LKR ${parseFloat(item.unit_price).toFixed(2)}`, leftMargin + 2, yPosition);
-                            yPosition += 6;
-                        });
-
-                        // Totals
-                        yPosition += 2;
-                        pdf.setLineDashPattern([1, 1], 0);
-                        pdf.line(leftMargin, yPosition, pageWidth - rightMargin, yPosition);
-                        pdf.setLineDashPattern([], 0);
-                        yPosition += 6;
-
-                        pdf.setFont('courier', 'normal');
-                        pdf.setFontSize(9);
-                        pdf.text('Sub Total:', leftMargin, yPosition);
-                        pdf.text(`LKR ${parseFloat(order.subtotal || order.total_amount).toFixed(2)}`, pageWidth - rightMargin, yPosition, {
-                            align: 'right'
-                        });
-                        yPosition += 6;
-
-                        pdf.setFont('courier', 'bold');
-                        pdf.setFontSize(11);
-                        pdf.text('TOTAL:', leftMargin, yPosition);
-                        pdf.text(`LKR ${parseFloat(order.total_amount).toFixed(2)}`, pageWidth - rightMargin, yPosition, {
-                            align: 'right'
-                        });
-                        yPosition += 8;
-
-                        // Payment
-                        pdf.setFontSize(9);
-                        pdf.setFont('courier', 'normal');
-                        pdf.text('Payment:', leftMargin, yPosition);
-                        pdf.text(order.payment_method, pageWidth - rightMargin, yPosition, {
-                            align: 'right'
-                        });
-                        yPosition += 5;
-
-                        if (parseFloat(order.cash_amount) > 0) {
-                            pdf.text('Cash:', leftMargin, yPosition);
-                            pdf.text(`LKR ${parseFloat(order.cash_amount).toFixed(2)}`, pageWidth - rightMargin, yPosition, {
-                                align: 'right'
-                            });
-                            yPosition += 5;
-                        }
-
-                        if (parseFloat(order.card_amount) > 0) {
-                            pdf.text('Card:', leftMargin, yPosition);
-                            pdf.text(`LKR ${parseFloat(order.card_amount).toFixed(2)}`, pageWidth - rightMargin, yPosition, {
-                                align: 'right'
-                            });
-                            yPosition += 5;
-                        }
-
-                        if (parseFloat(order.change_amount) > 0) {
-                            pdf.text('Change:', leftMargin, yPosition);
-                            pdf.text(`LKR ${parseFloat(order.change_amount).toFixed(2)}`, pageWidth - rightMargin, yPosition, {
-                                align: 'right'
-                            });
-                            yPosition += 5;
-                        }
-
-                        // Footer
-                        yPosition += 4;
-                        pdf.setLineDashPattern([1, 1], 0);
-                        pdf.line(leftMargin, yPosition, pageWidth - rightMargin, yPosition);
-                        pdf.setLineDashPattern([], 0);
-                        yPosition += 8;
-
-                        pdf.setFontSize(8);
-                        pdf.text('Thank you for visiting', pageWidth / 2, yPosition, {
-                            align: 'center'
-                        });
-                        yPosition += 4;
-                        pdf.setFont('courier', 'bold');
-                        pdf.text('RAVON RESTAURANT', pageWidth / 2, yPosition, {
-                            align: 'center'
-                        });
-                        yPosition += 4;
-                        pdf.setFont('courier', 'normal');
-                        pdf.text('Come again!', pageWidth / 2, yPosition, {
-                            align: 'center'
-                        });
-
-                        // Print via QZ Tray
-                        const pdfBase64 = pdf.output('datauristring').split(',')[1];
-                        const printerName = "Microsoft Print to PDF"; // Change to your receipt printer
-                        await printPDFwithQZ(pdfBase64, printerName, "Receipt Copy");
-
-                        showNotification('Receipt printed successfully!', 'success');
+                        window.open(`/sales-report/receipt/${orderId}`, '_blank');
+                        showNotification('Receipt opened successfully.', 'success');
 
                     } catch (err) {
                         console.error('Print Error:', err);

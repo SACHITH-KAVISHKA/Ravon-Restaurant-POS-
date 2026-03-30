@@ -1,4 +1,4 @@
-<aside class="w-64 border-r border-gray-200 flex flex-col overflow-y-auto shadow-md sticky top-0 h-screen"
+<aside class="w-72 border-r border-gray-200 flex flex-col overflow-y-auto shadow-md sticky top-0 h-screen"
     style="background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);">
     <div class="p-4 border-b border-white/20" style="background: rgba(255, 255, 255, 0.1);">
         <h2 class="text-lg font-bold text-white">Management</h2>
@@ -92,6 +92,15 @@
                     <span>Item Wise Summary</span>
                 </a>
 
+                <a href="{{ route('reports.item-transactions') }}"
+                    class="flex items-center gap-3 px-4 py-2 {{ request()->routeIs('reports.item-transactions*') ? 'bg-white/20 text-white font-medium' : 'text-white/70 hover:bg-white/10 hover:text-white' }} rounded-lg transition text-sm">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 17v-2a4 4 0 014-4h8m0 0l-3-3m3 3l-3 3M3 7h12m0 0l-3-3m3 3l-3 3" />
+                    </svg>
+                    <span>Item Transactions</span>
+                </a>
+
                 <a href="{{ route('void-report.index') }}"
                     class="flex items-center gap-3 px-4 py-2 {{ request()->routeIs('void-report.*') ? 'bg-white/20 text-white font-medium' : 'text-white/70 hover:bg-white/10 hover:text-white' }} rounded-lg transition text-sm">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -162,6 +171,15 @@
                     d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
             </svg>
             <span class="font-medium">User Management</span>
+        </a>
+
+        <a href="{{ route('vat-customers.index') }}"
+            class="flex items-center gap-3 px-4 py-3 {{ request()->routeIs('vat-customers.*') ? 'bg-white/25 text-white border-l-4 border-white font-semibold' : 'text-white/80 hover:bg-white/15 hover:text-white' }} rounded-lg transition">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M17 20h5V4H2v16h5m10 0v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4m10 0H7m3-12h4m-4 4h4" />
+            </svg>
+            <span class="font-medium leading-tight">VAT Customer Registration</span>
         </a>
         @endrole
 
@@ -282,6 +300,19 @@
                 </a>
             </div>
         </div>
+        @endrole
+
+        <!-- Settings (Admin Only) -->
+        @role('admin')
+        <a href="{{ route('settings.index') }}"
+            class="flex items-center gap-3 px-4 py-3 {{ request()->routeIs('settings.*') ? 'bg-white/25 text-white border-l-4 border-white font-semibold' : 'text-white/80 hover:bg-white/15 hover:text-white' }} rounded-lg transition">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <span>Settings</span>
+        </a>
         @endrole
     </nav>
 </aside>

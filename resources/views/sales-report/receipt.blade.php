@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Receipt - {{ $order->order_number }}</title>
+    <title>Invoice - {{ $order->order_number }}</title>
     <style>
         * {
             margin: 0;
@@ -12,392 +12,327 @@
             box-sizing: border-box;
         }
 
-        /* Thermal printer page settings - 80mm width, AUTO height for dynamic content */
         @page {
             size: 80mm auto;
-            /* Width fixed at 80mm, height expands automatically */
             margin: 0;
         }
 
         body {
             font-family: 'Courier New', monospace;
             font-size: 12px;
-            /* Fixed font size - will NOT scale */
-            line-height: 1.4;
+            line-height: 1.35;
             padding: 2mm 6mm 2mm 2mm;
             width: 80mm;
             max-width: 80mm;
             margin: 0 auto;
-            background: white;
-            color: black;
-            /* Prevent font size scaling during print */
+            background: #fff;
+            color: #000;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
-        }
-
-        .receipt {
-            background: white;
-            color: black;
-        }
-
-        .header {
-            text-align: center;
-            border-bottom: 2px dashed #000;
-            padding-bottom: 8px;
-            margin-bottom: 10px;
-        }
-
-        .header h1 {
-            font-size: 18px;
-            /* Fixed font size */
-            font-weight: bold;
-            margin-bottom: 4px;
-        }
-
-        .header p {
-            font-size: 10px;
-            /* Fixed font size */
-            margin: 2px 0;
-        }
-
-        .section {
-            margin: 8px 0;
-            padding: 8px 0;
-            border-bottom: 1px dashed #000;
-            page-break-inside: avoid;
-            /* Prevent section from breaking across pages */
-        }
-
-        .section:last-child {
-            border-bottom: 2px dashed #000;
-        }
-
-        .info-row {
-            display: flex;
-            justify-content: space-between;
-            margin: 3px 0;
-            font-size: 10px;
-            /* Fixed font size */
-        }
-
-        .info-label {
-            font-weight: bold;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 8px 0;
-        }
-
-        table th {
-            text-align: left;
-            border-bottom: 1px solid #000;
-            padding: 4px 0;
-            font-weight: bold;
-            font-size: 10px;
-            /* Fixed font size */
-        }
-
-        table td {
-            padding: 4px 0;
-            vertical-align: top;
-            font-size: 10px;
-            /* Fixed font size */
-        }
-
-        .item-name {
-            max-width: 120px;
-            word-wrap: break-word;
-        }
-
-        .item-modifier {
-            font-size: 9px;
-            /* Fixed font size */
-            margin-left: 8px;
-            color: #444;
-        }
-
-        .text-right {
-            text-align: right;
         }
 
         .text-center {
             text-align: center;
         }
 
-        .totals {
-            margin-top: 8px;
+        .title {
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
         }
 
-        .totals .row {
+        .sub {
+            font-size: 11px;
+            margin-top: 2px;
+        }
+
+        .invoice-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin: 10px 0 8px;
+        }
+
+        .row {
             display: flex;
             justify-content: space-between;
-            margin: 4px 0;
-            font-size: 10px;
-            /* Fixed font size */
+            gap: 8px;
+            margin: 2px 0;
+            font-size: 11px;
         }
 
-        .totals .row.total {
+        .label {
+            white-space: nowrap;
+        }
+
+        .value {
+            text-align: right;
+            word-break: break-word;
+        }
+
+        .separator {
+            border-top: 2px dashed #000;
+            margin: 8px 0;
+        }
+
+        .thin-separator {
+            border-top: 1px dashed #000;
+            margin: 6px 0;
+        }
+
+        .items-header {
             font-size: 12px;
-            /* Fixed font size */
-            font-weight: bold;
-            border-top: 1px solid #000;
-            padding-top: 5px;
-            margin-top: 8px;
+            font-weight: 700;
         }
 
-        .payment-info {
-            margin-top: 8px;
+        .item-name {
+            margin: 4px 0 2px;
+            font-size: 12px;
+            font-weight: 700;
         }
 
-        .footer {
-            text-align: center;
-            margin-top: 12px;
+        .item-subline {
+            margin-left: 8px;
+            margin-bottom: 2px;
+            font-size: 11px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 2px 0;
+            font-size: 11px;
+        }
+
+        .grand-total {
+            border-top: 2px solid #000;
+            margin-top: 6px;
+            padding-top: 4px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .thanks {
+            margin-top: 8px;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .small-footer {
+            margin-top: 4px;
             font-size: 10px;
-            /* Fixed font size */
         }
 
-        .footer p {
-            margin: 4px 0;
-        }
-
-        /* Print-specific styles */
         @media print {
+            .no-print {
+                display: none !important;
+            }
 
             html,
             body {
                 width: 80mm;
                 margin: 0;
                 padding: 2mm 6mm 2mm 2mm;
-                /* Ensure content flows naturally without scaling */
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
             }
 
-            .no-print {
-                display: none !important;
-            }
-
-            /* Ensure sections don't break awkwardly */
-            .section {
-                page-break-inside: avoid;
-            }
-
-            /* Prevent any automatic font scaling */
             * {
                 -webkit-text-size-adjust: 100%;
                 text-size-adjust: 100%;
             }
         }
 
-        /* Screen preview styles */
         @media screen {
             body {
                 padding: 20px;
-                max-width: 300px;
+                max-width: 320px;
             }
         }
     </style>
 </head>
 
 <body>
-    <div class="receipt">
-        <!-- Header -->
-        <div class="header">
-            <h1>RAVON RESTAURANT</h1>
-            <p>Point of Sale Receipt</p>
-            <p>Thank You For Your Business!</p>
-        </div>
+    @php
+        $taxService = app(\App\Services\TaxService::class);
+        $activeItems = $order->orderItems->where('status', '!=', 'deleted');
+        $orderTax = $taxService->calculateOrderTax(collect($activeItems)->values());
 
-        <!-- Order Information -->
-        <div class="section">
-            <div class="info-row">
-                <span class="info-label">Order #:</span>
-                <span>{{ $order->order_number }}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Payment #:</span>
-                <span>{{ $order->payment ? $order->payment->payment_number : 'N/A' }}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Date:</span>
-                <span>{{ $order->completed_at ? $order->completed_at->format('M d, Y H:i') : now()->format('M d, Y H:i') }}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Order Type:</span>
-                <span>{{ $order->order_type === 'dine_in' ? 'Dine In' : ($order->order_type === 'takeaway' ? 'Take Away' : ($order->order_type === 'pickme' ? 'PickMe Food' : ($order->order_type === 'uber_eats' ? 'Uber Eats' : ucwords(str_replace('_', ' ', $order->order_type))))) }}</span>
-            </div>
-            @if($order->order_type === 'pickme' && $order->pickme_ref_number)
-                <div class="info-row">
-                    <span class="info-label">PickMe Ref:</span>
-                    <span>{{ $order->pickme_ref_number }}</span>
-                </div>
-            @endif
-            @if($order->waiter)
-                <div class="info-row">
-                    <span class="info-label">Waiter:</span>
-                    <span>{{ $order->waiter->name }}</span>
-                </div>
-            @endif
-            @if($order->customer_name)
-                <div class="info-row">
-                    <span class="info-label">Customer:</span>
-                    <span>{{ $order->customer_name }}</span>
-                </div>
-            @endif
-            @if($order->table)
-                <div class="info-row">
-                    <span class="info-label">Table:</span>
-                    <span>{{ $order->table->table_number }}</span>
-                </div>
-            @endif
-        </div>
+        $dateTime = $order->completed_at ?? now();
+        $dateText = $dateTime->format('d/m/Y');
+        $timeText = $dateTime->format('H:i:s');
 
-        <!-- Order Items -->
-        <div class="section">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Item</th>
-                        <th class="text-center">Qty</th>
-                        <th class="text-right">Price</th>
-                        <th class="text-right">Total</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {{-- IMPORTANT: Loop through ALL items without any limit - this ensures complete receipts --}}
-                    @foreach($order->orderItems->where('status', '!=', 'deleted') as $item)
-                        <tr>
-                            <td class="item-name">
-                                {{ $item->item_display_name }}
-                                @if($item->modifiers->count() > 0)
-                                    @php
-                                        $nonPortionModifiers = \App\Helpers\PrintHelper::filterPortionModifiers($item->modifiers);
-                                    @endphp
-                                    @foreach($nonPortionModifiers as $modifier)
-                                        <div class="item-modifier">
-                                            + {{ $modifier->modifier_name }} ({{ number_format($modifier->price_adjustment, 2) }})
-                                        </div>
-                                    @endforeach
-                                @endif
-                            </td>
-                            <td class="text-center">{{ $item->quantity }}</td>
-                            <td class="text-right">{{ number_format($item->unit_price, 2) }}</td>
-                            <td class="text-right">{{ number_format($item->subtotal, 2) }}</td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
-        </div>
+        if ($order->table && $order->table->table_number) {
+            $tableText = (string) $order->table->table_number;
+        } elseif ($order->order_type === 'pickme' && $order->pickme_ref_number) {
+            $tableText = 'PickMe - ' . $order->pickme_ref_number;
+        } elseif ($order->order_type === 'pickme') {
+            $tableText = 'PickMe Food';
+        } elseif ($order->order_type === 'uber_eats') {
+            $tableText = 'Uber Eats';
+        } elseif ($order->order_type === 'delivery') {
+            $tableText = 'Delivery';
+        } else {
+            $tableText = 'Take Away';
+        }
+    @endphp
 
-        <!-- Totals -->
-        <div class="section">
-            <div class="totals">
-                <div class="row">
-                    <span>Subtotal:</span>
-                    <span>LKR {{ number_format($order->subtotal, 2) }}</span>
-                </div>
-                @if($order->discount_amount > 0)
-                    <div class="row">
-                        <span>Discount ({{ $order->discount_type == 'percentage' ? '%' : 'Fixed' }}):</span>
-                        <span>- LKR {{ number_format($order->discount_amount, 2) }}</span>
-                    </div>
-                @endif
-                @if($order->service_charge > 0)
-                    <div class="row">
-                        <span>Service Charge:</span>
-                        <span>LKR {{ number_format($order->service_charge, 2) }}</span>
-                    </div>
-                @endif
-                @if($order->tax_amount > 0)
-                    <div class="row">
-                        <span>Tax:</span>
-                        <span>LKR {{ number_format($order->tax_amount, 2) }}</span>
-                    </div>
-                @endif
-                @if($order->delivery_fee > 0)
-                    <div class="row">
-                        <span>Delivery Fee:</span>
-                        <span>LKR {{ number_format($order->delivery_fee, 2) }}</span>
-                    </div>
-                @endif
-                <div class="row total">
-                    <span>TOTAL:</span>
-                    <span>LKR {{ number_format($order->total_amount, 2) }}</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Payment Information -->
-        @if($order->payment)
-            <div class="section">
-                <div class="payment-info">
-                    <div class="info-row">
-                        <span class="info-label">Payment Method:</span>
-                        <span>{{ strtoupper($order->payment->payment_method) }}</span>
-                    </div>
-                    @if($cashAmount > 0)
-                        <div class="info-row">
-                            <span>Cash Payment:</span>
-                            <span>LKR {{ number_format($cashAmount, 2) }}</span>
-                        </div>
-                    @endif
-                    @if($cardAmount > 0)
-                        <div class="info-row">
-                            <span>Card Payment:</span>
-                            <span>LKR {{ number_format($cardAmount, 2) }}</span>
-                        </div>
-                    @endif
-                    @if($creditAmount > 0)
-                        <div class="info-row">
-                            <span>Credit Payment:</span>
-                            <span>LKR {{ number_format($creditAmount, 2) }}</span>
-                        </div>
-                    @endif
-                    @if($order->payment->change_amount > 0)
-                        <div class="info-row">
-                            <span class="info-label">Change:</span>
-                            <span>LKR {{ number_format($order->payment->change_amount, 2) }}</span>
-                        </div>
-                    @endif
-                </div>
-            </div>
+    <div class="text-center">
+        <div class="title">RAVON RESTAURANT</div>
+        <div class="sub">Ravon Restaurant (Pvt) Ltd</div>
+        <div class="sub">NO 282/A/2, KCTHALAWALA,</div>
+        <div class="sub">KADUWELA.</div>
+        <div class="sub">TEL.016-2006007</div>
+        @if(!empty($vatRegNo))
+            <div class="sub">VAT Reg No: {{ $vatRegNo }}</div>
         @endif
-
-        <!-- Footer -->
-        <div class="footer">
-            <p>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</p>
-            <p><strong>Thank you for dining with us!</strong></p>
-            <p>Please visit us again</p>
-            <p>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</p>
-            @if($order->special_instructions)
-                <p style="margin-top: 10px; font-size: 10px;">
-                    <strong>Special Instructions:</strong><br>
-                    {{ $order->special_instructions }}
-                </p>
-            @endif
-        </div>
+        <div class="invoice-title">INVOICE</div>
     </div>
 
-    <!-- Print Button (Hidden on Print) -->
+    <div class="row">
+        <span class="label">Customer :</span>
+        <span class="value">{{ $order->customer_name ?: 'Cash Customer' }}</span>
+    </div>
+    @if(!empty($order->customer_vat_number))
+        <div class="row">
+            <span class="label">VAT No :</span>
+            <span class="value">{{ $order->customer_vat_number }}</span>
+        </div>
+    @endif
+    <div class="row">
+        <span class="label">Invoice #</span>
+        <span class="value">{{ $order->order_number }}</span>
+    </div>
+    <div class="row">
+        <span class="label">Date</span>
+        <span class="value">:{{ $dateText }} Time {{ $timeText }}</span>
+    </div>
+    <div class="row">
+        <span class="label">Terminal:</span>
+        <span class="value">01</span>
+    </div>
+    <div class="row">
+        <span class="label">Table # :</span>
+        <span class="value">{{ $tableText }}</span>
+    </div>
+    <div class="row">
+        <span class="label">Cashier :</span>
+        <span class="value">{{ $order->waiter?->name ?: 'Cashier User' }}</span>
+    </div>
+
+    <div class="separator"></div>
+
+    <div class="row items-header">
+        <span>Item</span>
+        <span>Qty&nbsp;&nbsp;&nbsp;Amount</span>
+    </div>
+
+    <div class="thin-separator"></div>
+
+    @foreach($activeItems as $index => $item)
+        @php
+            $vatApplicable = $item->item?->vat_available ?? true;
+            $ssclApplicable = $item->item?->sscl_available ?? true;
+            $itemTax = $taxService->calculateItemTax(
+                (float) $item->unit_price,
+                (int) $item->quantity,
+                $vatApplicable,
+                $ssclApplicable
+            );
+            $baseUnitPrice = $item->quantity > 0
+                ? $itemTax['base_amount'] / $item->quantity
+                : 0;
+        @endphp
+
+        <div class="item-name">{{ $index + 1 }}. {{ $item->item_display_name ?: ($item->item->name ?? 'Item') }}</div>
+        <div class="item-subline">
+            <span>{{ $item->quantity }}x @ Rs. {{ number_format($baseUnitPrice, 2) }}</span>
+            <span>{{ number_format($itemTax['base_amount'], 2) }}</span>
+        </div>
+
+        @if($item->modifiers->count() > 0)
+            @php
+                $nonPortionModifiers = \App\Helpers\PrintHelper::filterPortionModifiers($item->modifiers);
+            @endphp
+            @foreach($nonPortionModifiers as $modifier)
+                <div class="item-subline" style="margin-left: 12px; font-size: 10px;">
+                    <span>+ {{ $modifier->modifier?->name ?: ($modifier->modifier_name ?: 'Modifier') }}</span>
+                    <span>(+Rs. {{ number_format($modifier->price_adjustment, 2) }})</span>
+                </div>
+            @endforeach
+        @endif
+    @endforeach
+
+    <div class="separator"></div>
+
+    <div class="total-row">
+        <span>Sub Total (Base)</span>
+        <span>{{ number_format($orderTax['subtotal'], 2) }}</span>
+    </div>
+    @if($orderTax['sscl_amount'] > 0)
+        <div class="total-row">
+            <span>SSCL ({{ $taxService->getSsclRate() }}%)</span>
+            <span>{{ number_format($orderTax['sscl_amount'], 2) }}</span>
+        </div>
+    @endif
+    @if($orderTax['vat_amount'] > 0)
+        <div class="total-row">
+            <span>VAT ({{ $taxService->getVatRate() }}%)</span>
+            <span>{{ number_format($orderTax['vat_amount'], 2) }}</span>
+        </div>
+    @endif
+
+    <div class="total-row grand-total">
+        <span>Total</span>
+        <span>{{ number_format($order->total_amount, 2) }}</span>
+    </div>
+
+    @if($order->payment)
+        <div style="margin-top: 8px;">
+            <div class="total-row">
+                <span>Payment Method</span>
+                <span>{{ strtoupper($order->payment->payment_method) }}</span>
+            </div>
+            @if($cashAmount > 0)
+                <div class="total-row">
+                    <span>Cash</span>
+                    <span>{{ number_format($cashAmount, 2) }}</span>
+                </div>
+            @endif
+            @if($cardAmount > 0)
+                <div class="total-row">
+                    <span>Card</span>
+                    <span>{{ number_format($cardAmount, 2) }}</span>
+                </div>
+            @endif
+            @if($creditAmount > 0)
+                <div class="total-row">
+                    <span>Credit</span>
+                    <span>{{ number_format($creditAmount, 2) }}</span>
+                </div>
+            @endif
+            @if($order->payment->change_amount > 0)
+                <div class="total-row">
+                    <span>Change</span>
+                    <span>{{ number_format($order->payment->change_amount, 2) }}</span>
+                </div>
+            @endif
+        </div>
+    @endif
+
+    <div class="text-center thanks">THANK YOU, COME AGAIN.</div>
+    <div class="separator"></div>
+    <div class="text-center small-footer">Software By Jayawardena Group</div>
+
     <div class="no-print" style="text-align: center; margin-top: 20px;">
         <button onclick="window.print()"
-            style="padding: 10px 30px; background: #2563eb; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
+            style="padding: 10px 24px; background: #2563eb; color: white; border: none; border-radius: 5px; cursor: pointer;">
             Print Receipt
         </button>
         <button onclick="window.close()"
-            style="padding: 10px 30px; background: #6b7280; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; margin-left: 10px;">
+            style="padding: 10px 24px; background: #6b7280; color: white; border: none; border-radius: 5px; cursor: pointer; margin-left: 10px;">
             Close
         </button>
     </div>
-
-    <script>
-        // Auto-print when page loads (optional)
-        // window.onload = function() {
-        //     window.print();
-        // };
-    </script>
 </body>
 
 </html>

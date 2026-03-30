@@ -266,7 +266,7 @@ class WastageController extends Controller
                 'item_name' => $w->item_name,
                 'item_code' => $w->item_code ?? '-',
                 'item_type' => $w->item_type,
-                'quantity_wasted' => (float) $w->quantity_wasted,
+                'quantity_wasted' => number_format($w->quantity_wasted, 3),
                 'unit' => $w->unit,
                 'price' => number_format($w->price, 2),
                 'wastage_amount' => number_format($w->wastage_amount, 2),

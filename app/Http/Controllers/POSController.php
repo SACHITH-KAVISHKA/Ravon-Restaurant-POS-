@@ -17,6 +17,7 @@ use App\Models\ItemRecipe;
 use App\Models\ItemModifier;
 use App\Models\VoidRecord;
 use App\Models\OrderLog;
+use App\Services\TaxService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -24,6 +25,13 @@ use Illuminate\Support\Facades\Log;
 
 class POSController extends Controller
 {
+    private TaxService $taxService;
+
+    public function __construct(TaxService $taxService)
+    {
+        $this->taxService = $taxService;
+    }
+
     /**
      * Display the POS interface.
      */
@@ -40,8 +48,13 @@ class POSController extends Controller
             ->get();
 
         $tables = Table::orderByRaw("CAST(SUBSTRING(table_number, 2) AS UNSIGNED)")->get();
+        
+        $settings = \App\Models\Setting::first();
+        $vatRate = $settings ? ($settings->vat ?? 0) : 0;
+        $ssclRate = $settings ? ($settings->sscl ?? 0) : 0;
+        $vatRegNo = $settings ? ($settings->vat_reg_no ?? '') : '';
 
-        return view('pos.index', compact('categories', 'tables'));
+        return view('pos.index', compact('categories', 'tables', 'vatRate', 'ssclRate', 'vatRegNo'));
     }
 
     /**
@@ -262,6 +275,8 @@ class POSController extends Controller
                     'unit_price' => $orderItem->unit_price,
                     'quantity' => $orderItem->quantity,
                     'subtotal' => $orderItem->subtotal,
+                    'vat_available' => $orderItem->item ? $orderItem->item->vat_available : false,
+                    'sscl_available' => $orderItem->item ? $orderItem->item->sscl_available : false,
                     'modifiers' => $modifiers,
                     'item' => [
                         'name' => $orderItem->item->name ?? 'Unknown Item',
@@ -276,6 +291,8 @@ class POSController extends Controller
                 'id' => $order->id,
                 'order_number' => $order->order_number,
                 'order_type' => $order->order_type,
+                'customer_name' => $order->customer_name,
+                'customer_vat_number' => $order->customer_vat_number,
                 'table_id' => $order->table_id,
                 'table_number' => $order->table ? $order->table->table_number : null,
                 'pickme_ref_number' => $order->pickme_ref_number,
@@ -598,15 +615,21 @@ class POSController extends Controller
                 ];
             }
 
-            // Recalculate order totals from all active order items
+            // Recalculate order totals from all active order items (with full tax breakdown)
             $order->refresh();
-            $subtotalFromAllItems = $order->orderItems()
+            $activeOrderItems = $order->orderItems()
                 ->whereNotIn('status', ['cancelled', 'deleted'])
-                ->sum('subtotal');
+                ->with('item')
+                ->get();
+
+            $taxTotals = $this->taxService->calculateOrderTax($activeOrderItems);
 
             $order->update([
-                'subtotal' => $subtotalFromAllItems,
-                'total_amount' => $subtotalFromAllItems,
+                'subtotal'     => $taxTotals['subtotal'],
+                'sscl_amount'  => $taxTotals['sscl_amount'],
+                'vat_amount'   => $taxTotals['vat_amount'],
+                'tax_amount'   => $taxTotals['tax_amount'],
+                'total_amount' => $taxTotals['total_amount'],
             ]);
 
             // Generate KOT/BOT for new/updated items ONLY
@@ -648,6 +671,8 @@ class POSController extends Controller
                     'name' => $orderItem->item_display_name ?? $orderItem->item->name ?? 'Unknown Item',
                     'item_name' => $orderItem->item_display_name ?? $orderItem->item->name ?? 'Unknown Item',
                     'item_code' => $orderItem->item->item_code ?? '',
+                    'vat_available' => $orderItem->item->vat_available ?? false,
+                    'sscl_available' => $orderItem->item->sscl_available ?? false,
                     'unit_price' => $orderItem->unit_price,
                     'price' => $orderItem->unit_price,
                     'quantity' => $orderItem->quantity,
@@ -1133,6 +1158,8 @@ class POSController extends Controller
                     'name' => $orderItem->item_display_name ?? $orderItem->item->name ?? 'Unknown Item',
                     'item_name' => $orderItem->item_display_name ?? $orderItem->item->name ?? 'Unknown Item',
                     'item_code' => $orderItem->item->item_code ?? '',
+                    'vat_available' => $orderItem->item->vat_available ?? false,
+                    'sscl_available' => $orderItem->item->sscl_available ?? false,
                     'unit_price' => $orderItem->unit_price,
                     'price' => $orderItem->unit_price,
                     'quantity' => $orderItem->quantity,
@@ -1160,6 +1187,11 @@ class POSController extends Controller
                 'orderItems' => $printItems,
                 'items' => $printItems,
                 'payment' => $payment,
+                'subtotal'    => $order->subtotal,
+                'sscl_amount' => $order->sscl_amount,
+                'vat_amount'  => $order->vat_amount,
+                'tax_amount'  => $order->tax_amount,
+                'total_amount' => $order->total_amount,
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -1187,7 +1219,10 @@ class POSController extends Controller
             'payment'
         ])->findOrFail($orderId);
 
-        return view('pos.receipt', compact('order'));
+        $setting = \App\Models\Setting::first();
+        $vatRegNo = $setting ? ($setting->vat_reg_no ?? '') : '';
+
+        return view('pos.receipt', compact('order', 'vatRegNo'));
     }
 
     /**
@@ -1359,15 +1394,21 @@ class POSController extends Controller
                 ];
             }
 
-            // Recalculate order totals
+            // Recalculate order totals after void (with full tax breakdown)
             $order->refresh();
-            $subtotalFromAllItems = $order->orderItems()
+            $activeOrderItems = $order->orderItems()
                 ->whereNotIn('status', ['cancelled', 'deleted'])
-                ->sum('subtotal');
+                ->with('item')
+                ->get();
+
+            $taxTotals = $this->taxService->calculateOrderTax($activeOrderItems);
 
             $order->update([
-                'subtotal' => $subtotalFromAllItems,
-                'total_amount' => $subtotalFromAllItems,
+                'subtotal'     => $taxTotals['subtotal'],
+                'sscl_amount'  => $taxTotals['sscl_amount'],
+                'vat_amount'   => $taxTotals['vat_amount'],
+                'tax_amount'   => $taxTotals['tax_amount'],
+                'total_amount' => $taxTotals['total_amount'],
             ]);
 
             // Create a Cancel KOT for voided items
@@ -1461,6 +1502,8 @@ class POSController extends Controller
                         'item_id' => $orderItem->item_id,
                         'name' => $orderItem->item_display_name ?? $orderItem->item->name ?? 'Unknown Item',
                         'price' => $orderItem->unit_price,
+                        'vat_available' => $orderItem->item->vat_available ?? false,
+                        'sscl_available' => $orderItem->item->sscl_available ?? false,
                         'quantity' => $orderItem->quantity,
                         'subtotal' => $orderItem->subtotal,
                     ];
@@ -1753,15 +1796,21 @@ class POSController extends Controller
                 }
             }
 
-            // Recalculate target order totals
+            // Recalculate target order totals (with full tax breakdown)
             $targetOrder->refresh();
-            $subtotalFromAllItems = $targetOrder->orderItems()
+            $activeTargetItems = $targetOrder->orderItems()
                 ->whereNotIn('status', ['cancelled', 'deleted'])
-                ->sum('subtotal');
+                ->with('item')
+                ->get();
+
+            $taxTotals = $this->taxService->calculateOrderTax($activeTargetItems);
 
             $targetOrder->update([
-                'subtotal' => $subtotalFromAllItems,
-                'total_amount' => $subtotalFromAllItems,
+                'subtotal'     => $taxTotals['subtotal'],
+                'sscl_amount'  => $taxTotals['sscl_amount'],
+                'vat_amount'   => $taxTotals['vat_amount'],
+                'tax_amount'   => $taxTotals['tax_amount'],
+                'total_amount' => $taxTotals['total_amount'],
             ]);
 
             // Cancel the source order
@@ -1770,7 +1819,10 @@ class POSController extends Controller
                 'cancelled_at' => now(),
                 'cancelled_by' => Auth::id(),
                 'cancellation_reason' => 'Merged into Order #' . $targetOrder->order_number,
-                'subtotal' => 0,
+                'subtotal'     => 0,
+                'sscl_amount'  => 0,
+                'vat_amount'   => 0,
+                'tax_amount'   => 0,
                 'total_amount' => 0,
             ]);
 

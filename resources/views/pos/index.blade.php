@@ -60,9 +60,24 @@
                 <!-- Bill Totals -->
                 <div class="p-4 border-t border-gray-700 bg-gray-900">
                     <div class="space-y-2 text-sm">
-                        <div class="flex justify-between text-lg font-bold text-white">
-                            <span>Total</span>
-                            <span id="total">0.00</span>
+                        <div class="flex justify-between text-gray-400">
+                            <span>Sub Total (Base)</span>
+                            <span id="subTotalBase">0.00</span>
+                        </div>
+                        <div class="flex justify-between text-gray-400">
+                            <span>SSCL ({{ $ssclRate ?? 0 }}%)</span>
+                            <span id="ssclAmount">0.00</span>
+                        </div>
+                        <div class="flex justify-between text-gray-400 pb-2 border-b border-gray-700 hover:border-gray-500 transition">
+                            <span>VAT ({{ $vatRate ?? 0 }}%)</span>
+                            <span id="vatAmount">0.00</span>
+                        </div>
+                        <div class="flex justify-between text-lg font-bold text-emerald-400 pt-1">
+                            <span>GRAND TOTAL</span>
+                            <span class="flex gap-1 items-center">
+                                <span class="text-xs text-emerald-600">LKR</span>
+                                <span id="total">0.00</span>
+                            </span>
                         </div>
                     </div>
 
@@ -582,15 +597,27 @@
                         <!-- Right Side - Payment Summary -->
                         <div class="space-y-4">
                             <div class="bg-gray-700 rounded-lg p-4 space-y-3">
-                                <!-- Sub Total -->
+                                <!-- Base Total -->
                                 <div class="flex justify-between items-center text-gray-300">
-                                    <span class="font-semibold">Sub Total</span>
-                                    <span class="font-bold" id="paymentSubtotal">0.00</span>
+                                    <span class="font-semibold">Sub Total (Base)</span>
+                                    <span class="font-bold" id="paymentSubtotalBase">0.00</span>
+                                </div>
+
+                                <!-- SSCL -->
+                                <div class="flex justify-between items-center text-gray-300">
+                                    <span class="font-semibold">SSCL ({{ $ssclRate ?? 0 }}%)</span>
+                                    <span class="font-bold" id="paymentSscl">0.00</span>
+                                </div>
+
+                                <!-- VAT -->
+                                <div class="flex justify-between items-center text-gray-300">
+                                    <span class="font-semibold">VAT ({{ $vatRate ?? 0 }}%)</span>
+                                    <span class="font-bold" id="paymentVat">0.00</span>
                                 </div>
 
                                 <!-- Total -->
                                 <div class="flex justify-between items-center py-2 border-t border-gray-600">
-                                    <span class="font-bold text-blue-400 text-lg">Total ——→</span>
+                                    <span class="font-bold text-blue-400 text-lg">GRAND TOTAL ——→</span>
                                     <span class="font-bold text-blue-400 text-2xl" id="paymentTotal">0.00</span>
                                 </div>
 
@@ -967,6 +994,16 @@
 
             <script>
 
+                const itemTaxInfo = {
+                    @foreach($categories as $category)
+                        @foreach($category->availableItems as $item)
+                        "{{ $item->id }}": {
+                            vat_available: {{ $item->vat_available ? 'true' : 'false' }},
+                            sscl_available: {{ $item->sscl_available ? 'true' : 'false' }}
+                        },
+                        @endforeach
+                    @endforeach
+                };
 
                 // Global variables
                 let billItems = [];
@@ -1333,7 +1370,38 @@
                     console.log('Cash Amount:', paymentCashAmount);
                     console.log('Card Amount:', paymentCardAmount);
 
-                    document.getElementById('paymentSubtotal').textContent = total.toFixed(2);
+                    const vatRate = parseFloat('{{ $vatRate ?? 0 }}') || 0;
+                    const ssclRate = parseFloat('{{ $ssclRate ?? 0 }}') || 0;
+                    
+                    let baseTotal = 0;
+                    let ssclAmount = 0;
+                    let vatAmount = 0;
+
+                    billItems.forEach(item => {
+                        const itemTotal = parseFloat(item.price) * parseInt(item.quantity);
+                        
+                        const taxInfo = itemTaxInfo[item.item_id] || { vat_available: false, sscl_available: false };
+                        const appliesVat = taxInfo.vat_available ? vatRate : 0;
+                        const appliesSscl = taxInfo.sscl_available ? ssclRate : 0;
+
+                        const itemBaseTotal = itemTotal / ((1 + (appliesSscl / 100)) * (1 + (appliesVat / 100)));
+                        const itemSsclAmount = itemBaseTotal * (appliesSscl / 100);
+                        const itemVatAmount = (itemBaseTotal + itemSsclAmount) * (appliesVat / 100);
+
+                        baseTotal += itemBaseTotal;
+                        ssclAmount += itemSsclAmount;
+                        vatAmount += itemVatAmount;
+                    });
+                    
+                    const subtotalBaseEl = document.getElementById('paymentSubtotalBase');
+                    if (subtotalBaseEl) subtotalBaseEl.textContent = baseTotal.toFixed(2);
+                    
+                    const ssclEl = document.getElementById('paymentSscl');
+                    if (ssclEl) ssclEl.textContent = ssclAmount.toFixed(2);
+
+                    const vatEl = document.getElementById('paymentVat');
+                    if (vatEl) vatEl.textContent = vatAmount.toFixed(2);
+
                     document.getElementById('paymentTotal').textContent = total.toFixed(2);
 
                     let balance = 0;
@@ -2198,8 +2266,43 @@
 
                 // Calculate totals
                 function calculateTotals() {
-                    const subtotal = billItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-                    document.getElementById('total').textContent = subtotal.toFixed(2);
+                    const vatRate = parseFloat('{{ $vatRate ?? 0 }}') || 0;
+                    const ssclRate = parseFloat('{{ $ssclRate ?? 0 }}') || 0;
+
+                    const grandTotal = billItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                    
+                    let baseTotal = 0;
+                    let ssclAmount = 0;
+                    let vatAmount = 0;
+
+                    billItems.forEach(item => {
+                        const itemTotal = parseFloat(item.price) * parseInt(item.quantity);
+                        
+                        const taxInfo = itemTaxInfo[item.item_id] || { vat_available: false, sscl_available: false };
+                        const appliesVat = taxInfo.vat_available ? vatRate : 0;
+                        const appliesSscl = taxInfo.sscl_available ? ssclRate : 0;
+
+                        const itemBaseTotal = itemTotal / ((1 + (appliesSscl / 100)) * (1 + (appliesVat / 100)));
+                        const itemSsclAmount = itemBaseTotal * (appliesSscl / 100);
+                        const itemVatAmount = (itemBaseTotal + itemSsclAmount) * (appliesVat / 100);
+
+                        baseTotal += itemBaseTotal;
+                        ssclAmount += itemSsclAmount;
+                        vatAmount += itemVatAmount;
+                    });
+
+                    // Update UI elements
+                    const totalEl = document.getElementById('total');
+                    if(totalEl) totalEl.textContent = grandTotal.toFixed(2);
+                    
+                    const subTotalBaseEl = document.getElementById('subTotalBase');
+                    if(subTotalBaseEl) subTotalBaseEl.textContent = baseTotal.toFixed(2);
+                    
+                    const ssclAmountEl = document.getElementById('ssclAmount');
+                    if(ssclAmountEl) ssclAmountEl.textContent = ssclAmount.toFixed(2);
+                    
+                    const vatAmountEl = document.getElementById('vatAmount');
+                    if(vatAmountEl) vatAmountEl.textContent = vatAmount.toFixed(2);
                 }
 
                 // Cancel a voided order (when user starts a new order without adding items)
@@ -3058,17 +3161,7 @@
                     }
                 }
 
-                // Show Close Order Modal
-                function showCloseOrderModal() {
-                    if (!currentOrderId) {
-                        showNotification('No active order to close', 'No Order');
-                        return;
-                    }
-
-                    const total = document.getElementById('total').textContent;
-                    document.getElementById('closeOrderTotal').textContent = total;
-                    document.getElementById('closeOrderModal').classList.remove('hidden');
-                }
+                
 
                 // Calculate change for close order
                 document.getElementById('closeOrderAmountPaid')?.addEventListener('input', function () {
@@ -4230,25 +4323,7 @@
                 let cashInputValue = '0';
                 let cardInputValue = '0';
 
-                // Show Close Order Modal
-                window.showCloseOrderModal = function () {
-                    if (!currentOrderId) {
-                        showNotification('No active order to close', 'No Order');
-                        return;
-                    }
-                    selectedPaymentType = 'cash';
-                    activePaymentField = 'cash';
-                    cashInputValue = '0';
-                    cardInputValue = '0';
-                    const total = parseFloat(document.getElementById('total').textContent);
-                    document.getElementById('paymentSubtotal').textContent = total.toFixed(2);
-                    document.getElementById('paymentTotal').textContent = total.toFixed(2);
-                    document.getElementById('paymentCashInput').value = '0.00';
-                    document.getElementById('paymentCardInput').value = '0.00';
-                    selectPaymentType('cash');
-                    updatePaymentCalculations();
-                    document.getElementById('closeOrderModal').classList.remove('hidden');
-                };
+                
 
                 // Select Payment Type
                 window.selectPaymentType = function (type) {
@@ -4667,7 +4742,7 @@
                             align: 'center'
                         });
                         yPosition += 4;
-                        pdf.text('Email-ravonrestaurant@gmail.com', pageWidth / 2, yPosition, {
+                        pdf.text('VAT Reg No: {{ $vatRegNo ?? '' }}', pageWidth / 2, yPosition, {
                             align: 'center'
                         });
                         yPosition += 8;
@@ -4683,6 +4758,23 @@
                         // Order Information
                         pdf.setFont('courier', 'normal');
                         pdf.setFontSize(9);
+
+                        const customerName = order.customer_name || 'Cash Customer';
+                        const customerVatNo = (order.customer_vat_number || '').toString().trim();
+
+                        pdf.text('Customer :', leftMargin, yPosition);
+                        pdf.text(customerName, pageWidth - rightMargin, yPosition, {
+                            align: 'right'
+                        });
+                        yPosition += 4;
+
+                        if (customerVatNo) {
+                            pdf.text('VAT No :', leftMargin, yPosition);
+                            pdf.text(customerVatNo, pageWidth - rightMargin, yPosition, {
+                                align: 'right'
+                            });
+                            yPosition += 4;
+                        }
 
                         pdf.text('Invoice #', leftMargin, yPosition);
                         pdf.text(String(order.order_number || order.id), pageWidth - rightMargin, yPosition, {
@@ -4767,12 +4859,20 @@
                         pdf.setFont('courier', 'normal');
                         pdf.setFontSize(9);
 
+                        const vatRate_r = parseFloat('{{ $vatRate ?? 0 }}') || 0;
+                        const ssclRate_r = parseFloat('{{ $ssclRate ?? 0 }}') || 0;
+
                         const items = order.order_items || order.orderItems || [];
                         items.forEach((item, index) => {
                             const itemName = item.item_display_name || item.name || item.item?.name || item.item_name || 'Unknown Item';
                             const quantity = item.quantity || 0;
-                            const unitPrice = parseFloat(item.unit_price || item.price || 0).toFixed(2);
-                            const subtotal = parseFloat(item.subtotal || 0).toFixed(2);
+                            const inclSubtotal_r = parseFloat(item.subtotal || (parseFloat(item.unit_price || item.price || 0) * quantity));
+                            const appliesVat_r = item.vat_available ? vatRate_r : 0;
+                            const appliesSscl_r = item.sscl_available ? ssclRate_r : 0;
+                            const taxFactor_item_r = (1 + appliesSscl_r / 100) * (1 + appliesVat_r / 100) || 1;
+                            const baseSubtotal_r_item = inclSubtotal_r / taxFactor_item_r;
+                            const unitPrice = (quantity > 0 ? baseSubtotal_r_item / quantity : 0).toFixed(2);
+                            const subtotal = baseSubtotal_r_item.toFixed(2);
                             const modifiers = item.modifiers || [];
 
                             // Item number and name with portion (first line)
@@ -4822,10 +4922,41 @@
                         yPosition += 4;
 
                         // Subtotal
+                        let baseTotal_r = 0;
+                        let ssclAmount_r = 0;
+                        let vatAmount_r = 0;
+
+                        const items_r = order.order_items || order.orderItems || [];
+                        items_r.forEach(item => {
+                            const appliesVat = item.vat_available ? vatRate_r : 0;
+                            const appliesSscl = item.sscl_available ? ssclRate_r : 0;
+                            const itemTotal = parseFloat(item.subtotal || (item.price * item.quantity));
+                            
+                            const itemBase = itemTotal / ((1 + (appliesSscl / 100)) * (1 + (appliesVat / 100)));
+                            const itemSscl = itemBase * (appliesSscl / 100);
+                            const itemVat = (itemBase + itemSscl) * (appliesVat / 100);
+                            
+                            baseTotal_r += itemBase;
+                            ssclAmount_r += itemSscl;
+                            vatAmount_r += itemVat;
+                        });
+
                         pdf.setFont('courier', 'normal');
                         pdf.setFontSize(10);
-                        pdf.text('Sub Total', leftMargin, yPosition);
-                        pdf.text(parseFloat(order.subtotal || 0).toFixed(2), pageWidth - rightMargin, yPosition, {
+                        pdf.text('Sub Total (Base)', leftMargin, yPosition);
+                        pdf.text(baseTotal_r.toFixed(2), pageWidth - rightMargin, yPosition, {
+                            align: 'right'
+                        });
+                        yPosition += 5;
+
+                        pdf.text(`SSCL (${ssclRate_r}%)`, leftMargin, yPosition);
+                        pdf.text(ssclAmount_r.toFixed(2), pageWidth - rightMargin, yPosition, {
+                            align: 'right'
+                        });
+                        yPosition += 4;
+
+                        pdf.text(`VAT (${vatRate_r}%)`, leftMargin, yPosition);
+                        pdf.text(vatAmount_r.toFixed(2), pageWidth - rightMargin, yPosition, {
                             align: 'right'
                         });
                         yPosition += 5;
@@ -4991,11 +5122,7 @@
                         yPosition += 4;
 
                         pdf.setFontSize(9);
-                        pdf.text('NO 282/A/2, KCTHALAWALA,', pageWidth / 2, yPosition, {
-                            align: 'center'
-                        });
-                        yPosition += 4;
-                        pdf.text('KADUWELA.', pageWidth / 2, yPosition, {
+                        pdf.text('NO 282/A/2, KCTHALAWALA, KADUWELA.', pageWidth / 2, yPosition, {
                             align: 'center'
                         });
                         yPosition += 4;
@@ -5003,7 +5130,7 @@
                             align: 'center'
                         });
                         yPosition += 4;
-                        pdf.text('Email-ravonrestaurant@gmail.com', pageWidth / 2, yPosition, {
+                        pdf.text('VAT Reg No: {{ $vatRegNo ?? '' }}', pageWidth / 2, yPosition, {
                             align: 'center'
                         });
                         yPosition += 8;
@@ -5019,6 +5146,23 @@
                         // Order Information
                         pdf.setFont('courier', 'normal');
                         pdf.setFontSize(9);
+
+                        const customerName = order.customer_name || 'Cash Customer';
+                        const customerVatNo = (order.customer_vat_number || '').toString().trim();
+
+                        pdf.text('Customer :', leftMargin, yPosition);
+                        pdf.text(customerName, pageWidth - rightMargin, yPosition, {
+                            align: 'right'
+                        });
+                        yPosition += 4;
+
+                        if (customerVatNo) {
+                            pdf.text('VAT No :', leftMargin, yPosition);
+                            pdf.text(customerVatNo, pageWidth - rightMargin, yPosition, {
+                                align: 'right'
+                            });
+                            yPosition += 4;
+                        }
 
                         pdf.text('Invoice #', leftMargin, yPosition);
                         pdf.text(String(order.order_number || order.id), pageWidth - rightMargin, yPosition, {
@@ -5098,12 +5242,20 @@
                         pdf.setFont('courier', 'normal');
                         pdf.setFontSize(9);
 
+                        const vatRate_i = parseFloat('{{ $vatRate ?? 0 }}') || 0;
+                        const ssclRate_i = parseFloat('{{ $ssclRate ?? 0 }}') || 0;
+
                         const items = order.order_items || order.orderItems || [];
                         items.forEach((item, index) => {
                             const itemName = item.item_display_name || item.name || item.item?.name || item.item_name || 'Unknown Item';
                             const quantity = item.quantity || 0;
-                            const unitPrice = parseFloat(item.unit_price || item.price || 0).toFixed(2);
-                            const subtotal = parseFloat(item.subtotal || 0).toFixed(2);
+                            const inclSubtotal_i = parseFloat(item.subtotal || (parseFloat(item.unit_price || item.price || 0) * quantity));
+                            const appliesVat_i = item.vat_available ? vatRate_i : 0;
+                            const appliesSscl_i = item.sscl_available ? ssclRate_i : 0;
+                            const taxFactor_item_i = (1 + appliesSscl_i / 100) * (1 + appliesVat_i / 100) || 1;
+                            const baseSubtotal_i_item = inclSubtotal_i / taxFactor_item_i;
+                            const unitPrice = (quantity > 0 ? baseSubtotal_i_item / quantity : 0).toFixed(2);
+                            const subtotal = baseSubtotal_i_item.toFixed(2);
                             const modifiers = item.modifiers || [];
 
                             // Item number and name with portion (first line)
@@ -5149,10 +5301,41 @@
                         yPosition += 4;
 
                         // Subtotal
+                        let baseTotal_i = 0;
+                        let ssclAmount_i = 0;
+                        let vatAmount_i = 0;
+
+                        const items_i = order.order_items || order.orderItems || [];
+                        items_i.forEach(item => {
+                            const appliesVat = item.vat_available ? vatRate_i : 0;
+                            const appliesSscl = item.sscl_available ? ssclRate_i : 0;
+                            const itemTotal = parseFloat(item.subtotal || (item.price * item.quantity));
+                            
+                            const itemBase = itemTotal / ((1 + (appliesSscl / 100)) * (1 + (appliesVat / 100)));
+                            const itemSscl = itemBase * (appliesSscl / 100);
+                            const itemVat = (itemBase + itemSscl) * (appliesVat / 100);
+                            
+                            baseTotal_i += itemBase;
+                            ssclAmount_i += itemSscl;
+                            vatAmount_i += itemVat;
+                        });
+
                         pdf.setFont('courier', 'normal');
                         pdf.setFontSize(10);
-                        pdf.text('Sub Total', leftMargin, yPosition);
-                        pdf.text(parseFloat(order.subtotal || 0).toFixed(2), pageWidth - rightMargin, yPosition, {
+                        pdf.text('Sub Total (Base)', leftMargin, yPosition);
+                        pdf.text(baseTotal_i.toFixed(2), pageWidth - rightMargin, yPosition, {
+                            align: 'right'
+                        });
+                        yPosition += 5;
+
+                        pdf.text(`SSCL (${ssclRate_i}%)`, leftMargin, yPosition);
+                        pdf.text(ssclAmount_i.toFixed(2), pageWidth - rightMargin, yPosition, {
+                            align: 'right'
+                        });
+                        yPosition += 4;
+
+                        pdf.text(`VAT (${vatRate_i}%)`, leftMargin, yPosition);
+                        pdf.text(vatAmount_i.toFixed(2), pageWidth - rightMargin, yPosition, {
                             align: 'right'
                         });
                         yPosition += 5;
@@ -5251,13 +5434,20 @@
                         console.warn('No items found in order');
                         itemsHTML = '<div class="item-row">No items</div>';
                     } else {
+                        const vatRate_html = parseFloat('{{ $vatRate ?? 0 }}') || 0;
+                        const ssclRate_html = parseFloat('{{ $ssclRate ?? 0 }}') || 0;
                         items.forEach(item => {
                             itemCount++;
                             const itemName = item.item?.name || item.item_name || 'Unknown Item';
                             const itemCode = item.item?.item_code || item.item_code || '';
-                            const unitPrice = parseFloat(item.unit_price || 0).toFixed(2);
                             const quantity = item.quantity || 0;
-                            const subtotal = parseFloat(item.subtotal || 0).toFixed(2);
+                            const inclSubtotal_html = parseFloat(item.subtotal || (parseFloat(item.unit_price || 0) * quantity));
+                            const appliesVat_html = item.vat_available ? vatRate_html : 0;
+                            const appliesSscl_html = item.sscl_available ? ssclRate_html : 0;
+                            const taxFactor_html = (1 + appliesSscl_html / 100) * (1 + appliesVat_html / 100) || 1;
+                            const baseSubtotal_html = inclSubtotal_html / taxFactor_html;
+                            const unitPrice = (quantity > 0 ? baseSubtotal_html / quantity : 0).toFixed(2);
+                            const subtotal = baseSubtotal_html.toFixed(2);
 
                             itemsHTML += `
                                                                                                                                                                                                                                         <div class="item-row">
@@ -5447,16 +5637,19 @@
                                                                                                                                                                                                                     <h1>RAVON RESTAURANT</h1>
                                                                                                                                                                                                                     <div class="subtitle">Ravon Restaurant (Pvt) Ltd</div>
                                                                                                                                                                                                                     <div class="address">
-                                                                                                                                                                                                                        NO 282/A/2, KCTHALAWALA,<br>
-                                                                                                                                                                                                                        KADUWELA.<br>
+                                                                                                                                                                                                                        NO 282/A/2, KCTHALAWALA, KADUWELA.<br>
                                                                                                                                                                                                                         TEL.016-2006007<br>
-                                                                                                                                                                                                                        Email-ravonrestaurant@gmail.com
+                                                                                                                                                                                                                        VAT Reg No: {{ $vatRegNo ?? '' }}
                                                                                                                                                                                                                     </div>
                                                                                                                                                                                                                 </div>
 
                                                                                                                                                                                                                 <div class="invoice-title">INVOICE</div>
 
                                                                                                                                                                                                                 <div class="section">
+                                                                                                                                                                                                                    <div class="info-row">
+                                                                                                                                                                                                                        <span class="label">Customer :</span>
+                                                                                                                                                                                                                        <span>${order.customer_name || 'Cash Customer'}</span>
+                                                                                                                                                                                                                    </div>
                                                                                                                                                                                                                     <div class="info-row">
                                                                                                                                                                                                                         <span class="label">Invoice #</span>
                                                                                                                                                                                                                         <span>${order.order_number || order.id}</span>
@@ -5501,7 +5694,7 @@
                                                                                                                                                                                                                 <div class="divider"></div>
 
                                                                                                                                                                                                                 <div class="items-header">
-                                                                                                                                                                                                                    <span>In Item Price</span>
+                                                                                                                                                                                                                    <span>Base Price</span>
                                                                                                                                                                                                                     <span>Qty Amount</span>
                                                                                                                                                                                                                 </div>
 
@@ -5512,10 +5705,43 @@
                                                                                                                                                                                                                 <div class="divider"></div>
 
                                                                                                                                                                                                                 <div class="totals">
+${(() => {
+    const vr = parseFloat('{{ $vatRate ?? 0 }}') || 0;
+    const sr = parseFloat('{{ $ssclRate ?? 0 }}') || 0;
+    
+    let bt = 0;
+    let sa = 0;
+    let va = 0;
+
+    const items_t = order.order_items || order.orderItems || [];
+    items_t.forEach(item => {
+        const appliesVat = item.vat_available ? vr : 0;
+        const appliesSscl = item.sscl_available ? sr : 0;
+        const itemTotal = parseFloat(item.subtotal || (item.price * item.quantity));
+        
+        const itemBase = itemTotal / ((1 + (appliesSscl / 100)) * (1 + (appliesVat / 100)));
+        const itemSscl = itemBase * (appliesSscl / 100);
+        const itemVat = (itemBase + itemSscl) * (appliesVat / 100);
+        
+        bt += itemBase;
+        sa += itemSscl;
+        va += itemVat;
+    });
+    return `
                                                                                                                                                                                                                     <div class="total-row">
-                                                                                                                                                                                                                        <span>Sub Total</span>
-                                                                                                                                                                                                                        <span>${parseFloat(order.subtotal).toFixed(2)}</span>
+                                                                                                                                                                                                                        <span>Sub Total (Base)</span>
+                                                                                                                                                                                                                        <span>${bt.toFixed(2)}</span>
                                                                                                                                                                                                                     </div>
+                                                                                                                                                                                                                    <div class="total-row">
+                                                                                                                                                                                                                        <span>SSCL (${sr}%)</span>
+                                                                                                                                                                                                                        <span>${sa.toFixed(2)}</span>
+                                                                                                                                                                                                                    </div>
+                                                                                                                                                                                                                    <div class="total-row">
+                                                                                                                                                                                                                        <span>VAT (${vr}%)</span>
+                                                                                                                                                                                                                        <span>${va.toFixed(2)}</span>
+                                                                                                                                                                                                                    </div>
+    `;
+})()}
                                                                                                                                                                                                                 </div>
 
                                                                                                                                                                                                                 <div class="divider-thick"></div>

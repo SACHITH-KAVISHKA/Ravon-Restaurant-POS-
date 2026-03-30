@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Models\PaymentSplit;
+use App\Models\VatCustomer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
@@ -14,6 +16,55 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class SalesReportController extends Controller
 {
+    /**
+     * Show order edit screen (Super Admin only).
+     */
+    public function edit(Order $order)
+    {
+        abort_unless(Auth::user()?->hasRole('superadmin'), 403);
+
+        $vatCustomers = VatCustomer::query()
+            ->orderBy('customer_name')
+            ->get(['id', 'customer_name', 'vat_number']);
+
+        $selectedVatCustomerId = null;
+        if (!empty($order->customer_vat_number)) {
+            $matched = $vatCustomers->firstWhere('vat_number', $order->customer_vat_number);
+            $selectedVatCustomerId = $matched?->id;
+        }
+
+        return view('sales-report.edit', compact('order', 'vatCustomers', 'selectedVatCustomerId'));
+    }
+
+    /**
+     * Update editable order details (Super Admin only).
+     */
+    public function update(Request $request, Order $order)
+    {
+        abort_unless(Auth::user()?->hasRole('superadmin'), 403);
+
+        $validated = $request->validate([
+            'order_number' => 'required|string|max:100|unique:orders,order_number,' . $order->id,
+            'vat_customer_id' => 'nullable|exists:vat_customers,id',
+        ]);
+
+        $order->order_number = $validated['order_number'];
+
+        if (!empty($validated['vat_customer_id'])) {
+            $vatCustomer = VatCustomer::findOrFail($validated['vat_customer_id']);
+            $order->customer_name = $vatCustomer->customer_name;
+            $order->customer_vat_number = $vatCustomer->vat_number;
+        } else {
+            $order->customer_name = 'Cash Customer';
+            $order->customer_vat_number = null;
+        }
+
+        $order->save();
+
+        return redirect()->route('sales-report.edit', $order)
+            ->with('success', 'Sale details updated successfully.');
+    }
+
     /**
      * Display the sales report index page with filters.
      */
@@ -77,38 +128,44 @@ class SalesReportController extends Controller
         $totalCredit = 0;
         $totalDiscount = 0;
         $totalTax = 0;
+        $totalSscl = 0;
+        $totalVat = 0;
         $totalServiceCharge = 0;
 
         foreach ($allOrders as $order) {
-            $totalSubtotal += $order->subtotal ?? 0;
-            $totalDiscount += $order->discount_amount ?? 0;
-            $totalTax += $order->tax_amount ?? 0;
+            $totalSubtotal      += $order->subtotal ?? 0;
+            $totalDiscount      += $order->discount_amount ?? 0;
+            $totalTax           += $order->tax_amount ?? 0;
+            $totalSscl          += $order->sscl_amount ?? 0;
+            $totalVat           += $order->vat_amount ?? 0;
             $totalServiceCharge += $order->service_charge ?? 0;
 
             // Get payment amounts and subtract change from cash only
             if ($order->payment) {
-                $cashAmt = $order->payment->cash_amount ?? 0;
-                $cardAmt = $order->payment->card_amount ?? 0;
+                $cashAmt   = $order->payment->cash_amount ?? 0;
+                $cardAmt   = $order->payment->card_amount ?? 0;
                 $creditAmt = $order->payment->credit_amount ?? 0;
                 $changeAmt = $order->payment->change_amount ?? 0;
 
                 // Subtract change from cash amount only
-                $totalCash += max(0, $cashAmt - $changeAmt);
-                $totalCard += $cardAmt;
+                $totalCash   += max(0, $cashAmt - $changeAmt);
+                $totalCard   += $cardAmt;
                 $totalCredit += $creditAmt;
             }
         }
 
         $totals = (object) [
             'total_transactions' => $allOrders->count(),
-            'total_subtotal' => $totalSubtotal,
-            'total_discount' => $totalDiscount,
-            'total_tax' => $totalTax,
+            'total_subtotal'     => $totalSubtotal,
+            'total_discount'     => $totalDiscount,
+            'total_tax'          => $totalTax,
+            'total_sscl'         => $totalSscl,
+            'total_vat'          => $totalVat,
             'total_service_charge' => $totalServiceCharge,
-            'total_amount' => $allOrders->sum('total_amount'),
-            'total_cash' => $totalCash,
-            'total_card' => $totalCard,
-            'total_credit' => $totalCredit,
+            'total_amount'       => $allOrders->sum('total_amount'),
+            'total_cash'         => $totalCash,
+            'total_card'         => $totalCard,
+            'total_credit'       => $totalCredit,
         ];
 
         return view('sales-report.index', compact(
@@ -144,11 +201,15 @@ class SalesReportController extends Controller
                 'payment_number' => $order->payment ? $order->payment->payment_number : 'N/A',
                 'waiter_name' => $order->waiter ? $order->waiter->name : 'N/A',
                 'customer_name' => $order->customer_name ?? 'Walk-in Customer',
+                'customer_vat_number' => $order->customer_vat_number,
+                'table_number' => $order->table?->table_number,
                 'order_type' => ucfirst($order->order_type),
                 'subtotal' => $order->subtotal,
                 'discount_amount' => $order->discount_amount,
                 'discount_type' => $order->discount_type,
                 'service_charge' => $order->service_charge,
+                'sscl_amount' => $order->sscl_amount,
+                'vat_amount'  => $order->vat_amount,
                 'tax_amount' => $order->tax_amount,
                 'total_amount' => $order->total_amount,
                 'payment_method' => $order->payment ? $order->payment->payment_method : 'N/A',
@@ -205,7 +266,10 @@ class SalesReportController extends Controller
             $creditAmount = $order->payment->credit_amount ?? 0;
         }
 
-        return view('sales-report.receipt', compact('order', 'cashAmount', 'cardAmount', 'creditAmount'));
+        $setting = \App\Models\Setting::first();
+        $vatRegNo = $setting ? ($setting->vat_reg_no ?? '') : '';
+
+        return view('sales-report.receipt', compact('order', 'cashAmount', 'cardAmount', 'creditAmount', 'vatRegNo'));
     }
 
     /**
@@ -393,7 +457,7 @@ class SalesReportController extends Controller
                             $orderItem->item_id,
                             $modifierId,
                             $orderItem->quantity,
-                            auth()->id()
+                            Auth::id()
                         );
 
                         // Log FG stock restore
@@ -406,7 +470,7 @@ class SalesReportController extends Controller
                                 'order',
                                 $order->order_number,
                                 'Stock restored - Order deleted - Qty: ' . $orderItem->quantity,
-                                auth()->id()
+                                Auth::id()
                             );
                         }
                     }
@@ -450,7 +514,7 @@ class SalesReportController extends Controller
                             $totalQuantity = $recipe->quantity * $orderItem->quantity;
                             $subStock = \App\Models\CashierSubStock::getOrCreateForItem($recipe->main_stock_item_id);
                             $qtyBefore = (float) $subStock->quantity;
-                            $subStock->addStock($totalQuantity, auth()->id());
+                            $subStock->addStock($totalQuantity, Auth::id());
 
                             // Log RM stock restore
                             \App\Models\CashierRmStockLog::log(
@@ -461,7 +525,7 @@ class SalesReportController extends Controller
                                 'order',
                                 $order->order_number,
                                 'Stock restored - Order deleted - Qty: ' . $totalQuantity,
-                                auth()->id()
+                                Auth::id()
                             );
                         }
                     }
