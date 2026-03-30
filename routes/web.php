@@ -13,6 +13,7 @@ use App\Http\Controllers\VoidReportController;
 use App\Http\Controllers\WastageController;
 use App\Http\Controllers\WastageReportController;
 use App\Http\Controllers\VatCustomerController;
+use App\Http\Controllers\VatReportController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -245,6 +246,13 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware(['role:admin'])->prefix('wastage-report')->name('wastage-report.')->group(function () {
         Route::get('/', [WastageReportController::class, 'index'])->name('index');
         Route::get('/data', [WastageReportController::class, 'getData'])->name('data');
+    });
+
+    // VAT Report Routes (Admin only)
+    Route::middleware(['role:admin'])->prefix('vat-report')->name('vat-report.')->group(function () {
+        Route::get('/', [VatReportController::class, 'index'])->name('index');
+        Route::get('/export', [VatReportController::class, 'exportExcel'])->name('export');
+        Route::get('/sale-details/{order}', [VatReportController::class, 'getSaleDetails'])->name('sale-details');
     });
 
     // QZ Tray Signature Route (for thermal printing)
