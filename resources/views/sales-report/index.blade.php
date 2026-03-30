@@ -429,87 +429,8 @@
         </div>
 
         @push('scripts')
-        {{-- QZ Tray for Thermal Printing --}}
-        <script src="https://cdn.jsdelivr.net/npm/qz-tray@2.2/qz-tray.js"></script>
-        {{-- jsPDF for PDF generation --}}
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
         <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
         <script>
-            // --- QZ TRAY SECURITY CONFIGURATION ---
-            qz.security.setCertificatePromise(function(resolve, reject) {
-                resolve(`-----BEGIN CERTIFICATE-----
-                    MIIDozCCAougAwIBAgIUWJpvpJOkleU6lWsqrMKfsq9u6OowDQYJKoZIhvcNAQEL
-                    BQAwYTELMAkGA1UEBhMCTEsxEDAOBgNVBAgMB1dlc3Rlcm4xEDAOBgNVBAcMB0Nv
-                    bG9tYm8xFTATBgNVBAoMDFJhdm9uIEJha2VyczEXMBUGA1UEAwwOMTI3LjAuMC4x
-                    OjgwMDAwHhcNMjUxMTE3MTgwNzI0WhcNMzUxMTE1MTgwNzI0WjBhMQswCQYDVQQG
-                    EwJMSzEQMA4GA1UECAwHV2VzdGVybjEQMA4GA1UEBwwHQ29sb21ibzEVMBMGA1UE
-                    CgwMUmF2b24gQmFrZXJzMRcwFQYDVQQDDA4xMjcuMC4wLjE6ODAwMDCCASIwDQYJ
-                    KoZIhvcNAQEBBQADggEPADCCAQoCggEBANF0JduabBoiZ1M7R28FmCmvUEDYy+2z
-                    uz+zQZiBGT3pm3gD2HgZfvhooGywwX2lmEn5Q5wvq3dodcqpd+Nr7xDE6U2QEcGS
-                    UEi0aDbTCBY2VIRP5HNP33hDqNOq06akEtJRxGQ43hOLxoSWZjYxe7hIstVfp2fU
-                    4j+uycPv9E8Cxo6eIM6NCFfRN1mIbkIIjgVfAmOaJb1y+TbD8z5NxXAfPf31GvXi
-                    7AJ3gnr6khs6XyW5umcesBeOijBL+lUyTRU26GQWiduoaeoTToN9UkX3ZEvfPlR7
-                    YLYqfRHnT4RJxRs+BcTDMsy0JHI5MGD/Ur/u8uXNgK2mqrfPLado9y0CAwEAAaNT
-                    MFEwHQYDVR0OBBYEFMSl/4RhhGD0mRYBD2bH4n+t/cNBMB8GA1UdIwQYMBaAFMSl
-                    /4RhhGD0mRYBD2bH4n+t/cNBMA8GA1UdEwEB/wQFMAMBAf8wDQYJKoZIhvcNAQEL
-                    BQADggEBADlwDYAu7LGzj+pGROVavOeVczrb8RibbIbXrIViV31iKC1uwXRmtTY1
-                    amAX+oEfMry3TIy//BHsJzGkAd6ozfosez33G4bbN8/y1Q9ZvcuaaHPT4DIBYrdR
-                    GX/B6TtAm63VxXyjfwrV4OUbbqwdgMtKuviRprB9A+oCE1QPa74p33hgy8UHYOCK
-                    g9lFgnRkyrLOb4fh2SmtjHhRV4aZf5CM+UbqBQAMiiuhHLAbqbmhBP3BYzVVZ066
-                    9moVkpDvvNADqW3FH6epeBDL8RyQXj2yikCyD3xXJIAih815xLJMh/pOmuqEjHdd
-                    NESCtDma6uLcth74mGaBwU3G3KsOCP4=
-                -----END CERTIFICATE-----`);
-            });
-
-            qz.security.setSignaturePromise(function(toSign) {
-                return function(resolve, reject) {
-                    var tokenMeta = document.querySelector('meta[name="csrf-token"]');
-                    var token = tokenMeta ? tokenMeta.content : "";
-
-                    fetch('/qz/sign', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRF-TOKEN': token
-                            },
-                            body: JSON.stringify({
-                                data: toSign
-                            })
-                        })
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.signature) {
-                                resolve(data.signature);
-                            } else {
-                                reject(data.error || "No signature returned");
-                            }
-                        })
-                        .catch(err => reject(err));
-                };
-            });
-
-            async function printPDFwithQZ(pdfBase64, printerName = null, jobType = "Receipt") {
-                try {
-                    if (!qz.websocket.isActive()) {
-                        await qz.websocket.connect();
-                    }
-                    let printer = printerName || await qz.printers.getDefault();
-                    const config = qz.configs.create(printer);
-                    const data = [{
-                        type: 'pdf',
-                        format: 'base64',
-                        data: pdfBase64
-                    }];
-                    await qz.print(config, data);
-                    console.log(`${jobType} sent to printer: ${printer}`);
-                    return true;
-                } catch (err) {
-                    console.error('QZ Tray Error:', err);
-                    throw err;
-                }
-            }
-            // --- END QZ TRAY ---
-
             $(document).ready(function() {
                 // CSRF Token setup
                 $.ajaxSetup({
@@ -629,24 +550,38 @@
                     currentOrderId = null;
                 });
 
-                // Print Receipt Button - Using QZ Tray like POS
-                $('.print-receipt-btn').on('click', async function(e) {
+                // Print Receipt Button - Using Hidden Iframe
+                $('.print-receipt-btn').on('click', function(e) {
                     e.preventDefault();
                     const btn = $(this);
                     const orderId = btn.closest('tr').data('order-id');
 
                     btn.prop('disabled', true);
+                    const originalHtml = btn.html();
+                    btn.html('<svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>');
 
-                    try {
-                        window.open(`/sales-report/receipt/${orderId}`, '_blank');
-                        showNotification('Receipt opened successfully.', 'success');
-
-                    } catch (err) {
-                        console.error('Print Error:', err);
-                        showNotification('Print failed: ' + err.message, 'error');
-                    } finally {
-                        btn.prop('disabled', false);
+                    let iframe = document.getElementById('print-iframe');
+                    if (!iframe) {
+                        iframe = document.createElement('iframe');
+                        iframe.id = 'print-iframe';
+                        iframe.style.display = 'none';
+                        document.body.appendChild(iframe);
                     }
+
+                    iframe.onload = function() {
+                        try {
+                            iframe.contentWindow.focus();
+                            iframe.contentWindow.print();
+                        } catch (err) {
+                            console.error('Print Error:', err);
+                            showNotification('Print failed: ' + err.message, 'error');
+                        } finally {
+                            btn.html(originalHtml);
+                            btn.prop('disabled', false);
+                        }
+                    };
+
+                    iframe.src = `/sales-report/receipt/${orderId}`;
                 });
 
                 // Simple notification function
