@@ -398,7 +398,7 @@
                             $('#modal-order-number').text(order.order_number);
                             $('#modal-payment-number').text(order.payment_number);
                             $('#modal-customer-name').text(order.customer_name || '—');
-                            $('#modal-vat-number').text(order.customer_vat_number || '—');
+                            $('#modal-vat-number').text(order.customer_vat_number || 'Not Eligible');
                             $('#modal-waiter').text(order.waiter_name);
                             $('#modal-order-type').text(order.order_type);
                             $('#modal-date').text(order.completed_at);

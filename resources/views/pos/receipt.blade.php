@@ -180,10 +180,10 @@
 
 <body>
     <div class="header">
-        <h1>RAVON RESTAURANT</h1>
-        <div>Ravon Restaurant (Pvt) Ltd</div>
-        <div>NO 282/A/2, KCTHALAWALA, KADUWELA.</div>
-        <div>TEL. 016-2006007</div>
+        <h1>RAVON BAKERS</h1>
+        <div>Jayawardena Holdings (Pvt) Ltd</div>
+        <div>No 282/A/2, Kothalawala, Kaduwela</div>
+        <div>Tel: +94 74 200 6007</div>
         @if(!empty($vatRegNo))
             <div>VAT Reg No: {{ $vatRegNo }}</div>
         @endif
@@ -194,12 +194,10 @@
             <span>Customer:</span>
             <span>{{ $order->customer_name ?: 'Cash Customer' }}</span>
         </div>
-        @if(!empty($order->customer_vat_number))
-            <div class="info-row">
-                <span>VAT No:</span>
-                <span>{{ $order->customer_vat_number }}</span>
-            </div>
-        @endif
+        <div class="info-row">
+            <span>VAT No:</span>
+            <span>{{ !empty($order->customer_vat_number) ? $order->customer_vat_number : 'Not Eligible' }}</span>
+        </div>
         <div class="info-row">
             <span>Invoice #:</span>
             <span>{{ $order->order_number }}</span>

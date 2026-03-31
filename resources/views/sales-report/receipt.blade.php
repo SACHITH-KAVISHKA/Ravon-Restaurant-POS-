@@ -177,11 +177,10 @@
     @endphp
 
     <div class="text-center">
-        <div class="title">RAVON RESTAURANT</div>
-        <div class="sub">Ravon Restaurant (Pvt) Ltd</div>
-        <div class="sub">NO 282/A/2, KCTHALAWALA,</div>
-        <div class="sub">KADUWELA.</div>
-        <div class="sub">TEL.016-2006007</div>
+        <div class="title">RAVON BAKERS</div>
+        <div class="sub">Jayawardena Holdings (Pvt) Ltd</div>
+        <div class="sub">No 282/A/2, Kothalawala, Kaduwela</div>
+        <div class="sub">Tel: +94 74 200 6007</div>
         @if(!empty($vatRegNo))
             <div class="sub">VAT Reg No: {{ $vatRegNo }}</div>
         @endif
@@ -192,12 +191,10 @@
         <span class="label">Customer :</span>
         <span class="value">{{ $order->customer_name ?: 'Cash Customer' }}</span>
     </div>
-    @if(!empty($order->customer_vat_number))
-        <div class="row">
-            <span class="label">VAT No :</span>
-            <span class="value">{{ $order->customer_vat_number }}</span>
-        </div>
-    @endif
+    <div class="row">
+        <span class="label">VAT No :</span>
+        <span class="value">{{ !empty($order->customer_vat_number) ? $order->customer_vat_number : 'Not Eligible' }}</span>
+    </div>
     <div class="row">
         <span class="label">Invoice #</span>
         <span class="value">{{ $order->order_number }}</span>
