@@ -21,3 +21,7 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
+
+# Ignored custom files
+/resources/views/pos/index.blade.php
+/app/Http/Controllers/QZTrayController.php

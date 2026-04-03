@@ -50,6 +50,15 @@
                     </svg>
                     <span>Categories</span>
                 </a>
+
+                <a href="{{ route('menu.rm-report.index') }}"
+                    class="flex items-center gap-3 px-4 py-2 {{ request()->routeIs('menu.rm-report.*') ? 'bg-white/20 text-white font-medium' : 'text-white/70 hover:bg-white/10 hover:text-white' }} rounded-lg transition text-sm">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 17v-2a4 4 0 014-4h8m0 0l-3-3m3 3l-3 3M3 7h12m0 0l-3-3m3 3l-3 3" />
+                    </svg>
+                    <span>RM Report</span>
+                </a>
             </div>
         </div>
         @endrole

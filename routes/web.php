@@ -14,6 +14,7 @@ use App\Http\Controllers\WastageController;
 use App\Http\Controllers\WastageReportController;
 use App\Http\Controllers\VatCustomerController;
 use App\Http\Controllers\VatReportController;
+use App\Http\Controllers\RmReportController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -62,6 +63,11 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/items/{item}/modifiers', [MenuController::class, 'storeModifier'])->name('modifiers.store');
         Route::put('/modifiers/{modifier}', [MenuController::class, 'updateModifier'])->name('modifiers.update');
         Route::delete('/modifiers/{modifier}', [MenuController::class, 'destroyModifier'])->name('modifiers.destroy');
+
+        // RM Report
+        Route::get('/rm-report', [RmReportController::class, 'index'])->name('rm-report.index');
+        Route::put('/rm-report/{recipe}', [RmReportController::class, 'update'])->name('rm-report.update');
+        Route::delete('/rm-report/{recipe}', [RmReportController::class, 'destroy'])->name('rm-report.destroy');
     });
 
     // Kitchen Display (Kitchen staff) - Placeholder routes

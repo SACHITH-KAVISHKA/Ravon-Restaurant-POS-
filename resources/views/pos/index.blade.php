@@ -998,13 +998,13 @@
                 const itemTaxInfo = {
                     @foreach($categories as $category)
                         @foreach($category->availableItems as $item)
-                                "{{ $item->id }}": {
+                                                "{{ $item->id }}": {
                             vat_available: {{ $item->vat_available ? 'true' : 'false' }},
                             sscl_available: {{ $item->sscl_available ? 'true' : 'false' }}
-                                },
+                                                },
                         @endforeach
                     @endforeach
-                    };
+                            };
 
                 // Global variables
                 let billItems = [];
@@ -1519,102 +1519,65 @@
 
 
                 // --- QZ TRAY SECURITY CONFIGURATION (START) ---
-                // qz.security.setSignatureAlgorithm("SHA512");
-                // Load the public certificate (from storage/app/keys/public-cert.pem)
-                qz.security.setCertificatePromise(function(resolve, reject) {
 
+                // IMPORTANT: Tell QZ Tray to use SHA512 - must match backend openssl_sign algorithm
+                qz.security.setSignatureAlgorithm("SHA512");
+
+                // Load the public certificate - CRITICAL: no leading whitespace inside the PEM block
+                qz.security.setCertificatePromise(function (resolve, reject) {
                     resolve(`-----BEGIN CERTIFICATE-----
-                        MIIDozCCAougAwIBAgIUWJpvpJOkleU6lWsqrMKfsq9u6OowDQYJKoZIhvcNAQEL
-                        BQAwYTELMAkGA1UEBhMCTEsxEDAOBgNVBAgMB1dlc3Rlcm4xEDAOBgNVBAcMB0Nv
-                        bG9tYm8xFTATBgNVBAoMDFJhdm9uIEJha2VyczEXMBUGA1UEAwwOMTI3LjAuMC4x
-                        OjgwMDAwHhcNMjUxMTE3MTgwNzI0WhcNMzUxMTE1MTgwNzI0WjBhMQswCQYDVQQG
-                        EwJMSzEQMA4GA1UECAwHV2VzdGVybjEQMA4GA1UEBwwHQ29sb21ibzEVMBMGA1UE
-                        CgwMUmF2b24gQmFrZXJzMRcwFQYDVQQDDA4xMjcuMC4wLjE6ODAwMDCCASIwDQYJ
-                        KoZIhvcNAQEBBQADggEPADCCAQoCggEBANF0JduabBoiZ1M7R28FmCmvUEDYy+2z
-                        uz+zQZiBGT3pm3gD2HgZfvhooGywwX2lmEn5Q5wvq3dodcqpd+Nr7xDE6U2QEcGS
-                        UEi0aDbTCBY2VIRP5HNP33hDqNOq06akEtJRxGQ43hOLxoSWZjYxe7hIstVfp2fU
-                        4j+uycPv9E8Cxo6eIM6NCFfRN1mIbkIIjgVfAmOaJb1y+TbD8z5NxXAfPf31GvXi
-                        7AJ3gnr6khs6XyW5umcesBeOijBL+lUyTRU26GQWiduoaeoTToN9UkX3ZEvfPlR7
-                        YLYqfRHnT4RJxRs+BcTDMsy0JHI5MGD/Ur/u8uXNgK2mqrfPLado9y0CAwEAAaNT
-                        MFEwHQYDVR0OBBYEFMSl/4RhhGD0mRYBD2bH4n+t/cNBMB8GA1UdIwQYMBaAFMSl
-                        /4RhhGD0mRYBD2bH4n+t/cNBMA8GA1UdEwEB/wQFMAMBAf8wDQYJKoZIhvcNAQEL
-                        BQADggEBADlwDYAu7LGzj+pGROVavOeVczrb8RibbIbXrIViV31iKC1uwXRmtTY1
-                        amAX+oEfMry3TIy//BHsJzGkAd6ozfosez33G4bbN8/y1Q9ZvcuaaHPT4DIBYrdR
-                        GX/B6TtAm63VxXyjfwrV4OUbbqwdgMtKuviRprB9A+oCE1QPa74p33hgy8UHYOCK
-                        g9lFgnRkyrLOb4fh2SmtjHhRV4aZf5CM+UbqBQAMiiuhHLAbqbmhBP3BYzVVZ066
-                        9moVkpDvvNADqW3FH6epeBDL8RyQXj2yikCyD3xXJIAih815xLJMh/pOmuqEjHdd
-                        NESCtDma6uLcth74mGaBwU3G3KsOCP4=
-                    -----END CERTIFICATE-----`);
+        MIIDozCCAougAwIBAgIUWJpvpJOkleU6lWsqrMKfsq9u6OowDQYJKoZIhvcNAQEL
+        BQAwYTELMAkGA1UEBhMCTEsxEDAOBgNVBAgMB1dlc3Rlcm4xEDAOBgNVBAcMB0Nv
+        bG9tYm8xFTATBgNVBAoMDFJhdm9uIEJha2VyczEXMBUGA1UEAwwOMTI3LjAuMC4x
+        OjgwMDAwHhcNMjUxMTE3MTgwNzI0WhcNMzUxMTE1MTgwNzI0WjBhMQswCQYDVQQG
+        EwJMSzEQMA4GA1UECAwHV2VzdGVybjEQMA4GA1UEBwwHQ29sb21ibzEVMBMGA1UE
+        CgwMUmF2b24gQmFrZXJzMRcwFQYDVQQDDA4xMjcuMC4wLjE6ODAwMDCCASIwDQYJ
+        KoZIhvcNAQEBBQADggEPADCCAQoCggEBANF0JduabBoiZ1M7R28FmCmvUEDYy+2z
+        uz+zQZiBGT3pm3gD2HgZfvhooGywwX2lmEn5Q5wvq3dodcqpd+Nr7xDE6U2QEcGS
+        UEi0aDbTCBY2VIRP5HNP33hDqNOq06akEtJRxGQ43hOLxoSWZjYxe7hIstVfp2fU
+        4j+uycPv9E8Cxo6eIM6NCFfRN1mIbkIIjgVfAmOaJb1y+TbD8z5NxXAfPf31GvXi
+        7AJ3gnr6khs6XyW5umcesBeOijBL+lUyTRU26GQWiduoaeoTToN9UkX3ZEvfPlR7
+        YLYqfRHnT4RJxRs+BcTDMsy0JHI5MGD/Ur/u8uXNgK2mqrfPLado9y0CAwEAAaNT
+        MFEwHQYDVR0OBBYEFMSl/4RhhGD0mRYBD2bH4n+t/cNBMB8GA1UdIwQYMBaAFMSl
+        /4RhhGD0mRYBD2bH4n+t/cNBMA8GA1UdEwEB/wQFMAMBAf8wDQYJKoZIhvcNAQEL
+        BQADggEBADlwDYAu7LGzj+pGROVavOeVczrb8RibbIbXrIViV31iKC1uwXRmtTY1
+        amAX+oEfMry3TIy//BHsJzGkAd6ozfosez33G4bbN8/y1Q9ZvcuaaHPT4DIBYrdR
+        GX/B6TtAm63VxXyjfwrV4OUbbqwdgMtKuviRprB9A+oCE1QPa74p33hgy8UHYOCK
+        g9lFgnRkyrLOb4fh2SmtjHhRV4aZf5CM+UbqBQAMiiuhHLAbqbmhBP3BYzVVZ066
+        9moVkpDvvNADqW3FH6epeBDL8RyQXj2yikCyD3xXJIAih815xLJMh/pOmuqEjHdd
+        NESCtDma6uLcth74mGaBwU3G3KsOCP4=
+        -----END CERTIFICATE-----`);
                 });
 
-                // // Get signature from backend
-                // qz.security.setSignaturePromise(function (toSign) {
-                //     return new Promise(function (resolve, reject) {
-                //         fetch('/qz/sign', {
-                //             method: 'POST',
-                //             headers: {
-                //                 'Content-Type': 'application/json',
-                //                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                //             },
-                //             body: JSON.stringify({ data: toSign })
-                //         })
-                //             .then(response => response.json())
-                //             .then(data => {
-                //                 if (data.signature) resolve(data.signature);
-                //                 else reject(data.error || 'No signature returned');
-                //             })
-                //             .catch(err => {
-                //                 console.error("Signing Failed:", err);
-                //                 reject(err);
-                //             });
-                //     });
-                // });
+                // Sign requests using backend PHP (SHA512 to match backend openssl_sign)
+                qz.security.setSignaturePromise(function (toSign) {
+                    return function (resolve, reject) {
+                        var tokenMeta = document.querySelector('meta[name="csrf-token"]');
+                        var token = tokenMeta ? tokenMeta.content : '';
 
-                // qz.security.setSignaturePromise(function (toSign) {
-                //     return fetch('/qz/sign', {
-                //         method: 'POST',
-                //         headers: {
-                //             'Content-Type': 'application/json',
-                //             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                //         },
-                //         body: JSON.stringify({ data: toSign })
-                //     })
-                //     .then(response => {
-                //         if (!response.ok) throw new Error('Network response was not ok');
-                //         return response.json();
-                //     })
-                //     .then(data => data.signature); // කෙලින්ම signature එක return කරන්න
-                // });
-
-                            qz.security.setSignaturePromise(function(toSign) {
-                            return function(resolve, reject) {
-                                // CSRF Token
-                                var tokenMeta = document.querySelector('meta[name="csrf-token"]');
-                                var token = tokenMeta ? tokenMeta.content : "";
-
-                                fetch('/qz/sign', {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/json',
-                                        'X-CSRF-TOKEN': token
-                                    },
-                                    body: JSON.stringify({ data: toSign })
-                                })
-                                .then(response => response.json())
-                                .then(data => {
-                                    if (data.signature) {
-                                        resolve(data.signature);
-                                    } else {
-                                        console.error("Signature Error:", data);
-                                        reject(data.error || "No signature returned");
-                                    }
-                                })
-                                .catch(err => {
-                                    console.error("Signing Failed:", err);
-                                    reject(err);
-                                });
-                            };
-                        });
+                        fetch('/qz/sign', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': token
+                            },
+                            body: JSON.stringify({ data: toSign })
+                        })
+                            .then(function (response) { return response.json(); })
+                            .then(function (data) {
+                                if (data.signature) {
+                                    resolve(data.signature);
+                                } else {
+                                    console.error('QZ Signature Error:', data);
+                                    reject(data.error || 'No signature returned from server');
+                                }
+                            })
+                            .catch(function (err) {
+                                console.error('QZ Signing request failed:', err);
+                                reject(err);
+                            });
+                    };
+                });
 
                 console.log('QZ Tray: Running in SECURE mode (Backend Signing active)');
 
@@ -1729,7 +1692,7 @@
                             link.click();
                             document.body.removeChild(link);
                             console.log('Fallback: Auto-downloaded PDF due to QZ Tray failure.');
-                        } catch(downloadErr) {
+                        } catch (downloadErr) {
                             console.error('Fallback download failed:', downloadErr);
                         }
 
@@ -2248,13 +2211,13 @@
 
                     if (billItems.length === 0) {
                         billItemsDiv.innerHTML = `
-                                                                                                                                                                                                                                        <div class="text-center text-gray-500 py-8">
-                                                                                                                                                                                                                                            <svg class="w-16 h-16 mx-auto mb-2 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                                                                                                                                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
-                                                                                                                                                                                                                                            </svg>
-                                                                                                                                                                                                                                            <p>No items added</p>
-                                                                                                                                                                                                                                        </div>
-                                                                                                                                                                                                                                    `;
+                                                                                                                                                                                                                                                <div class="text-center text-gray-500 py-8">
+                                                                                                                                                                                                                                                    <svg class="w-16 h-16 mx-auto mb-2 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                                                                                                                                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+                                                                                                                                                                                                                                                    </svg>
+                                                                                                                                                                                                                                                    <p>No items added</p>
+                                                                                                                                                                                                                                                </div>
+                                                                                                                                                                                                                                            `;
                         return;
                     }
 
@@ -2280,26 +2243,26 @@
                             'disabled title="Use VOID to reduce previously ordered items"';
 
                         return `
-                                                                                                                                                                                                                                    <div class="bg-gray-700 rounded-lg p-3 border border-gray-600 ${isOriginalItem && item.quantity <= originalQty ? 'border-l-4 border-l-orange-500' : ''}">
-                                                                                                                                                                                                                                        <div class="grid grid-cols-3 gap-2 text-sm">
-                                                                                                                                                                                                                                            <div class="col-span-2">
-                                                                                                                                                                                                                                                <div class="font-semibold text-white">${index + 1}. ${item.name}</div>
-                                                                                                                                                                                                                                                <div class="text-xs text-gray-400">Rs. ${item.price.toFixed(2)} each</div>
-                                                                                                                                                                                                                                                ${isOriginalItem && item.quantity <= originalQty ? '<div class="text-xs text-orange-400 mt-1"></div>' : ''}
-                                                                                                                                                                                                                                            </div>
-                                                                                                                                                                                                                                            <div class="text-center">
-                                                                                                                                                                                                                                                <div class="flex items-center justify-center space-x-2">
-                                                                                                                                                                                                                                                    <button ${decrementOnclick} class="${decrementBtnClass}">-</button>
-                                                                                                                                                                                                                                                    <span class="text-white font-semibold">${item.quantity}</span>
-                                                                                                                                                                                                                                                    <button onclick="incrementQuantity(${index})" class="w-6 h-6 bg-green-600 text-white rounded hover:bg-green-700">+</button>
+                                                                                                                                                                                                                                            <div class="bg-gray-700 rounded-lg p-3 border border-gray-600 ${isOriginalItem && item.quantity <= originalQty ? 'border-l-4 border-l-orange-500' : ''}">
+                                                                                                                                                                                                                                                <div class="grid grid-cols-3 gap-2 text-sm">
+                                                                                                                                                                                                                                                    <div class="col-span-2">
+                                                                                                                                                                                                                                                        <div class="font-semibold text-white">${index + 1}. ${item.name}</div>
+                                                                                                                                                                                                                                                        <div class="text-xs text-gray-400">Rs. ${item.price.toFixed(2)} each</div>
+                                                                                                                                                                                                                                                        ${isOriginalItem && item.quantity <= originalQty ? '<div class="text-xs text-orange-400 mt-1"></div>' : ''}
+                                                                                                                                                                                                                                                    </div>
+                                                                                                                                                                                                                                                    <div class="text-center">
+                                                                                                                                                                                                                                                        <div class="flex items-center justify-center space-x-2">
+                                                                                                                                                                                                                                                            <button ${decrementOnclick} class="${decrementBtnClass}">-</button>
+                                                                                                                                                                                                                                                            <span class="text-white font-semibold">${item.quantity}</span>
+                                                                                                                                                                                                                                                            <button onclick="incrementQuantity(${index})" class="w-6 h-6 bg-green-600 text-white rounded hover:bg-green-700">+</button>
+                                                                                                                                                                                                                                                        </div>
+                                                                                                                                                                                                                                                    </div>
+                                                                                                                                                                                                                                                </div>
+                                                                                                                                                                                                                                                <div class="text-right mt-2 text-white font-semibold">
+                                                                                                                                                                                                                                                    Rs. ${(item.price * item.quantity).toFixed(2)}
                                                                                                                                                                                                                                                 </div>
                                                                                                                                                                                                                                             </div>
-                                                                                                                                                                                                                                        </div>
-                                                                                                                                                                                                                                        <div class="text-right mt-2 text-white font-semibold">
-                                                                                                                                                                                                                                            Rs. ${(item.price * item.quantity).toFixed(2)}
-                                                                                                                                                                                                                                        </div>
-                                                                                                                                                                                                                                    </div>
-                                                                                                                                                                                                                                `
+                                                                                                                                                                                                                                        `
                     }).join('');
                 }
 
@@ -2478,11 +2441,11 @@
                         const hasPork = p.pork_available || itemPorkAvailable;
 
                         return `
-                                                                                                                                                                                                                                    <button class="p-3 bg-blue-700 text-white rounded-lg hover:bg-blue-600 transition font-semibold"
-                                                                                                                                                                                                                                            onclick="addPortionToBill(${itemId}, '${itemName}', ${portionPrice}, '${p.name}', ${p.id}, ${hasPork ? 'true' : 'false'})">
-                                                                                                                                                                                                                                        ${p.name}
-                                                                                                                                                                                                                                    </button>
-                                                                                                                                                                                                                                `;
+                                                                                                                                                                                                                                            <button class="p-3 bg-blue-700 text-white rounded-lg hover:bg-blue-600 transition font-semibold"
+                                                                                                                                                                                                                                                    onclick="addPortionToBill(${itemId}, '${itemName}', ${portionPrice}, '${p.name}', ${p.id}, ${hasPork ? 'true' : 'false'})">
+                                                                                                                                                                                                                                                ${p.name}
+                                                                                                                                                                                                                                            </button>
+                                                                                                                                                                                                                                        `;
                     }).join('');
 
                     closeBtn.classList.remove('hidden');
@@ -2612,17 +2575,17 @@
                 function renderPorkIngredients(recipes) {
                     const listDiv = document.getElementById('porkIngredientsList');
                     listDiv.innerHTML = recipes.map((recipe, idx) => `
-                                                                <label class="flex items-center gap-3 p-3 bg-gray-700 rounded-lg cursor-pointer hover:bg-gray-600 transition">
-                                                                    <input type="checkbox" checked
-                                                                        id="porkIngredient_${idx}"
-                                                                        data-recipe-id="${recipe.id}"
-                                                                        data-ingredient-id="${recipe.main_stock_item_id}"
-                                                                        data-ingredient-name="${recipe.ingredient_name}"
-                                                                        class="w-5 h-5 rounded text-pink-500 bg-gray-600 border-gray-500 focus:ring-pink-500">
-                                                                    <span class="text-white flex-1">${recipe.ingredient_name}</span>
-                                                                    <span class="text-gray-400 text-sm">${recipe.quantity} ${recipe.unit}</span>
-                                                                </label>
-                                                            `).join('');
+                                                                        <label class="flex items-center gap-3 p-3 bg-gray-700 rounded-lg cursor-pointer hover:bg-gray-600 transition">
+                                                                            <input type="checkbox" checked
+                                                                                id="porkIngredient_${idx}"
+                                                                                data-recipe-id="${recipe.id}"
+                                                                                data-ingredient-id="${recipe.main_stock_item_id}"
+                                                                                data-ingredient-name="${recipe.ingredient_name}"
+                                                                                class="w-5 h-5 rounded text-pink-500 bg-gray-600 border-gray-500 focus:ring-pink-500">
+                                                                            <span class="text-white flex-1">${recipe.ingredient_name}</span>
+                                                                            <span class="text-gray-400 text-sm">${recipe.quantity} ${recipe.unit}</span>
+                                                                        </label>
+                                                                    `).join('');
                 }
 
                 function closePorkModal() {
@@ -2927,13 +2890,13 @@
                                 }
 
                                 return `
-                                                                                                                                                                                                                                                <button
-                                                                                                                                                                                                                                                    ${clickable ? `onclick="selectTable('${table.table_number}', ${table.id})"` : 'disabled'}
-                                                                                                                                                                                                                                                    class="p-4 ${bgColor} text-white rounded-lg transition font-semibold">
-                                                                                                                                                                                                                                                    ${table.table_number}
-                                                                                                                                                                                                                                                    ${!table.is_available ? '<br><span class="text-xs">(Reserved)</span>' : ''}
-                                                                                                                                                                                                                                                </button>
-                                                                                                                                                                                                                                            `;
+                                                                                                                                                                                                                                                        <button
+                                                                                                                                                                                                                                                            ${clickable ? `onclick="selectTable('${table.table_number}', ${table.id})"` : 'disabled'}
+                                                                                                                                                                                                                                                            class="p-4 ${bgColor} text-white rounded-lg transition font-semibold">
+                                                                                                                                                                                                                                                            ${table.table_number}
+                                                                                                                                                                                                                                                            ${!table.is_available ? '<br><span class="text-xs">(Reserved)</span>' : ''}
+                                                                                                                                                                                                                                                        </button>
+                                                                                                                                                                                                                                                    `;
                             }).join('');
 
                             document.getElementById('tableModal').classList.remove('hidden');
@@ -2974,10 +2937,10 @@
 
                             if (result.orders.length === 0) {
                                 container.innerHTML = `
-                                                                                                                                                                                                                                                <div class="text-center text-gray-500 py-8">
-                                                                                                                                                                                                                                                    <p>No open checks</p>
-                                                                                                                                                                                                                                                </div>
-                                                                                                                                                                                                                                            `;
+                                                                                                                                                                                                                                                        <div class="text-center text-gray-500 py-8">
+                                                                                                                                                                                                                                                            <p>No open checks</p>
+                                                                                                                                                                                                                                                        </div>
+                                                                                                                                                                                                                                                    `;
                             } else {
                                 container.innerHTML = result.orders.map(order => {
                                     let typeDisplay = '';
@@ -2992,22 +2955,22 @@
                                     }
 
                                     return `
-                                                                                                                                                                                                                                                <div class="bg-gray-700 rounded-lg p-4 hover:bg-gray-600 cursor-pointer transition"
-                                                                                                                                                                                                                                                     onclick="loadOrder(${order.id})">
-                                                                                                                                                                                                                                                    <div class="flex justify-between items-center">
-                                                                                                                                                                                                                                                        <div>
-                                                                                                                                                                                                                                                            <div class="text-white font-semibold">${order.order_number}</div>
-                                                                                                                                                                                                                                                            <div class="text-sm text-gray-400">
-                                                                                                                                                                                                                                                                ${typeDisplay} | ${order.items_count} items
+                                                                                                                                                                                                                                                        <div class="bg-gray-700 rounded-lg p-4 hover:bg-gray-600 cursor-pointer transition"
+                                                                                                                                                                                                                                                             onclick="loadOrder(${order.id})">
+                                                                                                                                                                                                                                                            <div class="flex justify-between items-center">
+                                                                                                                                                                                                                                                                <div>
+                                                                                                                                                                                                                                                                    <div class="text-white font-semibold">${order.order_number}</div>
+                                                                                                                                                                                                                                                                    <div class="text-sm text-gray-400">
+                                                                                                                                                                                                                                                                        ${typeDisplay} | ${order.items_count} items
+                                                                                                                                                                                                                                                                    </div>
+                                                                                                                                                                                                                                                                </div>
+                                                                                                                                                                                                                                                                <div class="text-right">
+                                                                                                                                                                                                                                                                    <div class="text-white font-bold">Rs. ${parseFloat(order.total_amount).toFixed(2)}</div>
+                                                                                                                                                                                                                                                                    <div class="text-xs text-gray-400">${order.created_at}</div>
+                                                                                                                                                                                                                                                                </div>
                                                                                                                                                                                                                                                             </div>
                                                                                                                                                                                                                                                         </div>
-                                                                                                                                                                                                                                                        <div class="text-right">
-                                                                                                                                                                                                                                                            <div class="text-white font-bold">Rs. ${parseFloat(order.total_amount).toFixed(2)}</div>
-                                                                                                                                                                                                                                                            <div class="text-xs text-gray-400">${order.created_at}</div>
-                                                                                                                                                                                                                                                        </div>
-                                                                                                                                                                                                                                                    </div>
-                                                                                                                                                                                                                                                </div>
-                                                                                                                                                                                                                                                `;
+                                                                                                                                                                                                                                                        `;
                                 }).join('');
                             }
 
@@ -3179,13 +3142,13 @@
                                 }
 
                                 return `
-                                                                                                                                                                                                                                                <button
-                                                                                                                                                                                                                                                    ${clickable ? `onclick="confirmTableTransfer('${table.table_number}', ${table.id})"` : 'disabled'}
-                                                                                                                                                                                                                                                    class="p-4 ${bgColor} text-white rounded-lg transition font-semibold">
-                                                                                                                                                                                                                                                    ${table.table_number}
-                                                                                                                                                                                                                                                    ${label}
-                                                                                                                                                                                                                                                </button>
-                                                                                                                                                                                                                                            `;
+                                                                                                                                                                                                                                                        <button
+                                                                                                                                                                                                                                                            ${clickable ? `onclick="confirmTableTransfer('${table.table_number}', ${table.id})"` : 'disabled'}
+                                                                                                                                                                                                                                                            class="p-4 ${bgColor} text-white rounded-lg transition font-semibold">
+                                                                                                                                                                                                                                                            ${table.table_number}
+                                                                                                                                                                                                                                                            ${label}
+                                                                                                                                                                                                                                                        </button>
+                                                                                                                                                                                                                                                    `;
                             }).join('');
 
                             document.getElementById('tableTransferModal').classList.remove('hidden');
@@ -3360,14 +3323,14 @@
 
                             if (availableOrders.length === 0) {
                                 mergeGrid.innerHTML = `
-                                                                                                                                                                                                                                                <div class="col-span-3 text-center text-gray-500 py-8">
-                                                                                                                                                                                                                                                    <svg class="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                                                                                                                                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                                                                                                                                                                                                                                    </svg>
-                                                                                                                                                                                                                                                    <p class="text-lg font-semibold">No other orders available to merge</p>
-                                                                                                                                                                                                                                                    <p class="text-sm text-gray-400 mt-1">All open orders are currently unavailable for merging</p>
-                                                                                                                                                                                                                                                </div>
-                                                                                                                                                                                                                                            `;
+                                                                                                                                                                                                                                                        <div class="col-span-3 text-center text-gray-500 py-8">
+                                                                                                                                                                                                                                                            <svg class="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                                                                                                                                                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                                                                                                                                                                                                                            </svg>
+                                                                                                                                                                                                                                                            <p class="text-lg font-semibold">No other orders available to merge</p>
+                                                                                                                                                                                                                                                            <p class="text-sm text-gray-400 mt-1">All open orders are currently unavailable for merging</p>
+                                                                                                                                                                                                                                                        </div>
+                                                                                                                                                                                                                                                    `;
                             } else {
                                 mergeGrid.innerHTML = availableOrders.map(order => {
                                     let typeDisplay = '';
@@ -3387,27 +3350,27 @@
                                     }
 
                                     return `
-                                                                                                                                                                                                                                                    <button
-                                                                                                                                                                                                                                                        onclick="selectOrderToMerge(${order.id})"
-                                                                                                                                                                                                                                                        class="p-4 bg-gray-700 hover:bg-teal-600 text-white rounded-lg transition border-2 border-gray-600 hover:border-teal-500 text-left">
-                                                                                                                                                                                                                                                        <div class="flex justify-between items-start mb-2">
-                                                                                                                                                                                                                                                            <div class="font-bold text-lg">${order.order_number}</div>
-                                                                                                                                                                                                                                                            <span class="text-xs px-2 py-1 rounded ${typeBadgeColor}">${typeDisplay}</span>
-                                                                                                                                                                                                                                                        </div>
-                                                                                                                                                                                                                                                        <div class="text-sm text-gray-300 mb-2">
-                                                                                                                                                                                                                                                            <span class="inline-flex items-center">
-                                                                                                                                                                                                                                                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                                                                                                                                                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                                                                                                                                                                                                                                                                </svg>
-                                                                                                                                                                                                                                                                ${order.items_count} items
-                                                                                                                                                                                                                                                            </span>
-                                                                                                                                                                                                                                                        </div>
-                                                                                                                                                                                                                                                        <div class="flex justify-between items-center mt-2 pt-2 border-t border-gray-600">
-                                                                                                                                                                                                                                                            <span class="text-xs text-gray-400">${order.created_at}</span>
-                                                                                                                                                                                                                                                            <span class="font-bold text-teal-400">Rs. ${parseFloat(order.total_amount).toFixed(2)}</span>
-                                                                                                                                                                                                                                                        </div>
-                                                                                                                                                                                                                                                    </button>
-                                                                                                                                                                                                                                                `;
+                                                                                                                                                                                                                                                            <button
+                                                                                                                                                                                                                                                                onclick="selectOrderToMerge(${order.id})"
+                                                                                                                                                                                                                                                                class="p-4 bg-gray-700 hover:bg-teal-600 text-white rounded-lg transition border-2 border-gray-600 hover:border-teal-500 text-left">
+                                                                                                                                                                                                                                                                <div class="flex justify-between items-start mb-2">
+                                                                                                                                                                                                                                                                    <div class="font-bold text-lg">${order.order_number}</div>
+                                                                                                                                                                                                                                                                    <span class="text-xs px-2 py-1 rounded ${typeBadgeColor}">${typeDisplay}</span>
+                                                                                                                                                                                                                                                                </div>
+                                                                                                                                                                                                                                                                <div class="text-sm text-gray-300 mb-2">
+                                                                                                                                                                                                                                                                    <span class="inline-flex items-center">
+                                                                                                                                                                                                                                                                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                                                                                                                                                                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                                                                                                                                                                                                                                                                        </svg>
+                                                                                                                                                                                                                                                                        ${order.items_count} items
+                                                                                                                                                                                                                                                                    </span>
+                                                                                                                                                                                                                                                                </div>
+                                                                                                                                                                                                                                                                <div class="flex justify-between items-center mt-2 pt-2 border-t border-gray-600">
+                                                                                                                                                                                                                                                                    <span class="text-xs text-gray-400">${order.created_at}</span>
+                                                                                                                                                                                                                                                                    <span class="font-bold text-teal-400">Rs. ${parseFloat(order.total_amount).toFixed(2)}</span>
+                                                                                                                                                                                                                                                                </div>
+                                                                                                                                                                                                                                                            </button>
+                                                                                                                                                                                                                                                        `;
                                 }).join('');
                             }
 
@@ -3813,29 +3776,29 @@
 
                     if (voidItemsList.length === 0) {
                         tbody.innerHTML = `
-                                                                                                                                                                                                                                        <tr id="noVoidItemsRow">
-                                                                                                                                                                                                                                            <td colspan="4" class="px-4 py-6 text-center text-gray-400">
-                                                                                                                                                                                                                                                No items added to void. Select items above.
-                                                                                                                                                                                                                                            </td>
-                                                                                                                                                                                                                                        </tr>
-                                                                                                                                                                                                                                    `;
+                                                                                                                                                                                                                                                <tr id="noVoidItemsRow">
+                                                                                                                                                                                                                                                    <td colspan="4" class="px-4 py-6 text-center text-gray-400">
+                                                                                                                                                                                                                                                        No items added to void. Select items above.
+                                                                                                                                                                                                                                                    </td>
+                                                                                                                                                                                                                                                </tr>
+                                                                                                                                                                                                                                            `;
                         return;
                     }
 
                     tbody.innerHTML = voidItemsList.map((item, index) => `
-                                                                                                                                                                                                                                    <tr class="border-t border-gray-600">
-                                                                                                                                                                                                                                        <td class="px-4 py-3 text-white">${item.item_name}</td>
-                                                                                                                                                                                                                                        <td class="px-4 py-3 text-center text-gray-300">${item.current_quantity}</td>
-                                                                                                                                                                                                                                        <td class="px-4 py-3 text-center text-orange-400 font-bold">-${item.void_quantity}</td>
-                                                                                                                                                                                                                                        <td class="px-4 py-3 text-center">
-                                                                                                                                                                                                                                            <button onclick="removeVoidItem(${index})" class="text-red-400 hover:text-red-300 transition">
-                                                                                                                                                                                                                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                                                                                                                                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                                                                                                                                                                                                                </svg>
-                                                                                                                                                                                                                                            </button>
-                                                                                                                                                                                                                                        </td>
-                                                                                                                                                                                                                                    </tr>
-                                                                                                                                                                                                                                `).join('');
+                                                                                                                                                                                                                                            <tr class="border-t border-gray-600">
+                                                                                                                                                                                                                                                <td class="px-4 py-3 text-white">${item.item_name}</td>
+                                                                                                                                                                                                                                                <td class="px-4 py-3 text-center text-gray-300">${item.current_quantity}</td>
+                                                                                                                                                                                                                                                <td class="px-4 py-3 text-center text-orange-400 font-bold">-${item.void_quantity}</td>
+                                                                                                                                                                                                                                                <td class="px-4 py-3 text-center">
+                                                                                                                                                                                                                                                    <button onclick="removeVoidItem(${index})" class="text-red-400 hover:text-red-300 transition">
+                                                                                                                                                                                                                                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                                                                                                                                                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                                                                                                                                                                                                                        </svg>
+                                                                                                                                                                                                                                                    </button>
+                                                                                                                                                                                                                                                </td>
+                                                                                                                                                                                                                                            </tr>
+                                                                                                                                                                                                                                        `).join('');
                 }
 
                 // Process void items - send to server and print cancel KOT
@@ -5528,18 +5491,18 @@
                             const subtotal = baseSubtotal_html.toFixed(2);
 
                             itemsHTML += `
-                                                                                                                                                                                                                                            <div class="item-row">
-                                                                                                                                                                                                                                                <div class="item-line">
-                                                                                                                                                                                                                                                    <span>${itemCount}</span>
-                                                                                                                                                                                                                                                    <span>${itemName}</span>
-                                                                                                                                                                                                                                                </div>
-                                                                                                                                                                                                                                                <div class="item-line">
-                                                                                                                                                                                                                                                    <span>${itemCode}</span>
-                                                                                                                                                                                                                                                    <span>${unitPrice} x ${quantity}</span>
-                                                                                                                                                                                                                                                    <span>${subtotal}</span>
-                                                                                                                                                                                                                                                </div>
-                                                                                                                                                                                                                                            </div>
-                                                                                                                                                                                                                                        `;
+                                                                                                                                                                                                                                                    <div class="item-row">
+                                                                                                                                                                                                                                                        <div class="item-line">
+                                                                                                                                                                                                                                                            <span>${itemCount}</span>
+                                                                                                                                                                                                                                                            <span>${itemName}</span>
+                                                                                                                                                                                                                                                        </div>
+                                                                                                                                                                                                                                                        <div class="item-line">
+                                                                                                                                                                                                                                                            <span>${itemCode}</span>
+                                                                                                                                                                                                                                                            <span>${unitPrice} x ${quantity}</span>
+                                                                                                                                                                                                                                                            <span>${subtotal}</span>
+                                                                                                                                                                                                                                                        </div>
+                                                                                                                                                                                                                                                    </div>
+                                                                                                                                                                                                                                                `;
                         });
                     }
 
@@ -5558,193 +5521,193 @@
                     });
 
                     return `
-                                                                                                                                                                                                                <!DOCTYPE html>
-                                                                                                                                                                                                                <html>
-                                                                                                                                                                                                                <head>
-                                                                                                                                                                                                                    <meta charset="UTF-8">
-                                                                                                                                                                                                                    <title>Receipt - ${order.order_number || 'Order #' + order.id}</title>
-                                                                                                                                                                                                                    <style>
-                                                                                                                                                                                                                        * {
-                                                                                                                                                                                                                            margin: 0;
-                                                                                                                                                                                                                            padding: 0;
-                                                                                                                                                                                                                            box-sizing: border-box;
-                                                                                                                                                                                                                        }
+                                                                                                                                                                                                                        <!DOCTYPE html>
+                                                                                                                                                                                                                        <html>
+                                                                                                                                                                                                                        <head>
+                                                                                                                                                                                                                            <meta charset="UTF-8">
+                                                                                                                                                                                                                            <title>Receipt - ${order.order_number || 'Order #' + order.id}</title>
+                                                                                                                                                                                                                            <style>
+                                                                                                                                                                                                                                * {
+                                                                                                                                                                                                                                    margin: 0;
+                                                                                                                                                                                                                                    padding: 0;
+                                                                                                                                                                                                                                    box-sizing: border-box;
+                                                                                                                                                                                                                                }
 
-                                                                                                                                                                                                                        @page {
-                                                                                                                                                                                                                            size: 80mm auto;
-                                                                                                                                                                                                                            margin: 0;
-                                                                                                                                                                                                                        }
+                                                                                                                                                                                                                                @page {
+                                                                                                                                                                                                                                    size: 80mm auto;
+                                                                                                                                                                                                                                    margin: 0;
+                                                                                                                                                                                                                                }
 
-                                                                                                                                                                                                                        body {
-                                                                                                                                                                                                                            font-family: 'Courier New', Courier, monospace;
-                                                                                                                                                                                                                            font-size: 11px;
-                                                                                                                                                                                                                            line-height: 1.3;
-                                                                                                                                                                                                                            width: 80mm;
-                                                                                                                                                                                                                            padding: 2mm 6mm 2mm 2mm;
-                                                                                                                                                                                                                            margin: 0 auto;
-                                                                                                                                                                                                                            background: white;
-                                                                                                                                                                                                                        }
+                                                                                                                                                                                                                                body {
+                                                                                                                                                                                                                                    font-family: 'Courier New', Courier, monospace;
+                                                                                                                                                                                                                                    font-size: 11px;
+                                                                                                                                                                                                                                    line-height: 1.3;
+                                                                                                                                                                                                                                    width: 80mm;
+                                                                                                                                                                                                                                    padding: 2mm 6mm 2mm 2mm;
+                                                                                                                                                                                                                                    margin: 0 auto;
+                                                                                                                                                                                                                                    background: white;
+                                                                                                                                                                                                                                }
 
-                                                                                                                                                                                                                        .header {
-                                                                                                                                                                                                                            text-align: center;
-                                                                                                                                                                                                                            margin-bottom: 8px;
-                                                                                                                                                                                                                            padding-bottom: 8px;
-                                                                                                                                                                                                                        }
+                                                                                                                                                                                                                                .header {
+                                                                                                                                                                                                                                    text-align: center;
+                                                                                                                                                                                                                                    margin-bottom: 8px;
+                                                                                                                                                                                                                                    padding-bottom: 8px;
+                                                                                                                                                                                                                                }
 
-                                                                                                                                                                                                                        .header h1 {
-                                                                                                                                                                                                                            font-size: 16px;
-                                                                                                                                                                                                                            font-weight: bold;
-                                                                                                                                                                                                                            margin-bottom: 2px;
-                                                                                                                                                                                                                            letter-spacing: 1px;
-                                                                                                                                                                                                                        }
+                                                                                                                                                                                                                                .header h1 {
+                                                                                                                                                                                                                                    font-size: 16px;
+                                                                                                                                                                                                                                    font-weight: bold;
+                                                                                                                                                                                                                                    margin-bottom: 2px;
+                                                                                                                                                                                                                                    letter-spacing: 1px;
+                                                                                                                                                                                                                                }
 
-                                                                                                                                                                                                                        .header .subtitle {
-                                                                                                                                                                                                                            font-size: 10px;
-                                                                                                                                                                                                                            margin-bottom: 2px;
-                                                                                                                                                                                                                        }
+                                                                                                                                                                                                                                .header .subtitle {
+                                                                                                                                                                                                                                    font-size: 10px;
+                                                                                                                                                                                                                                    margin-bottom: 2px;
+                                                                                                                                                                                                                                }
 
-                                                                                                                                                                                                                        .header .address {
-                                                                                                                                                                                                                            font-size: 9px;
-                                                                                                                                                                                                                            line-height: 1.4;
-                                                                                                                                                                                                                        }
+                                                                                                                                                                                                                                .header .address {
+                                                                                                                                                                                                                                    font-size: 9px;
+                                                                                                                                                                                                                                    line-height: 1.4;
+                                                                                                                                                                                                                                }
 
-                                                                                                                                                                                                                        .divider {
-                                                                                                                                                                                                                            border-top: 1px dashed #000;
-                                                                                                                                                                                                                            margin: 5px 0;
-                                                                                                                                                                                                                        }
+                                                                                                                                                                                                                                .divider {
+                                                                                                                                                                                                                                    border-top: 1px dashed #000;
+                                                                                                                                                                                                                                    margin: 5px 0;
+                                                                                                                                                                                                                                }
 
-                                                                                                                                                                                                                        .divider-thick {
-                                                                                                                                                                                                                            border-top: 2px solid #000;
-                                                                                                                                                                                                                            margin: 5px 0;
-                                                                                                                                                                                                                        }
+                                                                                                                                                                                                                                .divider-thick {
+                                                                                                                                                                                                                                    border-top: 2px solid #000;
+                                                                                                                                                                                                                                    margin: 5px 0;
+                                                                                                                                                                                                                                }
 
-                                                                                                                                                                                                                        .invoice-title {
-                                                                                                                                                                                                                            text-align: center;
-                                                                                                                                                                                                                            font-weight: bold;
-                                                                                                                                                                                                                            font-size: 14px;
-                                                                                                                                                                                                                            margin: 8px 0;
-                                                                                                                                                                                                                        }
+                                                                                                                                                                                                                                .invoice-title {
+                                                                                                                                                                                                                                    text-align: center;
+                                                                                                                                                                                                                                    font-weight: bold;
+                                                                                                                                                                                                                                    font-size: 14px;
+                                                                                                                                                                                                                                    margin: 8px 0;
+                                                                                                                                                                                                                                }
 
-                                                                                                                                                                                                                        .info-row {
-                                                                                                                                                                                                                            display: flex;
-                                                                                                                                                                                                                            justify-content: space-between;
-                                                                                                                                                                                                                            margin-bottom: 2px;
-                                                                                                                                                                                                                            font-size: 10px;
-                                                                                                                                                                                                                        }
+                                                                                                                                                                                                                                .info-row {
+                                                                                                                                                                                                                                    display: flex;
+                                                                                                                                                                                                                                    justify-content: space-between;
+                                                                                                                                                                                                                                    margin-bottom: 2px;
+                                                                                                                                                                                                                                    font-size: 10px;
+                                                                                                                                                                                                                                }
 
-                                                                                                                                                                                                                        .info-row .label {
-                                                                                                                                                                                                                            min-width: 80px;
-                                                                                                                                                                                                                        }
+                                                                                                                                                                                                                                .info-row .label {
+                                                                                                                                                                                                                                    min-width: 80px;
+                                                                                                                                                                                                                                }
 
-                                                                                                                                                                                                                        .section {
-                                                                                                                                                                                                                            margin: 8px 0;
-                                                                                                                                                                                                                        }
+                                                                                                                                                                                                                                .section {
+                                                                                                                                                                                                                                    margin: 8px 0;
+                                                                                                                                                                                                                                }
 
-                                                                                                                                                                                                                        .items-header {
-                                                                                                                                                                                                                            display: flex;
-                                                                                                                                                                                                                            justify-content: space-between;
-                                                                                                                                                                                                                            font-weight: bold;
-                                                                                                                                                                                                                            margin-bottom: 3px;
-                                                                                                                                                                                                                            padding-bottom: 3px;
-                                                                                                                                                                                                                            border-bottom: 1px dashed #000;
-                                                                                                                                                                                                                        }
+                                                                                                                                                                                                                                .items-header {
+                                                                                                                                                                                                                                    display: flex;
+                                                                                                                                                                                                                                    justify-content: space-between;
+                                                                                                                                                                                                                                    font-weight: bold;
+                                                                                                                                                                                                                                    margin-bottom: 3px;
+                                                                                                                                                                                                                                    padding-bottom: 3px;
+                                                                                                                                                                                                                                    border-bottom: 1px dashed #000;
+                                                                                                                                                                                                                                }
 
-                                                                                                                                                                                                                        .item-row {
-                                                                                                                                                                                                                            margin-bottom: 5px;
-                                                                                                                                                                                                                        }
+                                                                                                                                                                                                                                .item-row {
+                                                                                                                                                                                                                                    margin-bottom: 5px;
+                                                                                                                                                                                                                                }
 
-                                                                                                                                                                                                                        .item-line {
-                                                                                                                                                                                                                            display: flex;
-                                                                                                                                                                                                                            justify-content: space-between;
-                                                                                                                                                                                                                            align-items: flex-start;
-                                                                                                                                                                                                                            gap: 5px;
-                                                                                                                                                                                                                        }
+                                                                                                                                                                                                                                .item-line {
+                                                                                                                                                                                                                                    display: flex;
+                                                                                                                                                                                                                                    justify-content: space-between;
+                                                                                                                                                                                                                                    align-items: flex-start;
+                                                                                                                                                                                                                                    gap: 5px;
+                                                                                                                                                                                                                                }
 
-                                                                                                                                                                                                                        .item-line:first-child {
-                                                                                                                                                                                                                            font-weight: bold;
-                                                                                                                                                                                                                        }
+                                                                                                                                                                                                                                .item-line:first-child {
+                                                                                                                                                                                                                                    font-weight: bold;
+                                                                                                                                                                                                                                }
 
-                                                                                                                                                                                                                        .totals {
-                                                                                                                                                                                                                            margin-top: 8px;
-                                                                                                                                                                                                                        }
+                                                                                                                                                                                                                                .totals {
+                                                                                                                                                                                                                                    margin-top: 8px;
+                                                                                                                                                                                                                                }
 
-                                                                                                                                                                                                                        .total-row {
-                                                                                                                                                                                                                            display: flex;
-                                                                                                                                                                                                                            justify-content: space-between;
-                                                                                                                                                                                                                            margin-bottom: 3px;
-                                                                                                                                                                                                                        }
+                                                                                                                                                                                                                                .total-row {
+                                                                                                                                                                                                                                    display: flex;
+                                                                                                                                                                                                                                    justify-content: space-between;
+                                                                                                                                                                                                                                    margin-bottom: 3px;
+                                                                                                                                                                                                                                }
 
-                                                                                                                                                                                                                        .total-row.grand {
-                                                                                                                                                                                                                            font-weight: bold;
-                                                                                                                                                                                                                            font-size: 13px;
-                                                                                                                                                                                                                            padding-top: 3px;
-                                                                                                                                                                                                                            margin-top: 3px;
-                                                                                                                                                                                                                        }
+                                                                                                                                                                                                                                .total-row.grand {
+                                                                                                                                                                                                                                    font-weight: bold;
+                                                                                                                                                                                                                                    font-size: 13px;
+                                                                                                                                                                                                                                    padding-top: 3px;
+                                                                                                                                                                                                                                    margin-top: 3px;
+                                                                                                                                                                                                                                }
 
-                                                                                                                                                                                                                        .payment-info {
-                                                                                                                                                                                                                            margin-top: 8px;
-                                                                                                                                                                                                                        }
+                                                                                                                                                                                                                                .payment-info {
+                                                                                                                                                                                                                                    margin-top: 8px;
+                                                                                                                                                                                                                                }
 
-                                                                                                                                                                                                                        .credit-note {
-                                                                                                                                                                                                                            margin-top: 5px;
-                                                                                                                                                                                                                            font-size: 10px;
-                                                                                                                                                                                                                        }
+                                                                                                                                                                                                                                .credit-note {
+                                                                                                                                                                                                                                    margin-top: 5px;
+                                                                                                                                                                                                                                    font-size: 10px;
+                                                                                                                                                                                                                                }
 
-                                                                                                                                                                                                                        .footer {
-                                                                                                                                                                                                                            text-align: center;
-                                                                                                                                                                                                                            margin-top: 10px;
-                                                                                                                                                                                                                            font-size: 10px;
-                                                                                                                                                                                                                        }
+                                                                                                                                                                                                                                .footer {
+                                                                                                                                                                                                                                    text-align: center;
+                                                                                                                                                                                                                                    margin-top: 10px;
+                                                                                                                                                                                                                                    font-size: 10px;
+                                                                                                                                                                                                                                }
 
-                                                                                                                                                                                                                        .footer-note {
-                                                                                                                                                                                                                            margin-top: 8px;
-                                                                                                                                                                                                                            padding-top: 8px;
-                                                                                                                                                                                                                            border-top: 1px dashed #000;
-                                                                                                                                                                                                                            font-size: 9px;
-                                                                                                                                                                                                                        }
+                                                                                                                                                                                                                                .footer-note {
+                                                                                                                                                                                                                                    margin-top: 8px;
+                                                                                                                                                                                                                                    padding-top: 8px;
+                                                                                                                                                                                                                                    border-top: 1px dashed #000;
+                                                                                                                                                                                                                                    font-size: 9px;
+                                                                                                                                                                                                                                }
 
-                                                                                                                                                                                                                        @media print {
-                                                                                                                                                                                                                            body {
-                                                                                                                                                                                                                                width: 80mm;
-                                                                                                                                                                                                                            }
-                                                                                                                                                                                                                        }
-                                                                                                                                                                                                                    </style>
-                                                                                                                                                                                                                </head>
-                                                                                                                                                                                                                <body>
-                                                                                                                                                                                                                    <div class="header">
-                                                                                                                                                                                                                        <h1>RAVON BAKERS</h1>
-                                                                                                                                                                                                                        <div class="subtitle">Jayawardena Holdings (Pvt) Ltd</div>
-                                                                                                                                                                                                                        <div class="address">
-                                                                                                                                                                                                                            No 282/A/2, Kothalawala, Kaduwela<br>
-                                                                                                                                                                                                                            Tel: +94 74 200 6007<br>
-                                                                                                                                                                                                                            @if(!empty($vatRegNo))
-                                                                                                                                                                                                                                VAT Reg No: {{ $vatRegNo }}
-                                                                                                                                                                                                                            @endif
-                                                                                                                                                                                                                        </div>
-                                                                                                                                                                                                                    </div>
+                                                                                                                                                                                                                                @media print {
+                                                                                                                                                                                                                                    body {
+                                                                                                                                                                                                                                        width: 80mm;
+                                                                                                                                                                                                                                    }
+                                                                                                                                                                                                                                }
+                                                                                                                                                                                                                            </style>
+                                                                                                                                                                                                                        </head>
+                                                                                                                                                                                                                        <body>
+                                                                                                                                                                                                                            <div class="header">
+                                                                                                                                                                                                                                <h1>RAVON BAKERS</h1>
+                                                                                                                                                                                                                                <div class="subtitle">Jayawardena Holdings (Pvt) Ltd</div>
+                                                                                                                                                                                                                                <div class="address">
+                                                                                                                                                                                                                                    No 282/A/2, Kothalawala, Kaduwela<br>
+                                                                                                                                                                                                                                    Tel: +94 74 200 6007<br>
+                                                                                                                                                                                                                                    @if(!empty($vatRegNo))
+                                                                                                                                                                                                                                        VAT Reg No: {{ $vatRegNo }}
+                                                                                                                                                                                                                                    @endif
+                                                                                                                                                                                                                                </div>
+                                                                                                                                                                                                                            </div>
 
-                                                                                                                                                                                                                    <div class="invoice-title">INVOICE</div>
+                                                                                                                                                                                                                            <div class="invoice-title">INVOICE</div>
 
-                                                                                                                                                                                                                    <div class="section">
-                                                                                                                                                                                                                        <div class="info-row">
-                                                                                                                                                                                                                            <span class="label">Customer :</span>
-                                                                                                                                                                                                                            <span>${order.customer_name || 'Cash Customer'}</span>
-                                                                                                                                                                                                                        </div>
-                                                                                                                                                                                                                        <div class="info-row">
-                                                                                                                                                                                                                            <span class="label">Invoice #</span>
-                                                                                                                                                                                                                            <span>${order.order_number || order.id}</span>
-                                                                                                                                                                                                                        </div>
-                                                                                                                                                                                                                        <div class="info-row">
-                                                                                                                                                                                                                            <span class="label">Date</span>
-                                                                                                                                                                                                                            <span>:${dateStr} Time ${timeStr}</span>
-                                                                                                                                                                                                                        </div>
-                                                                                                                                                                                                                        <div class="info-row">
-                                                                                                                                                                                                                            <span class="label">Terminal:</span>
-                                                                                                                                                                                                                            <span>01</span>
-                                                                                                                                                                                                                        </div>
-                                                                                                                                                                                                                        <div class="info-row">
-                                                                                                                                                                                                                            <span class="label">Table # :</span>
-                                                                                                                                                                                                                            <span>${(() => {
+                                                                                                                                                                                                                            <div class="section">
+                                                                                                                                                                                                                                <div class="info-row">
+                                                                                                                                                                                                                                    <span class="label">Customer :</span>
+                                                                                                                                                                                                                                    <span>${order.customer_name || 'Cash Customer'}</span>
+                                                                                                                                                                                                                                </div>
+                                                                                                                                                                                                                                <div class="info-row">
+                                                                                                                                                                                                                                    <span class="label">Invoice #</span>
+                                                                                                                                                                                                                                    <span>${order.order_number || order.id}</span>
+                                                                                                                                                                                                                                </div>
+                                                                                                                                                                                                                                <div class="info-row">
+                                                                                                                                                                                                                                    <span class="label">Date</span>
+                                                                                                                                                                                                                                    <span>:${dateStr} Time ${timeStr}</span>
+                                                                                                                                                                                                                                </div>
+                                                                                                                                                                                                                                <div class="info-row">
+                                                                                                                                                                                                                                    <span class="label">Terminal:</span>
+                                                                                                                                                                                                                                    <span>01</span>
+                                                                                                                                                                                                                                </div>
+                                                                                                                                                                                                                                <div class="info-row">
+                                                                                                                                                                                                                                    <span class="label">Table # :</span>
+                                                                                                                                                                                                                                    <span>${(() => {
                             if (order.table && order.table.table_number) {
                                 return order.table.table_number;
                             } else {
@@ -5764,28 +5727,28 @@
                                 }
                             }
                         })()}</span>
-                                                                                                                                                                                                                        </div>
-                                                                                                                                                                                                                        <div class="info-row">
-                                                                                                                                                                                                                            <span class="label">Cashier :</span>
-                                                                                                                                                                                                                            <span>${order.waiter ? order.waiter.name : 'Cashier'}</span>
-                                                                                                                                                                                                                        </div>
-                                                                                                                                                                                                                    </div>
+                                                                                                                                                                                                                                </div>
+                                                                                                                                                                                                                                <div class="info-row">
+                                                                                                                                                                                                                                    <span class="label">Cashier :</span>
+                                                                                                                                                                                                                                    <span>${order.waiter ? order.waiter.name : 'Cashier'}</span>
+                                                                                                                                                                                                                                </div>
+                                                                                                                                                                                                                            </div>
 
-                                                                                                                                                                                                                    <div class="divider"></div>
+                                                                                                                                                                                                                            <div class="divider"></div>
 
-                                                                                                                                                                                                                    <div class="items-header">
-                                                                                                                                                                                                                        <span>Base Price</span>
-                                                                                                                                                                                                                        <span>Qty Amount</span>
-                                                                                                                                                                                                                    </div>
+                                                                                                                                                                                                                            <div class="items-header">
+                                                                                                                                                                                                                                <span>Base Price</span>
+                                                                                                                                                                                                                                <span>Qty Amount</span>
+                                                                                                                                                                                                                            </div>
 
-                                                                                                                                                                                                                    <div class="divider"></div>
+                                                                                                                                                                                                                            <div class="divider"></div>
 
-                                                                                                                                                                                                                    ${itemsHTML}
+                                                                                                                                                                                                                            ${itemsHTML}
 
-                                                                                                                                                                                                                    <div class="divider"></div>
+                                                                                                                                                                                                                            <div class="divider"></div>
 
-                                                                                                                                                                                                                    <div class="totals">
-    ${(() => {
+                                                                                                                                                                                                                            <div class="totals">
+            ${(() => {
                             const vr = parseFloat('{{ $vatRate ?? 0 }}') || 0;
                             const sr = parseFloat('{{ $ssclRate ?? 0 }}') || 0;
 
@@ -5808,69 +5771,69 @@
                                 va += itemVat;
                             });
                             return `
-                                                                                                                                                                                                                        <div class="total-row">
-                                                                                                                                                                                                                            <span>Sub Total (Base)</span>
-                                                                                                                                                                                                                            <span>${bt.toFixed(2)}</span>
-                                                                                                                                                                                                                        </div>
-                                                                                                                                                                                                                        <div class="total-row">
-                                                                                                                                                                                                                            <span>SSCL (${sr}%)</span>
-                                                                                                                                                                                                                            <span>${sa.toFixed(2)}</span>
-                                                                                                                                                                                                                        </div>
-                                                                                                                                                                                                                        <div class="total-row">
-                                                                                                                                                                                                                            <span>VAT (${vr}%)</span>
-                                                                                                                                                                                                                            <span>${va.toFixed(2)}</span>
-                                                                                                                                                                                                                        </div>
-        `;
+                                                                                                                                                                                                                                <div class="total-row">
+                                                                                                                                                                                                                                    <span>Sub Total (Base)</span>
+                                                                                                                                                                                                                                    <span>${bt.toFixed(2)}</span>
+                                                                                                                                                                                                                                </div>
+                                                                                                                                                                                                                                <div class="total-row">
+                                                                                                                                                                                                                                    <span>SSCL (${sr}%)</span>
+                                                                                                                                                                                                                                    <span>${sa.toFixed(2)}</span>
+                                                                                                                                                                                                                                </div>
+                                                                                                                                                                                                                                <div class="total-row">
+                                                                                                                                                                                                                                    <span>VAT (${vr}%)</span>
+                                                                                                                                                                                                                                    <span>${va.toFixed(2)}</span>
+                                                                                                                                                                                                                                </div>
+                `;
                         })()}
-                                                                                                                                                                                                                    </div>
+                                                                                                                                                                                                                            </div>
 
-                                                                                                                                                                                                                    <div class="divider-thick"></div>
+                                                                                                                                                                                                                            <div class="divider-thick"></div>
 
-                                                                                                                                                                                                                    <div class="total-row grand">
-                                                                                                                                                                                                                        <span>Total</span>
-                                                                                                                                                                                                                        <span>${parseFloat(order.total_amount).toFixed(2)}</span>
-                                                                                                                                                                                                                    </div>
+                                                                                                                                                                                                                            <div class="total-row grand">
+                                                                                                                                                                                                                                <span>Total</span>
+                                                                                                                                                                                                                                <span>${parseFloat(order.total_amount).toFixed(2)}</span>
+                                                                                                                                                                                                                            </div>
 
-                                                                                                                                                                                                                    <div class="payment-info">
-                                                                                                                                                                                                                        <div class="total-row">
-                                                                                                                                                                                                                            <span>Payment Method</span>
-                                                                                                                                                                                                                            <span>${paymentMethod}</span>
-                                                                                                                                                                                                                        </div>
-                                                                                                                                                                                                                        ${cashAmount > 0 ? `
-                                                                                                                                                                                                                        <div class="total-row">
-                                                                                                                                                                                                                            <span>Cash</span>
-                                                                                                                                                                                                                            <span>${parseFloat(cashAmount).toFixed(2)}</span>
-                                                                                                                                                                                                                        </div>
-                                                                                                                                                                                                                        ` : ''}
-                                                                                                                                                                                                                        ${cardAmount > 0 ? `
-                                                                                                                                                                                                                        <div class="total-row">
-                                                                                                                                                                                                                            <span>Card</span>
-                                                                                                                                                                                                                            <span>${parseFloat(cardAmount).toFixed(2)}</span>
-                                                                                                                                                                                                                        </div>
-                                                                                                                                                                                                                        ` : ''}
-                                                                                                                                                                                                                        ${creditAmount > 0 ? `
-                                                                                                                                                                                                                        <div class="total-row">
-                                                                                                                                                                                                                            <span>Credit</span>
-                                                                                                                                                                                                                            <span>${parseFloat(creditAmount).toFixed(2)}</span>
-                                                                                                                                                                                                                        </div>
-                                                                                                                                                                                                                        ` : ''}
-                                                                                                                                                                                                                        ${parseFloat(changeAmount) > 0 ? `
-                                                                                                                                                                                                                        <div class="total-row">
-                                                                                                                                                                                                                            <span>Change</span>
-                                                                                                                                                                                                                            <span>${parseFloat(changeAmount).toFixed(2)}</span>
-                                                                                                                                                                                                                        </div>
-                                                                                                                                                                                                                        ` : ''}
-                                                                                                                                                                                                                    </div>
+                                                                                                                                                                                                                            <div class="payment-info">
+                                                                                                                                                                                                                                <div class="total-row">
+                                                                                                                                                                                                                                    <span>Payment Method</span>
+                                                                                                                                                                                                                                    <span>${paymentMethod}</span>
+                                                                                                                                                                                                                                </div>
+                                                                                                                                                                                                                                ${cashAmount > 0 ? `
+                                                                                                                                                                                                                                <div class="total-row">
+                                                                                                                                                                                                                                    <span>Cash</span>
+                                                                                                                                                                                                                                    <span>${parseFloat(cashAmount).toFixed(2)}</span>
+                                                                                                                                                                                                                                </div>
+                                                                                                                                                                                                                                ` : ''}
+                                                                                                                                                                                                                                ${cardAmount > 0 ? `
+                                                                                                                                                                                                                                <div class="total-row">
+                                                                                                                                                                                                                                    <span>Card</span>
+                                                                                                                                                                                                                                    <span>${parseFloat(cardAmount).toFixed(2)}</span>
+                                                                                                                                                                                                                                </div>
+                                                                                                                                                                                                                                ` : ''}
+                                                                                                                                                                                                                                ${creditAmount > 0 ? `
+                                                                                                                                                                                                                                <div class="total-row">
+                                                                                                                                                                                                                                    <span>Credit</span>
+                                                                                                                                                                                                                                    <span>${parseFloat(creditAmount).toFixed(2)}</span>
+                                                                                                                                                                                                                                </div>
+                                                                                                                                                                                                                                ` : ''}
+                                                                                                                                                                                                                                ${parseFloat(changeAmount) > 0 ? `
+                                                                                                                                                                                                                                <div class="total-row">
+                                                                                                                                                                                                                                    <span>Change</span>
+                                                                                                                                                                                                                                    <span>${parseFloat(changeAmount).toFixed(2)}</span>
+                                                                                                                                                                                                                                </div>
+                                                                                                                                                                                                                                ` : ''}
+                                                                                                                                                                                                                            </div>
 
-                                                                                                                                                                                                                    <div class="footer">
-                                                                                                                                                                                                                        <div style="font-weight: bold; margin-bottom: 5px;">THANK YOU, COME AGAIN.</div>
-                                                                                                                                                                                                                        <div class="footer-note">
-                                                                                                                                                                                                                            Software By SKM Labs
-                                                                                                                                                                                                                        </div>
-                                                                                                                                                                                                                    </div>
-                                                                                                                                                                                                                </body>
-                                                                                                                                                                                                                </html>
-                                                                                                                                                                                                                                `;
+                                                                                                                                                                                                                            <div class="footer">
+                                                                                                                                                                                                                                <div style="font-weight: bold; margin-bottom: 5px;">THANK YOU, COME AGAIN.</div>
+                                                                                                                                                                                                                                <div class="footer-note">
+                                                                                                                                                                                                                                    Software By SKM Labs
+                                                                                                                                                                                                                                </div>
+                                                                                                                                                                                                                            </div>
+                                                                                                                                                                                                                        </body>
+                                                                                                                                                                                                                        </html>
+                                                                                                                                                                                                                                        `;
                 }
 
                 // Open Closed Orders Modal
@@ -5884,10 +5847,10 @@
 
                             if (result.orders.length === 0) {
                                 container.innerHTML = `
-                                                                                                                                                                                                                                                <div class="text-center text-gray-500 py-8">
-                                                                                                                                                                                                                                                    <p>No closed orders</p>
-                                                                                                                                                                                                                                                </div>
-                                                                                                                                                                                                                                            `;
+                                                                                                                                                                                                                                                        <div class="text-center text-gray-500 py-8">
+                                                                                                                                                                                                                                                            <p>No closed orders</p>
+                                                                                                                                                                                                                                                        </div>
+                                                                                                                                                                                                                                                    `;
                             } else {
                                 container.innerHTML = result.orders.map(order => {
                                     let typeDisplay = '';
@@ -5902,28 +5865,28 @@
                                     }
 
                                     return `
-                                                                                                                                                                                                                                                <div class="bg-gray-700 rounded-lg p-4 mb-2 flex justify-between items-center hover:bg-gray-650 transition">
-                                                                                                                                                                                                                                                    <div>
-                                                                                                                                                                                                                                                        <div class="text-white font-semibold">${order.order_number}</div>
-                                                                                                                                                                                                                                                        <div class="text-sm text-gray-400">
-                                                                                                                                                                                                                                                            ${typeDisplay} | ${order.items_count} items | ${order.payment_method.toUpperCase()}
+                                                                                                                                                                                                                                                        <div class="bg-gray-700 rounded-lg p-4 mb-2 flex justify-between items-center hover:bg-gray-650 transition">
+                                                                                                                                                                                                                                                            <div>
+                                                                                                                                                                                                                                                                <div class="text-white font-semibold">${order.order_number}</div>
+                                                                                                                                                                                                                                                                <div class="text-sm text-gray-400">
+                                                                                                                                                                                                                                                                    ${typeDisplay} | ${order.items_count} items | ${order.payment_method.toUpperCase()}
+                                                                                                                                                                                                                                                                </div>
+                                                                                                                                                                                                                                                            </div>
+                                                                                                                                                                                                                                                            <div class="flex items-center gap-4">
+                                                                                                                                                                                                                                                                <div class="text-right">
+                                                                                                                                                                                                                                                                    <div class="text-white font-bold">Rs. ${parseFloat(order.total_amount).toFixed(2)}</div>
+                                                                                                                                                                                                                                                                    <div class="text-xs text-gray-400">${order.completed_at}</div>
+                                                                                                                                                                                                                                                                </div>
+                                                                                                                                                                                                                                                                <button onclick="printReceipt(${order.id})"
+                                                                                                                                                                                                                                                                        class="bg-rose-500 hover:bg-rose-600 text-white p-2 rounded-lg transition shadow-sm"
+                                                                                                                                                                                                                                                                        title="Print Receipt">
+                                                                                                                                                                                                                                                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                                                                                                                                                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                                                                                                                                                                                                                                                                    </svg>
+                                                                                                                                                                                                                                                                </button>
+                                                                                                                                                                                                                                                            </div>
                                                                                                                                                                                                                                                         </div>
-                                                                                                                                                                                                                                                    </div>
-                                                                                                                                                                                                                                                    <div class="flex items-center gap-4">
-                                                                                                                                                                                                                                                        <div class="text-right">
-                                                                                                                                                                                                                                                            <div class="text-white font-bold">Rs. ${parseFloat(order.total_amount).toFixed(2)}</div>
-                                                                                                                                                                                                                                                            <div class="text-xs text-gray-400">${order.completed_at}</div>
-                                                                                                                                                                                                                                                        </div>
-                                                                                                                                                                                                                                                        <button onclick="printReceipt(${order.id})"
-                                                                                                                                                                                                                                                                class="bg-rose-500 hover:bg-rose-600 text-white p-2 rounded-lg transition shadow-sm"
-                                                                                                                                                                                                                                                                title="Print Receipt">
-                                                                                                                                                                                                                                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                                                                                                                                                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                                                                                                                                                                                                                                                            </svg>
-                                                                                                                                                                                                                                                        </button>
-                                                                                                                                                                                                                                                    </div>
-                                                                                                                                                                                                                                                </div>
-                                                                                                                                                                                                                                                `;
+                                                                                                                                                                                                                                                        `;
                                 }).join('');
                             }
 

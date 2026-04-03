@@ -40,7 +40,7 @@ class QZTrayController extends Controller
         $signature = null;
 
         // 3. Attempt to sign the data
-        if (!openssl_sign($requestData, $signature, $privateKey, 'sha1')) {
+        if (!openssl_sign($requestData, $signature, $privateKey, 'sha512')) {
             return response()->json(['error' => 'Failed to sign data. Check OpenSSL.'], 500);
         }
 
