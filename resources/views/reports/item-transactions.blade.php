@@ -136,9 +136,16 @@
                     <label for="item_id" class="block text-sm font-semibold text-gray-600 mb-1">Item</label>
                     <select id="item_id" name="item_id" class="tx-input" required>
                         <option value="">Select Item</option>
-                        @foreach($items as $item)
-                            <option value="{{ $item->id }}">{{ $item->item_name }} ({{ $item->item_code ?? 'N/A' }})</option>
-                        @endforeach
+                        <optgroup label="Finished Goods">
+                            @foreach($items->where('item_type', 'finished_good') as $item)
+                                <option value="{{ $item->id }}">{{ $item->item_name }} ({{ $item->item_code ?? 'N/A' }})</option>
+                            @endforeach
+                        </optgroup>
+                        <optgroup label="Raw Materials">
+                            @foreach($items->where('item_type', 'raw_material') as $item)
+                                <option value="{{ $item->id }}">{{ $item->item_name }} ({{ $item->item_code ?? 'N/A' }})</option>
+                            @endforeach
+                        </optgroup>
                     </select>
                 </div>
 

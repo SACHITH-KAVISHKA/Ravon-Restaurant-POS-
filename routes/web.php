@@ -15,6 +15,7 @@ use App\Http\Controllers\WastageReportController;
 use App\Http\Controllers\VatCustomerController;
 use App\Http\Controllers\VatReportController;
 use App\Http\Controllers\RmReportController;
+use App\Http\Controllers\RmSalesReportController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -105,6 +106,11 @@ Route::middleware(['auth'])->group(function () {
         // Item Transaction Details Report
         Route::get('/item-transactions', [ItemTransactionReportController::class, 'index'])->name('item-transactions');
         Route::post('/item-transactions/data', [ItemTransactionReportController::class, 'data'])->name('item-transactions.data');
+
+        // RM Sales Report
+        Route::get('/rm-sales', [RmSalesReportController::class, 'index'])->name('rm-sales');
+        Route::post('/rm-sales/filter', [RmSalesReportController::class, 'filter'])->name('rm-sales.filter');
+        Route::post('/rm-sales/details', [RmSalesReportController::class, 'getOrderDetails'])->name('rm-sales.details');
 
         Route::get('/staff-performance', function () {
             return view('dashboard');

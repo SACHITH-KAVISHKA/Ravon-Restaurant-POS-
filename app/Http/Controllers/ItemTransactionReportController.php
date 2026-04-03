@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\CashierFgStockLog;
+use App\Models\CashierRmStockLog;
 use App\Models\MainStockItem;
 use App\Models\User;
 use Carbon\Carbon;
@@ -24,9 +25,8 @@ class ItemTransactionReportController extends Controller
 
         $items = MainStockItem::query()
             ->active()
-            ->ofType('finished_good')
             ->orderBy('item_name')
-            ->get(['id', 'item_code', 'item_name']);
+            ->get(['id', 'item_code', 'item_name', 'item_type']);
 
         return view('reports.item-transactions', compact('branches', 'items'));
     }
@@ -49,8 +49,13 @@ class ItemTransactionReportController extends Controller
         $item = MainStockItem::query()->findOrFail($validated['item_id']);
         $branch = null;
 
-        $baseQuery = CashierFgStockLog::query()
-            ->with('performer:id,name')
+        if ($item->item_type === 'raw_material') {
+            $baseQuery = CashierRmStockLog::query();
+        } else {
+            $baseQuery = CashierFgStockLog::query();
+        }
+
+        $baseQuery->with('performer:id,name')
             ->where('main_stock_item_id', $validated['item_id']);
 
         if (!empty($validated['branch_id'])) {
@@ -72,7 +77,7 @@ class ItemTransactionReportController extends Controller
             ->orderBy('id')
             ->get();
 
-        $rows = $transactions->map(function (CashierFgStockLog $log) {
+        $rows = $transactions->map(function ($log) {
             $changed = (float) $log->quantity_changed;
 
             return [

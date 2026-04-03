@@ -66,9 +66,9 @@
         <!-- Reports (Collapsible) -->
         @role('admin')
         <div
-            x-data="{ open: {{ request()->routeIs('reports.*') || request()->routeIs('sales-report.*') || request()->routeIs('void-report.*') || request()->routeIs('wastage-report.*') || request()->routeIs('vat-report.*') ? 'true' : 'false' }} }">
+            x-data="{ open: {{ request()->routeIs('reports.*') || request()->routeIs('sales-report.*') || request()->routeIs('void-report.*') || request()->routeIs('wastage-report.*') || request()->routeIs('vat-report.*') || request()->routeIs('reports.rm-sales*') ? 'true' : 'false' }} }">
             <button @click="open = !open"
-                class="w-full flex items-center justify-between gap-3 px-4 py-3 {{ request()->routeIs('reports.*') || request()->routeIs('sales-report.*') || request()->routeIs('void-report.*') || request()->routeIs('wastage-report.*') || request()->routeIs('vat-report.*') ? 'bg-white/25 text-white border-l-4 border-white font-semibold' : 'text-white/80 hover:bg-white/15 hover:text-white' }} rounded-lg transition">
+                class="w-full flex items-center justify-between gap-3 px-4 py-3 {{ request()->routeIs('reports.*') || request()->routeIs('sales-report.*') || request()->routeIs('void-report.*') || request()->routeIs('wastage-report.*') || request()->routeIs('vat-report.*') || request()->routeIs('reports.rm-sales*') ? 'bg-white/25 text-white border-l-4 border-white font-semibold' : 'text-white/80 hover:bg-white/15 hover:text-white' }} rounded-lg transition">
                 <div class="flex items-center gap-3">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -118,6 +118,15 @@
                             d="M9 17v-2a4 4 0 014-4h8m0 0l-3-3m3 3l-3 3M3 7h12m0 0l-3-3m3 3l-3 3" />
                     </svg>
                     <span>Item Transactions</span>
+                </a>
+
+                <a href="{{ route('reports.rm-sales') }}"
+                    class="flex items-center gap-3 px-4 py-2 {{ request()->routeIs('reports.rm-sales*') ? 'bg-white/20 text-white font-medium' : 'text-white/70 hover:bg-white/10 hover:text-white' }} rounded-lg transition text-sm">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 17v-2a4 4 0 014-4h8m0 0l-3-3m3 3l-3 3M3 7h12m0 0l-3-3m3 3l-3 3" />
+                    </svg>
+                    <span>RM Sales Report</span>
                 </a>
 
                 <a href="{{ route('void-report.index') }}"
