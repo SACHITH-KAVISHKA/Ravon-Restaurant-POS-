@@ -127,15 +127,14 @@ class RolesAndPermissionsSeeder extends Seeder
         $adminUser->assignRole('admin');
 
         // Super Admin user (has both superadmin and admin privileges)
-        $superAdminUser = User::where('username', 'finance')->first();
-        if (!$superAdminUser) {
-            $superAdminUser = new User();
-            $superAdminUser->name = 'Finance Super Admin';
-            $superAdminUser->username = 'finance';
-            $superAdminUser->password = Hash::make('password');
-            $superAdminUser->is_active = true;
-            $superAdminUser->save();
-        }
+        $superAdminUser = User::firstOrCreate(
+            ['username' => 'finance'],
+            [
+                'name' => 'Finance Super Admin',
+                'password' => Hash::make('password'),
+                'is_active' => true,
+            ]
+        );
         $superAdminUser->syncRoles(['superadmin', 'admin']);
 
         $cashierUser = User::firstOrCreate(

@@ -115,7 +115,9 @@
                                 @php
                                 $role = $user->roles->first()?->name;
                                 $roleColors = [
+                                'superadmin' => 'bg-red-100 text-red-800',
                                 'admin' => 'bg-purple-100 text-purple-800',
+                                'manager' => 'bg-green-100 text-green-800',
                                 'cashier' => 'bg-blue-100 text-blue-800',
                                 'supervisor' => 'bg-orange-100 text-orange-800',
                                 ];
@@ -257,7 +259,9 @@
                         class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition bg-white"
                         onchange="handleRoleChange()">
                         <option value="">Select Role</option>
+                        <option value="superadmin">Super Admin</option>
                         <option value="admin">Admin</option>
+                        <option value="manager">Manager</option>
                         <option value="cashier">Cashier</option>
                         <option value="supervisor">Supervisor</option>
                     </select>

@@ -16,7 +16,7 @@ class UserController extends Controller
     {
         $users = User::with('roles')
             ->whereHas('roles', function ($query) {
-                $query->whereIn('name', ['admin', 'cashier', 'supervisor']);
+                $query->whereIn('name', ['admin', 'cashier', 'supervisor', 'manager', 'superadmin']);
             })
             ->orderBy('created_at', 'desc')
             ->get();
@@ -34,7 +34,7 @@ class UserController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'username' => ['required', 'string', 'max:255', 'unique:users'],
             'password' => ['required', 'string', 'min:6'],
-            'role' => ['required', 'string', 'in:admin,cashier,supervisor'],
+            'role' => ['required', 'string', 'in:admin,cashier,supervisor,manager,superadmin'],
         ]);
 
         // Check if supervisor role exists, if not create it
@@ -67,7 +67,7 @@ class UserController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'username' => ['required', 'string', 'max:255', 'unique:users,username,' . $user->id],
             'password' => ['nullable', 'string', 'min:6'],
-            'role' => ['required', 'string', 'in:admin,cashier,supervisor'],
+            'role' => ['required', 'string', 'in:admin,cashier,supervisor,manager,superadmin'],
             'is_active' => ['boolean'],
         ]);
 
