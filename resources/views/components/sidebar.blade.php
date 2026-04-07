@@ -64,7 +64,7 @@
         @endrole
 
         <!-- Reports (Collapsible) -->
-        @role('admin')
+        @hasanyrole('admin|manager|cashier')
         <div
             x-data="{ open: {{ request()->routeIs('reports.*') || request()->routeIs('sales-report.*') || request()->routeIs('void-report.*') || request()->routeIs('wastage-report.*') || request()->routeIs('vat-report.*') || request()->routeIs('reports.rm-sales*') ? 'true' : 'false' }} }">
             <button @click="open = !open"
@@ -149,7 +149,7 @@
 
             </div>
         </div>
-        @endrole
+        @endhasanyrole
 
         <!-- Stock Adjustment (Admin Only) -->
         @role('admin')

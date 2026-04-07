@@ -87,8 +87,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/daily-summary', [PaymentController::class, 'dailySummary'])->name('daily-summary');
     });
 
-    // Reports (Admin & Cashier) - Placeholder routes
-    Route::middleware(['role:admin|cashier'])->prefix('reports')->name('reports.')->group(function () {
+    // Reports (Admin, Cashier & Manager)
+    Route::middleware(['role:admin|cashier|manager'])->prefix('reports')->name('reports.')->group(function () {
         Route::get('/', function () {
             return view('dashboard');
         })->name('index');
@@ -120,8 +120,8 @@ Route::middleware(['auth'])->group(function () {
         })->name('export');
     });
 
-    // Sales Report (Admin only)
-    Route::middleware(['role:admin'])->prefix('sales-report')->name('sales-report.')->group(function () {
+    // Sales Report (Admin & Manager only)
+    Route::middleware(['role:admin|manager'])->prefix('sales-report')->name('sales-report.')->group(function () {
         Route::get('/', [SalesReportController::class, 'index'])->name('index');
         Route::get('/sale-details/{order}', [SalesReportController::class, 'getSaleDetails'])->name('sale-details');
         Route::get('/order/{order}/edit', [SalesReportController::class, 'edit'])->middleware('role:superadmin')->name('edit');
@@ -131,8 +131,8 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/order/{order}', [SalesReportController::class, 'softDelete'])->name('order.delete');
     });
 
-    // Void Report (Admin only)
-    Route::middleware(['role:admin'])->prefix('void-report')->name('void-report.')->group(function () {
+    // Void Report (Admin & Manager only)
+    Route::middleware(['role:admin|manager'])->prefix('void-report')->name('void-report.')->group(function () {
         Route::get('/', [VoidReportController::class, 'index'])->name('index');
         Route::get('/export', [VoidReportController::class, 'export'])->name('export');
         Route::get('/{voidRecord}', [VoidReportController::class, 'getDetails'])->name('details');
@@ -254,14 +254,14 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/history', [WastageController::class, 'history'])->name('history');
     });
 
-    // Wastage Report Routes (Admin)
-    Route::middleware(['role:admin'])->prefix('wastage-report')->name('wastage-report.')->group(function () {
+    // Wastage Report Routes (Admin & Manager)
+    Route::middleware(['role:admin|manager'])->prefix('wastage-report')->name('wastage-report.')->group(function () {
         Route::get('/', [WastageReportController::class, 'index'])->name('index');
         Route::get('/data', [WastageReportController::class, 'getData'])->name('data');
     });
 
-    // VAT Report Routes (Admin only)
-    Route::middleware(['role:admin'])->prefix('vat-report')->name('vat-report.')->group(function () {
+    // VAT Report Routes (Admin & Manager only)
+    Route::middleware(['role:admin|manager'])->prefix('vat-report')->name('vat-report.')->group(function () {
         Route::get('/', [VatReportController::class, 'index'])->name('index');
         Route::get('/export', [VatReportController::class, 'exportExcel'])->name('export');
         Route::get('/sale-details/{order}', [VatReportController::class, 'getSaleDetails'])->name('sale-details');

@@ -39,7 +39,21 @@
                 <div class="bg-white border border-gray-200 rounded-xl shadow-md p-6 mb-6">
                     <form id="filterForm" class="space-y-4">
                         @csrf
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <!-- Category Filter -->
+                            <div>
+                                <label for="category_id" class="block text-sm font-medium text-gray-600 mb-2">
+                                    Category
+                                </label>
+                                <select id="category_id" name="category_id"
+                                    class="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-lg text-gray-800 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                                    <option value="">All Categories</option>
+                                    @foreach($categories as $category)
+                                        <option value="{{ $category->id }}">{{ $category->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+
                             <!-- Start Date -->
                             <div>
                                 <label for="start_date" class="block text-sm font-medium text-gray-600 mb-2">
@@ -231,11 +245,16 @@
             $('#exportSummaryBtn').on('click', function () {
                 const startDate = $('#start_date').val();
                 const endDate = $('#end_date').val();
+                const categoryId = $('#category_id').val();
 
                 const params = new URLSearchParams({
                     start_date: startDate,
                     end_date: endDate
                 });
+
+                if (categoryId) {
+                    params.append('category_id', categoryId);
+                }
 
                 window.location.href = `{{ route('reports.item-sales.export') }}?${params.toString()}`;
             });
@@ -269,8 +288,9 @@
             console.log('=== LOAD SALES DATA CALLED ===');
             const startDate = $('#start_date').val();
             const endDate = $('#end_date').val();
+            const categoryId = $('#category_id').val();
 
-            console.log('Date range:', startDate, 'to', endDate);
+            console.log('Date range:', startDate, 'to', endDate, 'Category:', categoryId);
             console.log('AJAX URL:', '{{ route("reports.item-sales.filter") }}');
             console.log('CSRF Token:', '{{ csrf_token() }}');
 
@@ -280,7 +300,8 @@
                 data: {
                     _token: '{{ csrf_token() }}',
                     start_date: startDate,
-                    end_date: endDate
+                    end_date: endDate,
+                    category_id: categoryId
                 },
                 beforeSend: function () {
                     console.log('AJAX request starting...');

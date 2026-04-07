@@ -108,6 +108,13 @@ class RolesAndPermissionsSeeder extends Seeder
             'reprint-kot',
         ]);
 
+        // Manager Role
+        $manager = Role::firstOrCreate(['name' => 'manager']);
+        $manager->givePermissionTo([
+            'view-reports',
+            'export-reports',
+        ]);
+
         // Create default users
         $adminUser = User::firstOrCreate(
             ['username' => 'admin'],
@@ -160,5 +167,15 @@ class RolesAndPermissionsSeeder extends Seeder
             ]
         );
         $kitchenUser->assignRole('kitchen');
+
+        $managerUser = User::firstOrCreate(
+            ['username' => 'Manoj'],
+            [
+                'name' => 'Manager User',
+                'password' => Hash::make('manoj123'),
+                'is_active' => true,
+            ]
+        );
+        $managerUser->assignRole('manager');
     }
 }

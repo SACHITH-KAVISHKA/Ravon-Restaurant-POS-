@@ -21,7 +21,8 @@ class ItemSalesReportController extends Controller
      */
     public function index(Request $request)
     {
-        return view('reports.item-sales');
+        $categories = \App\Models\Category::all();
+        return view('reports.item-sales', compact('categories'));
     }
 
     /**
@@ -32,12 +33,14 @@ class ItemSalesReportController extends Controller
         $request->validate([
             'start_date' => 'required|date',
             'end_date' => 'required|date|after_or_equal:start_date',
+            'category_id' => 'nullable|exists:categories,id',
         ]);
 
         $fromDate = $request->start_date;
         $toDate = $request->end_date;
+        $categoryId = $request->category_id;
 
-        $salesData = $this->getSalesData($fromDate, $toDate);
+        $salesData = $this->getSalesData($fromDate, $toDate, $categoryId);
 
         return response()->json([
             'success' => true,
@@ -127,8 +130,9 @@ class ItemSalesReportController extends Controller
     {
         $fromDate = $request->get('start_date', Carbon::today()->format('Y-m-d'));
         $toDate = $request->get('end_date', Carbon::today()->format('Y-m-d'));
+        $categoryId = $request->get('category_id');
 
-        $salesData = $this->getSalesData($fromDate, $toDate);
+        $salesData = $this->getSalesData($fromDate, $toDate, $categoryId);
 
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
@@ -292,18 +296,25 @@ class ItemSalesReportController extends Controller
     /**
      * Get aggregated sales data for all items (grouped by item and portion)
      */
-    private function getSalesData($fromDate, $toDate)
+    private function getSalesData($fromDate, $toDate, $categoryId = null)
     {
         // Get items that have sales in the date range, grouped by item_id and item_modifier_id (portion)
-        $salesData = OrderItem::with(['item', 'itemModifier'])
+        $query = OrderItem::with(['item', 'itemModifier'])
             ->select('item_id', 'item_modifier_id', DB::raw('SUM(quantity) as total_quantity'))
-            ->whereHas('order', function ($query) use ($fromDate, $toDate) {
-                $query->where('status', 'completed')
+            ->whereHas('order', function ($q) use ($fromDate, $toDate) {
+                $q->where('status', 'completed')
                     ->where('is_paid', true)
                     ->whereBetween(DB::raw('DATE(completed_at)'), [$fromDate, $toDate]);
             })
-            ->where('status', '!=', 'cancelled')
-            ->groupBy('item_id', 'item_modifier_id')
+            ->where('status', '!=', 'cancelled');
+
+        if ($categoryId) {
+            $query->whereHas('item', function ($q) use ($categoryId) {
+                $q->where('category_id', $categoryId);
+            });
+        }
+
+        $salesData = $query->groupBy('item_id', 'item_modifier_id')
             ->get()
             ->map(function ($orderItem) {
                 $item = $orderItem->item;

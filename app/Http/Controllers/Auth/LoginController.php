@@ -34,6 +34,10 @@ class LoginController extends Controller
 
         if (Auth::attempt($credentials, $remember)) {
             $request->session()->regenerate();
+            
+            // Store primary role in session for frontend usage if needed
+            $role = Auth::user()->roles->first()->name ?? null;
+            $request->session()->put('role', $role);
 
             return redirect()->intended(route('dashboard'));
         }
