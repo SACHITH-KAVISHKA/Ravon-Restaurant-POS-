@@ -37,12 +37,10 @@ class UserController extends Controller
             'role' => ['required', 'string', 'in:admin,cashier,supervisor,manager,superadmin'],
         ]);
 
-        // Check if supervisor role exists, if not create it
-        if ($request->role === 'supervisor') {
-            $supervisorRole = Role::where('name', 'supervisor')->first();
-            if (!$supervisorRole) {
-                $supervisorRole = Role::create(['name' => 'supervisor', 'guard_name' => 'web']);
-            }
+        // Check if role exists, if not create it
+        $roleExists = Role::where('name', $request->role)->first();
+        if (!$roleExists) {
+            Role::create(['name' => $request->role, 'guard_name' => 'web']);
         }
 
         $user = User::create([
@@ -73,12 +71,10 @@ class UserController extends Controller
 
         $newRole = $request->role;
 
-        // Check if supervisor role exists, if not create it
-        if ($newRole === 'supervisor') {
-            $supervisorRole = Role::where('name', 'supervisor')->first();
-            if (!$supervisorRole) {
-                $supervisorRole = Role::create(['name' => 'supervisor', 'guard_name' => 'web']);
-            }
+        // Check if role exists, if not create it
+        $roleExists = Role::where('name', $newRole)->first();
+        if (!$roleExists) {
+            Role::create(['name' => $newRole, 'guard_name' => 'web']);
         }
 
         $updateData = [
