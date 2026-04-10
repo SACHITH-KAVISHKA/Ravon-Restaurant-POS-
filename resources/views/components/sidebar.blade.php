@@ -51,6 +51,7 @@
                     <span>Categories</span>
                 </a>
 
+                @role('superadmin')
                 <a href="{{ route('menu.rm-report.index') }}"
                     class="flex items-center gap-3 px-4 py-2 {{ request()->routeIs('menu.rm-report.*') ? 'bg-white/20 text-white font-medium' : 'text-white/70 hover:bg-white/10 hover:text-white' }} rounded-lg transition text-sm">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -59,12 +60,44 @@
                     </svg>
                     <span>RM Report</span>
                 </a>
+                @endrole
+            </div>
+        </div>
+        @endhasanyrole
+
+        <!-- New Details Menu for Admin -> Summary Sales Report -->
+        @hasanyrole('admin|superadmin')
+        <div x-data="{ open: {{ request()->routeIs('special-sales-report.*') ? 'true' : 'false' }} }">
+            <button @click="open = !open"
+                class="w-full flex items-center justify-between gap-3 px-4 py-3 {{ request()->routeIs('special-sales-report.*') ? 'bg-white/25 text-white border-l-4 border-white font-semibold' : 'text-white/80 hover:bg-white/15 hover:text-white' }} rounded-lg transition">
+                <div class="flex items-center gap-3">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span class="font-medium">Details</span>
+                </div>
+                <svg class="w-4 h-4 transition-transform" :class="{'rotate-180': open}" fill="none"
+                    stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+            </button>
+
+            <div x-show="open" x-collapse class="ml-4 mt-2 space-y-1">
+                <a href="{{ route('special-sales-report.index') }}"
+                    class="flex items-center gap-3 px-4 py-2 {{ request()->routeIs('special-sales-report.*') ? 'bg-white/20 text-white font-medium' : 'text-white/70 hover:bg-white/10 hover:text-white' }} rounded-lg transition text-sm">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                    </svg>
+                    <span>Sales Report</span>
+                </a>
             </div>
         </div>
         @endhasanyrole
 
         <!-- Reports (Collapsible) -->
-        @hasanyrole('superadmin|admin|manager|cashier')
+        @hasanyrole('superadmin|manager')
         <div
             x-data="{ open: {{ request()->routeIs('reports.*') || request()->routeIs('sales-report.*') || request()->routeIs('void-report.*') || request()->routeIs('wastage-report.*') || request()->routeIs('vat-report.*') || request()->routeIs('reports.rm-sales*') ? 'true' : 'false' }} }">
             <button @click="open = !open"
@@ -152,7 +185,7 @@
         @endhasanyrole
 
         <!-- Stock Adjustment (Admin Only) -->
-        @hasanyrole('admin|superadmin')
+        @hasanyrole('superadmin')
         <div x-data="{ open: {{ request()->routeIs('stock-adjustment.*') ? 'true' : 'false' }} }">
             <button @click="open = !open"
                 class="w-full flex items-center justify-between gap-3 px-4 py-3 {{ request()->routeIs('stock-adjustment.*') ? 'bg-white/25 text-white border-l-4 border-white font-semibold' : 'text-white/80 hover:bg-white/15 hover:text-white' }} rounded-lg transition">
@@ -192,7 +225,7 @@
         @endhasanyrole
 
         <!-- User Management (Admin Only) -->
-        @hasanyrole('admin|superadmin')
+        @hasanyrole('superadmin')
         <a href="{{ route('users.index') }}"
             class="flex items-center gap-3 px-4 py-3 {{ request()->routeIs('users.*') ? 'bg-white/25 text-white border-l-4 border-white font-semibold' : 'text-white/80 hover:bg-white/15 hover:text-white' }} rounded-lg transition">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -332,7 +365,7 @@
         @endrole
 
         <!-- Settings (Admin Only) -->
-        @hasanyrole('admin|superadmin')
+        @role('superadmin')
         <a href="{{ route('settings.index') }}"
             class="flex items-center gap-3 px-4 py-3 {{ request()->routeIs('settings.*') ? 'bg-white/25 text-white border-l-4 border-white font-semibold' : 'text-white/80 hover:bg-white/15 hover:text-white' }} rounded-lg transition">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

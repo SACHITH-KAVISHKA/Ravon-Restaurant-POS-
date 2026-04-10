@@ -16,6 +16,7 @@ use App\Http\Controllers\VatCustomerController;
 use App\Http\Controllers\VatReportController;
 use App\Http\Controllers\RmReportController;
 use App\Http\Controllers\RmSalesReportController;
+use App\Http\Controllers\SpecialSalesReportController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -129,6 +130,11 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/receipt/{order}', [SalesReportController::class, 'receipt'])->name('receipt');
         Route::get('/export', [SalesReportController::class, 'exportExcel'])->name('export');
         Route::delete('/order/{order}', [SalesReportController::class, 'softDelete'])->name('order.delete');
+    });
+
+    // Special Sales Report (Admin & SuperAdmin only)
+    Route::middleware(['role:admin|superadmin'])->prefix('special-sales-report')->name('special-sales-report.')->group(function () {
+        Route::get('/', [SpecialSalesReportController::class, 'index'])->name('index');
     });
 
     // Void Report (Admin, Manager & SuperAdmin only)
