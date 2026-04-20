@@ -17,27 +17,21 @@ use Illuminate\Support\Facades\DB;
 class StockTransferController extends Controller
 {
     /**
-     * Apply the shared date and time range filters to a transfer query.
+     * Apply the shared date range filters to a transfer query.
      */
     private function applyTransferRangeFilters(Builder $query, Request $request): Builder
     {
         $fromDate = $request->input('from_date');
-        $fromTime = $request->input('from_time');
         $toDate = $request->input('to_date');
-        $toTime = $request->input('to_time');
 
         if ($fromDate) {
-            $fromDateTime = $fromTime
-                ? Carbon::parse($fromDate . ' ' . $fromTime)
-                : Carbon::parse($fromDate)->startOfDay();
+            $fromDateTime = Carbon::parse($fromDate)->startOfDay();
 
             $query->whereRaw('COALESCE(responded_at, created_at) >= ?', [$fromDateTime->toDateTimeString()]);
         }
 
         if ($toDate) {
-            $toDateTime = $toTime
-                ? Carbon::parse($toDate . ' ' . $toTime)
-                : Carbon::parse($toDate)->endOfDay();
+            $toDateTime = Carbon::parse($toDate)->endOfDay();
 
             $query->whereRaw('COALESCE(responded_at, created_at) <= ?', [$toDateTime->toDateTimeString()]);
         }

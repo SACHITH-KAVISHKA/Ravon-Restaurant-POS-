@@ -100,22 +100,14 @@
         </div>
 
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-6">
-            <form method="GET" action="{{ route('stock-transfer.cashier.index') }}" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4 items-end">
+            <form method="GET" action="{{ route('stock-transfer.cashier.index') }}" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 items-end">
                 <div>
                     <label for="from_date" class="block text-sm font-semibold text-gray-600 mb-1">From Date</label>
                     <input type="date" id="from_date" name="from_date" value="{{ request('from_date') }}" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm">
                 </div>
                 <div>
-                    <label for="from_time" class="block text-sm font-semibold text-gray-600 mb-1">From Time</label>
-                    <input type="time" id="from_time" name="from_time" value="{{ request('from_time') }}" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm">
-                </div>
-                <div>
                     <label for="to_date" class="block text-sm font-semibold text-gray-600 mb-1">To Date</label>
                     <input type="date" id="to_date" name="to_date" value="{{ request('to_date') }}" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm">
-                </div>
-                <div>
-                    <label for="to_time" class="block text-sm font-semibold text-gray-600 mb-1">To Time</label>
-                    <input type="time" id="to_time" name="to_time" value="{{ request('to_time') }}" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm">
                 </div>
                 <div class="flex gap-3">
                     <button type="submit" class="flex-1 px-5 py-2.5 bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white rounded-lg font-semibold hover:shadow-lg transition">

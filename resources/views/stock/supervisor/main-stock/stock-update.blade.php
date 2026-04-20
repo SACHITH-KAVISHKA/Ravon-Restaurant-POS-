@@ -221,9 +221,9 @@
                 </a>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="grid grid-cols-1 gap-6">
                 <!-- Stock Update Form -->
-                <div class="lg:col-span-2">
+                <div>
                     <div class="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
                         <!-- Form Header -->
                         <div class="px-6 py-4 bg-gradient-to-r from-[#667eea] to-[#764ba2]">
@@ -333,54 +333,6 @@
                     </div>
                 </div>
 
-                <!-- Quick Stock View -->
-                <div class="lg:col-span-1">
-                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden sticky top-6">
-                        <div class="p-4 border-b border-gray-100 bg-gradient-to-r from-purple-50 to-indigo-50">
-                            <h3 class="font-semibold text-gray-800">Low Stock Items</h3>
-                            <p class="text-xs text-gray-500">Items below minimum level</p>
-                        </div>
-                        <div class="max-h-96 overflow-y-auto divide-y divide-gray-100">
-                            @php
-                                $lowStockItems = $items->filter(fn($item) => $item->isLowStock());
-                            @endphp
-                            @forelse($lowStockItems as $item)
-                                <div class="p-3 hover:bg-gray-50 cursor-pointer item-quick-select"
-                                    data-item-id="{{ $item->id }}">
-                                    <div class="flex justify-between items-start">
-                                        <div>
-                                            <p class="font-medium text-sm text-gray-800">{{ $item->item_name }}</p>
-                                            <p class="text-xs text-gray-500">{{ $item->item_code }}</p>
-                                        </div>
-                                        <div class="text-right">
-                                            <p class="font-semibold text-red-600">{{ number_format($item->quantity, 2) }}</p>
-                                            <p class="text-xs text-gray-500">{{ $item->unit_abbreviation }}</p>
-                                        </div>
-                                    </div>
-                                    <div class="mt-2">
-                                        <div class="w-full bg-gray-200 rounded-full h-1.5">
-                                            @php
-                                                $percentage = $item->min_quantity > 0 ? min(100, ($item->quantity / $item->min_quantity) * 100) : 0;
-                                            @endphp
-                                            <div class="bg-red-500 h-1.5 rounded-full" style="width: {{ $percentage }}%"></div>
-                                        </div>
-                                        <p class="text-xs text-gray-500 mt-1">Min: {{ number_format($item->min_quantity, 2) }}
-                                            {{ $item->unit_abbreviation }}</p>
-                                    </div>
-                                </div>
-                            @empty
-                                <div class="p-6 text-center">
-                                    <svg class="w-12 h-12 mx-auto text-green-300" fill="none" stroke="currentColor"
-                                        viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                    <p class="mt-2 text-sm text-gray-500">All items have sufficient stock</p>
-                                </div>
-                            @endforelse
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
     </div>
@@ -734,38 +686,6 @@
                 document.getElementById('notes').value = '';
                 rowIndex = 1;
                 updateAllDropdowns();
-            });
-
-            // Quick select from low stock items
-            document.querySelectorAll('.item-quick-select').forEach(el => {
-                el.addEventListener('click', function() {
-                    const itemId = this.dataset.itemId;
-                    const item = itemsData.find(i => i.id == itemId);
-                    
-                    if (!item) return;
-
-                    // Find first empty dropdown or add new row
-                    let targetDropdown = null;
-                    document.querySelectorAll('.searchable-dropdown').forEach(dropdown => {
-                        if (!dropdown.querySelector('.item-value').value && !targetDropdown) {
-                            targetDropdown = dropdown;
-                        }
-                    });
-
-                    if (!targetDropdown) {
-                        addNewRow();
-                        targetDropdown = tableBody.lastElementChild.querySelector('.searchable-dropdown');
-                    }
-
-                    // Set the value
-                    targetDropdown.querySelector('.item-value').value = item.id;
-                    targetDropdown.querySelector('.search-input').value = `${item.code} - ${item.name}`;
-                    targetDropdown.classList.add('has-value');
-                    updateAllDropdowns();
-                    
-                    // Focus on quantity input
-                    targetDropdown.closest('.item-row').querySelector('.qty-input').focus();
-                });
             });
 
             // Form submission

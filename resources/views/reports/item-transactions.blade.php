@@ -33,70 +33,11 @@
         padding: 10px 18px;
         color: #ffffff;
         font-weight: 600;
-        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-        transition: all 0.2s ease;
-    }
-
-    .tx-btn:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 10px 20px rgba(79, 70, 229, 0.25);
-    }
-
-    .tx-table {
-        width: 100%;
-        border-collapse: separate;
-        border-spacing: 0;
-    }
-
-    .tx-table th {
-        background: linear-gradient(135deg, #5b7ce0 0%, #6476df 100%);
-        color: #ffffff;
-        font-weight: 700;
-        padding: 12px 10px;
-        text-align: left;
-        font-size: 14px;
-    }
-
-    .tx-table td {
-        padding: 12px 10px;
-        border-bottom: 1px solid #e5e7eb;
-        font-size: 15px;
-        color: #111827;
-    }
-
-    .tx-table tbody tr:hover {
-        background: #f8fafc;
-    }
-
-    .qty-plus {
-        color: #059669;
-        font-weight: 700;
-    }
-
-    .qty-minus {
-        color: #dc2626;
-        font-weight: 700;
-    }
-
-    .qty-zero {
-        color: #6b7280;
-        font-weight: 700;
-    }
-
-    .row-opening {
-        background: #e5e7eb;
-        font-weight: 700;
-    }
-
-    .type-pill {
-        display: inline-flex;
-        align-items: center;
-        border-radius: 999px;
-        padding: 2px 10px;
-        font-size: 12px;
-        font-weight: 700;
-    }
-
+            .table-responsive {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            <div class="bg-white border border-gray-200 rounded-xl shadow-md p-6 mb-6">
+            <form id="transactionFilterForm" class="grid grid-cols-1 lg:grid-cols-5 gap-4">
     .type-sale_deduct { background: #fee2e2; color: #991b1b; }
     .type-sale_restore { background: #dbeafe; color: #1e40af; }
     .type-transfer_in { background: #dcfce7; color: #166534; }
@@ -107,24 +48,22 @@
 @endpush
 
 @section('content')
-<div class="flex min-h-screen bg-gray-100">
+<div class="flex h-screen overflow-hidden">
     <x-sidebar />
 
-    <div class="flex-1 p-6">
-        <div class="mb-6">
-            <h1 class="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-violet-600">
-                Item Transaction Details
-            </h1>
-            <p class="text-gray-600 mt-1">Track opening balance, transfers, sales, and all stock movements by item.</p>
-        </div>
+    <div class="flex-1 overflow-y-auto">
+        <div class="container mx-auto px-4 py-8">
+            <div class="mb-8">
+                <h1 class="text-3xl font-bold bg-gradient-to-r from-[#667eea] to-[#764ba2] bg-clip-text text-transparent mb-2">Item Transaction Details</h1>
+                <p class="text-gray-600">Track opening balance, transfers, sales, and all stock movements by item.</p>
+            </div>
 
-        <div class="tx-card p-5 mb-6">
-            <h2 class="text-2xl font-semibold text-gray-800 mb-4">Filter Transactions</h2>
+            <div class="bg-white border border-gray-200 rounded-xl shadow-md p-6 mb-6">
             <form id="transactionFilterForm" class="grid grid-cols-1 lg:grid-cols-5 gap-4">
                 @csrf
                 <div>
-                    <label for="branch_id" class="block text-sm font-semibold text-gray-600 mb-1">Branch</label>
-                    <select id="branch_id" name="branch_id" class="tx-input">
+                    <label for="branch_id" class="block text-sm font-medium text-gray-700 mb-2">Branch</label>
+                    <select id="branch_id" name="branch_id" class="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
                         <option value="">All Branches</option>
                         @foreach($branches as $branch)
                             <option value="{{ $branch->id }}">{{ $branch->name }}</option>
@@ -133,8 +72,8 @@
                 </div>
 
                 <div>
-                    <label for="item_id" class="block text-sm font-semibold text-gray-600 mb-1">Item</label>
-                    <select id="item_id" name="item_id" class="tx-input" required>
+                    <label for="item_id" class="block text-sm font-medium text-gray-700 mb-2">Item</label>
+                    <select id="item_id" name="item_id" class="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-purple-500" required>
                         <option value="">Select Item</option>
                         <optgroup label="Finished Goods">
                             @foreach($items->where('item_type', 'finished_good') as $item)
@@ -150,44 +89,47 @@
                 </div>
 
                 <div>
-                    <label for="from_date" class="block text-sm font-semibold text-gray-600 mb-1">From Date</label>
-                    <input id="from_date" name="from_date" type="date" class="tx-input" value="{{ now()->toDateString() }}" max="{{ now()->toDateString() }}" required>
+                    <label for="from_date" class="block text-sm font-medium text-gray-700 mb-2">From Date</label>
+                    <input id="from_date" name="from_date" type="date" class="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-purple-500" value="{{ now()->toDateString() }}" max="{{ now()->toDateString() }}" required>
                 </div>
 
                 <div>
-                    <label for="to_date" class="block text-sm font-semibold text-gray-600 mb-1">To Date</label>
-                    <input id="to_date" name="to_date" type="date" class="tx-input" value="{{ now()->toDateString() }}" max="{{ now()->toDateString() }}" required>
+                    <label for="to_date" class="block text-sm font-medium text-gray-700 mb-2">To Date</label>
+                    <input id="to_date" name="to_date" type="date" class="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-purple-500" value="{{ now()->toDateString() }}" max="{{ now()->toDateString() }}" required>
                 </div>
 
                 <div class="flex items-end">
-                    <button type="submit" class="tx-btn w-full">Generate</button>
+                    <button type="submit" class="flex-1 bg-gradient-to-r from-[#667eea] to-[#764ba2] hover:shadow-lg hover:shadow-purple-500/50 text-white font-semibold py-2 px-4 rounded-lg transition duration-200 flex items-center justify-center w-full">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                        Search
+                    </button>
                 </div>
             </form>
-        </div>
-
-        <div class="tx-card overflow-hidden">
-            <div class="px-5 py-4 border-b border-gray-200">
-                <h3 id="historyTitle" class="text-2xl font-bold text-gray-800">Transaction History</h3>
-                <p id="historySubTitle" class="text-gray-600 mt-1">Select filters and click Generate to view details.</p>
             </div>
 
-            <div class="overflow-x-auto">
-                <table class="tx-table">
-                    <thead>
-                        <tr>
-                            <th>Date and Time</th>
-                            <th>Type</th>
-                            <th>Reference</th>
-                            <th>Performed By</th>
-                            <th class="text-right">Quantity</th>
-                        </tr>
-                    </thead>
-                    <tbody id="transactionBody">
-                        <tr>
-                            <td colspan="5" class="text-center text-gray-500 py-10">Select filters and click Generate.</td>
-                        </tr>
-                    </tbody>
-                </table>
+            <div class="bg-white border border-gray-200 rounded-xl shadow-md overflow-hidden">
+                
+
+                <div class="table-responsive">
+                    <table class="w-full">
+                        <thead class="bg-gradient-to-r from-[#667eea] to-[#764ba2]">
+                            <tr>
+                                <th class="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">Date and Time</th>
+                                <th class="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">Type</th>
+                                <th class="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">Reference</th>
+                                <th class="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">Performed By</th>
+                                <th class="px-6 py-4 text-right text-xs font-semibold text-white uppercase tracking-wider">Quantity</th>
+                            </tr>
+                        </thead>
+                        <tbody id="transactionBody" class="divide-y divide-gray-200">
+                            <tr>
+                                <td colspan="5" class="text-center text-gray-500 py-10">Select filters and click Search.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
@@ -211,7 +153,12 @@
 
         transactionBody.innerHTML = `
             <tr>
-                <td colspan="5" class="text-center text-gray-500 py-10">Loading transactions...</td>
+                <td colspan="5" class="text-center py-12">
+                    <div class="flex flex-col items-center justify-center">
+                        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mb-4"></div>
+                        <p class="text-gray-600">Loading transactions...</p>
+                    </div>
+                </td>
             </tr>
         `;
 
@@ -236,7 +183,7 @@
         } catch (error) {
             transactionBody.innerHTML = `
                 <tr>
-                    <td colspan="5" class="text-center text-red-600 py-10">${escapeHtml(error.message)}</td>
+                    <td colspan="5" class="text-center py-10 text-red-600">${escapeHtml(error.message)}</td>
                 </tr>
             `;
         }
@@ -251,11 +198,11 @@
 
         let html = `
             <tr class="row-opening">
-                <td>Before ${meta.from_date}</td>
-                <td>Opening Balance</td>
-                <td class="text-center">-</td>
-                <td class="text-center">-</td>
-                <td class="text-right qty-zero">${escapeHtml(meta.opening_display)}</td>
+                <td class="px-6 py-4">Before ${meta.from_date}</td>
+                <td class="px-6 py-4">Opening Balance</td>
+                <td class="px-6 py-4 text-center">-</td>
+                <td class="px-6 py-4 text-center">-</td>
+                <td class="px-6 py-4 text-right qty-zero">${escapeHtml(meta.opening_display)}</td>
             </tr>
         `;
 
@@ -271,21 +218,21 @@
                 const typeClass = `type-${row.type_key}`;
 
                 html += `
-                    <tr>
-                        <td>${escapeHtml(row.date_time)}</td>
-                        <td><span class="type-pill ${typeClass}">${escapeHtml(row.type)}</span></td>
-                        <td>${escapeHtml(row.reference)}</td>
-                        <td>${escapeHtml(row.performed_by)}</td>
-                        <td class="text-right ${qtyClass}">${escapeHtml(row.quantity_display)}</td>
+                    <tr class="hover:bg-purple-50 transition-colors">
+                        <td class="px-6 py-4 whitespace-nowrap text-gray-700">${escapeHtml(row.date_time)}</td>
+                        <td class="px-6 py-4"><span class="type-pill ${typeClass}">${escapeHtml(row.type)}</span></td>
+                        <td class="px-6 py-4 text-gray-700">${escapeHtml(row.reference)}</td>
+                        <td class="px-6 py-4 text-gray-700">${escapeHtml(row.performed_by)}</td>
+                        <td class="px-6 py-4 text-right ${qtyClass}">${escapeHtml(row.quantity_display)}</td>
                     </tr>
                 `;
             });
         }
 
         html += `
-            <tr class="bg-gray-50 font-semibold">
-                <td colspan="4" class="text-right">Closing Balance</td>
-                <td class="text-right">${escapeHtml(meta.closing_display)}</td>
+            <tr class="bg-gray-100 font-semibold border-t border-gray-300">
+                <td colspan="4" class="px-6 py-4 text-right uppercase tracking-wider text-gray-800">Closing Balance</td>
+                <td class="px-6 py-4 text-right text-gray-900">${escapeHtml(meta.closing_display)}</td>
             </tr>
         `;
 
