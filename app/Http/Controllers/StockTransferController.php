@@ -8,12 +8,61 @@ use App\Models\MainStockItem;
 use App\Models\CashierSubStock;
 use App\Models\CashierFgStockLog;
 use App\Models\CashierRmStockLog;
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class StockTransferController extends Controller
 {
+    /**
+     * Apply the shared date and time range filters to a transfer query.
+     */
+    private function applyTransferRangeFilters(Builder $query, Request $request): Builder
+    {
+        $fromDate = $request->input('from_date');
+        $fromTime = $request->input('from_time');
+        $toDate = $request->input('to_date');
+        $toTime = $request->input('to_time');
+
+        if ($fromDate) {
+            $fromDateTime = $fromTime
+                ? Carbon::parse($fromDate . ' ' . $fromTime)
+                : Carbon::parse($fromDate)->startOfDay();
+
+            $query->whereRaw('COALESCE(responded_at, created_at) >= ?', [$fromDateTime->toDateTimeString()]);
+        }
+
+        if ($toDate) {
+            $toDateTime = $toTime
+                ? Carbon::parse($toDate . ' ' . $toTime)
+                : Carbon::parse($toDate)->endOfDay();
+
+            $query->whereRaw('COALESCE(responded_at, created_at) <= ?', [$toDateTime->toDateTimeString()]);
+        }
+
+        return $query;
+    }
+
+    /**
+     * Build a transfer query for the current supervisor/cashier view.
+     */
+    private function buildTransferQuery(Request $request, ?string $status = null, bool $scopeToSupervisor = true): Builder
+    {
+        $query = StockTransfer::with(['items', 'supervisor', 'cashier']);
+
+        if ($scopeToSupervisor) {
+            $query->bySupervisor(Auth::id());
+        }
+
+        if ($status && $status !== 'all') {
+            $query->where('status', $status);
+        }
+
+        return $this->applyTransferRangeFilters($query, $request);
+    }
+
     /**
      * Display the supervisor's stock transfer page (create transfers).
      */
@@ -25,16 +74,15 @@ class StockTransferController extends Controller
             ->get();
 
         // Get transfer history by this supervisor
-        $myTransfers = StockTransfer::with(['items', 'cashier'])
-            ->bySupervisor(Auth::id())
+        $myTransfers = $this->buildTransferQuery(request())
             ->latest()
             ->paginate(10);
 
         // Get counts for tabs
         $counts = [
-            'pending' => StockTransfer::bySupervisor(Auth::id())->pending()->count(),
-            'accepted' => StockTransfer::bySupervisor(Auth::id())->accepted()->count(),
-            'rejected' => StockTransfer::bySupervisor(Auth::id())->rejected()->count(),
+            'pending' => $this->buildTransferQuery(request(), 'pending')->count(),
+            'accepted' => $this->buildTransferQuery(request(), 'accepted')->count(),
+            'rejected' => $this->buildTransferQuery(request(), 'rejected')->count(),
         ];
 
         return view('stock.supervisor.transfers.index', compact('mainStockItems', 'myTransfers', 'counts'));
@@ -113,29 +161,29 @@ class StockTransferController extends Controller
     public function cashierIndex()
     {
         // Get pending transfers (awaiting cashier acceptance)
-        $pendingTransfers = StockTransfer::with(['items', 'supervisor'])
-            ->pending()
+        $pendingCount = $this->buildTransferQuery(request(), 'pending', false)->count();
+        $pendingTransfers = $this->buildTransferQuery(request(), 'pending', false)
             ->latest()
             ->get();
 
         // Get accepted transfers history
-        $acceptedTransfers = StockTransfer::with(['items', 'supervisor'])
-            ->accepted()
+        $acceptedCount = $this->buildTransferQuery(request(), 'accepted', false)->count();
+        $acceptedTransfers = $this->buildTransferQuery(request(), 'accepted', false)
             ->latest()
             ->limit(20)
             ->get();
 
         // Get rejected transfers history
-        $rejectedTransfers = StockTransfer::with(['items', 'supervisor'])
-            ->rejected()
+        $rejectedCount = $this->buildTransferQuery(request(), 'rejected', false)->count();
+        $rejectedTransfers = $this->buildTransferQuery(request(), 'rejected', false)
             ->latest()
             ->limit(20)
             ->get();
 
         $counts = [
-            'pending' => $pendingTransfers->count(),
-            'accepted' => $acceptedTransfers->count(),
-            'rejected' => $rejectedTransfers->count(),
+            'pending' => $pendingCount,
+            'accepted' => $acceptedCount,
+            'rejected' => $rejectedCount,
         ];
 
         return view('stock.cashier.transfers', compact('pendingTransfers', 'acceptedTransfers', 'rejectedTransfers', 'counts'));
@@ -271,15 +319,22 @@ class StockTransferController extends Controller
     public function cashierSubStock(Request $request)
     {
         $type = $request->get('type', 'raw_material'); // Default to raw_material
+        $search = trim((string) $request->get('search', ''));
 
         $subStock = CashierSubStock::with('mainStockItem')
             ->whereHas('mainStockItem', function ($q) use ($type) {
                 $q->active()->where('item_type', $type);
             })
+            ->when($search !== '', function ($query) use ($search) {
+                $query->whereHas('mainStockItem', function ($itemQuery) use ($search) {
+                    $itemQuery->where('item_name', 'like', '%' . $search . '%')
+                        ->orWhere('item_code', 'like', '%' . $search . '%');
+                });
+            })
             ->orderBy('updated_at', 'desc')
             ->get();
 
-        return view('stock.cashier.sub-stock', compact('subStock', 'type'));
+        return view('stock.cashier.sub-stock', compact('subStock', 'type', 'search'));
     }
 
     /**
@@ -315,14 +370,7 @@ class StockTransferController extends Controller
      */
     public function getTransferHistory(Request $request)
     {
-        $query = StockTransfer::with(['items', 'cashier'])
-            ->bySupervisor(Auth::id());
-
-        if ($request->filled('status') && $request->status !== 'all') {
-            $query->where('status', $request->status);
-        }
-
-        $transfers = $query->latest()->get();
+        $transfers = $this->buildTransferQuery($request, $request->input('status'))->latest()->get();
 
         return response()->json([
             'success' => true,

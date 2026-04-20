@@ -117,14 +117,25 @@ class StockRequestController extends Controller
     public function cashierStock()
     {
         // Get all restaurant stock for Finished Goods items
+        $search = trim((string) request()->get('search', ''));
         $stocks = RestaurantStock::with(['item', 'item.category', 'itemModifier'])
             ->whereHas('item', function ($query) {
                 $query->where('is_finished_goods', true);
             })
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($subQuery) use ($search) {
+                    $subQuery->whereHas('item', function ($itemQuery) use ($search) {
+                        $itemQuery->where('name', 'like', '%' . $search . '%')
+                            ->orWhere('item_code', 'like', '%' . $search . '%');
+                    })->orWhereHas('itemModifier', function ($modifierQuery) use ($search) {
+                        $modifierQuery->where('name', 'like', '%' . $search . '%');
+                    });
+                });
+            })
             ->orderBy('item_id')
             ->get();
 
-        return view('stock.cashier.stock', compact('stocks'));
+        return view('stock.cashier.stock', compact('stocks', 'search'));
     }
 
     /**

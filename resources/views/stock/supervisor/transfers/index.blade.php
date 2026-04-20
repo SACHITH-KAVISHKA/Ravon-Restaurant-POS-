@@ -88,6 +88,35 @@
             </button>
         </div>
 
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-6">
+            <form method="GET" action="{{ route('stock-transfer.supervisor.index') }}" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4 items-end">
+                <div>
+                    <label for="from_date" class="block text-sm font-semibold text-gray-600 mb-1">From Date</label>
+                    <input type="date" id="from_date" name="from_date" value="{{ request('from_date') }}" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm">
+                </div>
+                <div>
+                    <label for="from_time" class="block text-sm font-semibold text-gray-600 mb-1">From Time</label>
+                    <input type="time" id="from_time" name="from_time" value="{{ request('from_time') }}" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm">
+                </div>
+                <div>
+                    <label for="to_date" class="block text-sm font-semibold text-gray-600 mb-1">To Date</label>
+                    <input type="date" id="to_date" name="to_date" value="{{ request('to_date') }}" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm">
+                </div>
+                <div>
+                    <label for="to_time" class="block text-sm font-semibold text-gray-600 mb-1">To Time</label>
+                    <input type="time" id="to_time" name="to_time" value="{{ request('to_time') }}" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm">
+                </div>
+                <div class="flex gap-3">
+                    <button type="submit" class="flex-1 px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white rounded-lg font-semibold hover:shadow-lg transition">
+                        Search
+                    </button>
+                    <a href="{{ route('stock-transfer.supervisor.index') }}" class="px-5 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition">
+                        Clear
+                    </a>
+                </div>
+            </form>
+        </div>
+
         <!-- Tabs Card -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
             <!-- Tab Navigation -->
@@ -139,7 +168,7 @@
 </div>
 
 <!-- Create Transfer Modal -->
-<div id="createTransferModal" class="fixed inset-0 bg-black/50 modal-backdrop z-50 hidden flex items-center justify-center">
+<div id="createTransferModal" class="fixed inset-0 bg-black/50 modal-backdrop z-50 hidden items-center justify-center">
     <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-hidden flex flex-col">
         <!-- Modal Header -->
         <div class="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-emerald-600 to-emerald-700">
@@ -203,7 +232,7 @@
 </div>
 
 <!-- View Transfer Modal -->
-<div id="viewTransferModal" class="fixed inset-0 bg-black/50 modal-backdrop z-50 hidden flex items-center justify-center">
+<div id="viewTransferModal" class="fixed inset-0 bg-black/50 modal-backdrop z-50 hidden items-center justify-center">
     <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-hidden flex flex-col">
         <!-- Modal Header -->
         <div class="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-emerald-600 to-emerald-700">
@@ -250,6 +279,7 @@
 
     // Tab switching
     function switchTab(tab) {
+        localStorage.setItem('stockTransferTab', tab);
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.classList.remove('active');
             btn.classList.add('text-gray-500');
@@ -267,13 +297,30 @@
         }
     }
 
+    function getFilterParams() {
+        const params = new URLSearchParams();
+        const fromDate = document.getElementById('from_date')?.value;
+        const fromTime = document.getElementById('from_time')?.value;
+        const toDate = document.getElementById('to_date')?.value;
+        const toTime = document.getElementById('to_time')?.value;
+
+        if (fromDate) params.append('from_date', fromDate);
+        if (fromTime) params.append('from_time', fromTime);
+        if (toDate) params.append('to_date', toDate);
+        if (toTime) params.append('to_time', toTime);
+
+        return params;
+    }
+
     // Load transfers by status
     async function loadTransfersByStatus(status) {
         const container = document.getElementById(`${status}-container`);
         container.innerHTML = '<div class="text-center py-8"><div class="animate-spin w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full mx-auto"></div></div>';
 
         try {
-            const response = await fetch(`{{ route('stock-transfer.history') }}?status=${status}`);
+            const params = getFilterParams();
+            params.append('status', status);
+            const response = await fetch(`{{ route('stock-transfer.history') }}?${params.toString()}`);
             const data = await response.json();
 
             if (data.success) {
@@ -357,11 +404,15 @@
         // Add first row automatically
         addItemRow();
 
-        document.getElementById('createTransferModal').classList.remove('hidden');
+        const createModal = document.getElementById('createTransferModal');
+        createModal.classList.remove('hidden');
+        createModal.classList.add('flex');
     }
 
     function closeCreateTransferModal() {
-        document.getElementById('createTransferModal').classList.add('hidden');
+        const createModal = document.getElementById('createTransferModal');
+        createModal.classList.add('hidden');
+        createModal.classList.remove('flex');
     }
 
     // Add all items with their full quantities
@@ -662,7 +713,9 @@
             if (data.success) {
                 currentViewingTransfer = data.data;
                 renderTransferDetails(data.data);
-                document.getElementById('viewTransferModal').classList.remove('hidden');
+                const viewModal = document.getElementById('viewTransferModal');
+                viewModal.classList.remove('hidden');
+                viewModal.classList.add('flex');
             }
         } catch (error) {
             showToast('Failed to load transfer details', 'error');
@@ -728,7 +781,9 @@
     }
 
     function closeViewTransferModal() {
-        document.getElementById('viewTransferModal').classList.add('hidden');
+        const viewModal = document.getElementById('viewTransferModal');
+        viewModal.classList.add('hidden');
+        viewModal.classList.remove('flex');
         currentViewingTransfer = null;
     }
 
@@ -751,9 +806,11 @@
         }
     });
 
-    // Load pending transfers on page load (default tab)
     document.addEventListener('DOMContentLoaded', function() {
-        loadTransfersByStatus('pending');
+        const savedTab = localStorage.getItem('stockTransferTab');
+        const initialTab = savedTab && document.getElementById(`tab-${savedTab}`) ? savedTab : 'pending';
+
+        switchTab(initialTab);
     });
 </script>
 @endpush

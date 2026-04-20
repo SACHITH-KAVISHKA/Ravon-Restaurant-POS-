@@ -99,6 +99,24 @@
             </div>
         </div>
 
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-6">
+            <form method="GET" action="{{ route('stock.cashier.stock') }}" class="flex flex-col md:flex-row gap-3 md:items-end">
+                <div class="flex-1">
+                    <label for="search" class="block text-sm font-semibold text-gray-600 mb-1">Search Stock Item</label>
+                    <input type="text" id="search" name="search" value="{{ $search ?? '' }}" placeholder="Search by item name, code, or portion"
+                        class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm">
+                </div>
+                <div class="flex gap-3">
+                    <button type="submit" class="px-5 py-2.5 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg font-semibold hover:shadow-lg transition">
+                        Search
+                    </button>
+                    <a href="{{ route('stock.cashier.stock') }}" class="px-5 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition">
+                        Clear
+                    </a>
+                </div>
+            </form>
+        </div>
+
         <!-- Stock Table Card -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
             @if($stocks->isEmpty())

@@ -99,6 +99,35 @@
             @endif
         </div>
 
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-6">
+            <form method="GET" action="{{ route('stock-transfer.cashier.index') }}" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4 items-end">
+                <div>
+                    <label for="from_date" class="block text-sm font-semibold text-gray-600 mb-1">From Date</label>
+                    <input type="date" id="from_date" name="from_date" value="{{ request('from_date') }}" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm">
+                </div>
+                <div>
+                    <label for="from_time" class="block text-sm font-semibold text-gray-600 mb-1">From Time</label>
+                    <input type="time" id="from_time" name="from_time" value="{{ request('from_time') }}" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm">
+                </div>
+                <div>
+                    <label for="to_date" class="block text-sm font-semibold text-gray-600 mb-1">To Date</label>
+                    <input type="date" id="to_date" name="to_date" value="{{ request('to_date') }}" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm">
+                </div>
+                <div>
+                    <label for="to_time" class="block text-sm font-semibold text-gray-600 mb-1">To Time</label>
+                    <input type="time" id="to_time" name="to_time" value="{{ request('to_time') }}" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm">
+                </div>
+                <div class="flex gap-3">
+                    <button type="submit" class="flex-1 px-5 py-2.5 bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white rounded-lg font-semibold hover:shadow-lg transition">
+                        Search
+                    </button>
+                    <a href="{{ route('stock-transfer.cashier.index') }}" class="px-5 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition">
+                        Clear
+                    </a>
+                </div>
+            </form>
+        </div>
+
         <div class="grid grid-cols-1 gap-6">
             <!-- Pending Transfers & History -->
             <div class="space-y-6">
@@ -289,7 +318,7 @@
 </div>
 
 <!-- View/Respond Transfer Modal -->
-<div id="transferModal" class="fixed inset-0 bg-black/50 modal-backdrop z-50 hidden flex items-center justify-center">
+<div id="transferModal" class="fixed inset-0 bg-black/50 modal-backdrop z-50 hidden items-center justify-center">
     <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-hidden flex flex-col">
         <!-- Modal Header -->
         <div class="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-emerald-600 to-emerald-700">
@@ -379,6 +408,7 @@
 
     // Tab switching
     function switchTab(tab) {
+        localStorage.setItem('stockTransferTab', tab);
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.classList.remove('active');
             btn.classList.add('text-gray-500');
@@ -400,7 +430,9 @@
             if (data.success) {
                 currentTransfer = data.data;
                 renderTransferModal(data.data);
-                document.getElementById('transferModal').classList.remove('hidden');
+                const modal = document.getElementById('transferModal');
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
             }
         } catch (error) {
             showToast('Failed to load transfer details', 'error');
@@ -458,7 +490,9 @@
     }
 
     function closeTransferModal() {
-        document.getElementById('transferModal').classList.add('hidden');
+        const modal = document.getElementById('transferModal');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
         currentTransfer = null;
         document.getElementById('response-notes').value = '';
     }
@@ -518,6 +552,12 @@
                 viewTransfer(parseInt(transferId));
             }
         }
+    });
+    document.addEventListener('DOMContentLoaded', function() {
+        const savedTab = localStorage.getItem('stockTransferTab');
+        const initialTab = savedTab && document.getElementById(`tab-${savedTab}`) ? savedTab : 'pending';
+
+        switchTab(initialTab);
     });
 </script>
 @endpush
