@@ -177,6 +177,10 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/cancel-voided-order', [App\Http\Controllers\POSController::class, 'cancelVoidedOrder'])->name('cancelVoidedOrder');
         Route::post('/transfer-table', [App\Http\Controllers\POSController::class, 'transferTable'])->name('transferTable');
         Route::post('/merge-order', [App\Http\Controllers\POSController::class, 'mergeOrder'])->name('mergeOrder');
+        Route::post('/order-item/update-delivery', [App\Http\Controllers\POSController::class, 'updateOrderItemDelivery'])->name('orderItem.updateDelivery');
+        Route::post('/order-item/supervisor-override', [App\Http\Controllers\POSController::class, 'supervisorOverrideOrderItemDelivery'])->name('orderItem.supervisorOverride');
+        Route::post('/order-items/{orderItem}/deliver', [App\Http\Controllers\POSController::class, 'markOrderItemDelivered'])->name('orderItems.deliver');
+        Route::post('/order-items/{orderItem}/prepare', [App\Http\Controllers\POSController::class, 'markOrderItemPreparing'])->name('orderItems.prepare');
         Route::get('/order/{orderId}/logs', [App\Http\Controllers\POSController::class, 'getOrderLogs'])->name('orderLogs');
     });
 

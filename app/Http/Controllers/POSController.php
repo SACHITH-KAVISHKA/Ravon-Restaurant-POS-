@@ -15,6 +15,7 @@ use App\Models\CashierFgStockLog;
 use App\Models\CashierRmStockLog;
 use App\Models\ItemRecipe;
 use App\Models\ItemModifier;
+use App\Models\OrderItemDeliveryAudit;
 use App\Models\VoidRecord;
 use App\Models\OrderLog;
 use App\Services\TaxService;
@@ -165,10 +166,24 @@ class POSController extends Controller
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($order) {
-                // Count only active items (not cancelled or deleted)
-                $activeItemsCount = $order->orderItems->filter(function ($item) {
+                // Include only items that are still active for cashier actions.
+                $activeItems = $order->activeItems->filter(function ($item) {
                     return !in_array($item->status, ['cancelled', 'deleted']);
-                })->count();
+                });
+
+                $activeItemsCount = $activeItems->count();
+
+                $items = $activeItems->map(function ($item) {
+                    $isDelivered = $item->status === 'delivered';
+
+                    return [
+                        'id' => $item->id,
+                        'name' => $item->item_display_name ?? $item->item->name ?? 'Unknown Item',
+                        'quantity' => $item->quantity,
+                        // UI only needs two states for cashier flow.
+                        'status' => $isDelivered ? 'delivered' : 'preparing',
+                    ];
+                })->values();
 
                 return [
                     'id' => $order->id,
@@ -179,6 +194,7 @@ class POSController extends Controller
                     'total_amount' => $order->total_amount,
                     'created_at' => $order->created_at->format('M d, h:i A'),
                     'items_count' => $activeItemsCount,
+                    'items' => $items,
                 ];
             });
 
@@ -266,6 +282,7 @@ class POSController extends Controller
                 })->toArray();
 
                 return [
+                    'id' => $orderItem->id,
                     'item_id' => $orderItem->item_id,
                     'modifier_id' => $orderItem->item_modifier_id, // Include modifier_id for ID-based matching
                     'name' => $orderItem->item_display_name ?? $orderItem->item->name ?? 'Unknown Item',
@@ -274,7 +291,15 @@ class POSController extends Controller
                     'price' => $orderItem->unit_price,
                     'unit_price' => $orderItem->unit_price,
                     'quantity' => $orderItem->quantity,
+                    'latest_added_quantity' => $orderItem->latest_added_quantity,
+                    'delivered_quantity' => $orderItem->delivered_quantity,
                     'subtotal' => $orderItem->subtotal,
+                    'status' => $orderItem->status,
+                    'preparing_at' => $orderItem->preparing_at,
+                    'delivered_at' => $orderItem->delivered_at,
+                    'preparing_to_delivered_seconds' => (
+                        $orderItem->status === 'delivered' && $orderItem->preparing_at && $orderItem->delivered_at
+                    ) ? $orderItem->delivered_at->diffInSeconds($orderItem->preparing_at) : null,
                     'vat_available' => $orderItem->item ? $orderItem->item->vat_available : false,
                     'sscl_available' => $orderItem->item ? $orderItem->item->sscl_available : false,
                     'modifiers' => $modifiers,
@@ -509,7 +534,7 @@ class POSController extends Controller
 
                         // Handle quantity = 0 or removal
                         if ($requestedQty <= 0) {
-                            if ($matchedItem->status !== 'pending') {
+                            if (!in_array($matchedItem->status, ['pending', 'preparing'])) {
                                 $matchedItem->update([
                                     'status' => 'cancelled',
                                     'quantity' => 0,
@@ -523,10 +548,14 @@ class POSController extends Controller
 
                         if ($requestedQty != $currentQty) {
                             // Update the existing order item quantity
-                            $matchedItem->update([
+                            $quantityUpdate = $requestedQty > $currentQty
+                                ? $matchedItem->quantityIncreaseTrackingAttributes($requestedQty)
+                                : $matchedItem->quantityDecreaseTrackingAttributes($requestedQty);
+
+                            $matchedItem->update(array_merge($quantityUpdate, [
                                 'quantity' => $requestedQty,
                                 'subtotal' => $itemData['price'] * $requestedQty
-                            ]);
+                            ]));
 
                             // If increased, send only the DIFFERENCE to KOT
                             if ($requestedQty > $currentQty) {
@@ -567,7 +596,7 @@ class POSController extends Controller
                             'name' => $existingItem->item_display_name,
                             'status' => $existingItem->status,
                         ]);
-                        if ($existingItem->status !== 'pending') {
+                        if (!in_array($existingItem->status, ['pending', 'preparing'])) {
                             $existingItem->update([
                                 'status' => 'cancelled',
                                 'quantity' => 0,
@@ -598,8 +627,12 @@ class POSController extends Controller
                         'item_modifier_id' => $itemData['modifier_id'] ?? null, // Store modifier ID for stock deduction
                         'item_display_name' => $itemData['name'] ?? $item->name,
                         'quantity' => $itemData['quantity'],
+                        'latest_added_quantity' => $itemData['quantity'],
+                        'delivered_quantity' => 0,
                         'unit_price' => $itemData['price'],
                         'subtotal' => $itemData['price'] * $itemData['quantity'],
+                        'status' => 'preparing',
+                        'preparing_at' => now(),
                         'excluded_ingredients' => !empty($itemData['excluded_ingredients']) ? $itemData['excluded_ingredients'] : null,
                     ]);
                 } else {
@@ -676,8 +709,15 @@ class POSController extends Controller
                     'unit_price' => $orderItem->unit_price,
                     'price' => $orderItem->unit_price,
                     'quantity' => $orderItem->quantity,
+                    'latest_added_quantity' => $orderItem->latest_added_quantity,
+                    'delivered_quantity' => $orderItem->delivered_quantity,
                     'subtotal' => $orderItem->subtotal,
                     'status' => $orderItem->status,
+                    'preparing_at' => $orderItem->preparing_at,
+                    'delivered_at' => $orderItem->delivered_at,
+                    'preparing_to_delivered_seconds' => (
+                        $orderItem->status === 'delivered' && $orderItem->preparing_at && $orderItem->delivered_at
+                    ) ? $orderItem->delivered_at->diffInSeconds($orderItem->preparing_at) : null,
                     'modifiers' => $modifiers,
                     'item' => [
                         'name' => $orderItem->item->name ?? 'Unknown Item',
@@ -721,6 +761,292 @@ class POSController extends Controller
                 'message' => 'Error placing order: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Mark a single order item as delivered.
+     */
+    public function markOrderItemDelivered(Request $request, OrderItem $orderItem)
+    {
+        $validated = $request->validate([
+            'delivered_amount' => 'nullable|integer|min:1',
+        ]);
+
+        $orderItem->loadMissing('order');
+
+        if ($orderItem->order && ($orderItem->order->is_paid || $orderItem->order->status === 'completed')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cannot update items for a closed order.'
+            ], 422);
+        }
+
+        if (in_array($orderItem->status, ['cancelled', 'deleted'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'This item cannot be delivered.'
+            ], 422);
+        }
+
+        if ($orderItem->status === 'delivered' && (int) $orderItem->delivered_quantity >= (int) $orderItem->quantity) {
+            $durationSeconds = null;
+            if ($orderItem->preparing_at && $orderItem->delivered_at) {
+                $durationSeconds = $orderItem->delivered_at->diffInSeconds($orderItem->preparing_at);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Item already delivered.',
+                'order_item' => [
+                    'id' => $orderItem->id,
+                    'status' => 'delivered',
+                    'preparing_at' => $orderItem->preparing_at,
+                    'delivered_at' => $orderItem->delivered_at,
+                    'latest_added_quantity' => $orderItem->latest_added_quantity,
+                    'delivered_quantity' => $orderItem->delivered_quantity,
+                    'preparing_to_delivered_seconds' => $durationSeconds,
+                ],
+            ]);
+        }
+
+        $deliveredAmount = $validated['delivered_amount'] ?? max((int) $orderItem->quantity - (int) $orderItem->delivered_quantity, 0);
+        $trackingUpdate = $orderItem->deliveryTrackingAttributes($deliveredAmount);
+
+        $orderItem->update([
+            'status' => 'delivered',
+            'delivered_at' => now(),
+        ] + $trackingUpdate);
+        $orderItem->refresh();
+
+        if ((int) $orderItem->delivered_quantity < (int) $orderItem->quantity) {
+            $orderItem->update([
+                'status' => 'preparing',
+                'delivered_at' => null,
+            ]);
+            $orderItem->refresh();
+        }
+
+        $durationSeconds = null;
+        if ($orderItem->preparing_at && $orderItem->delivered_at) {
+            $durationSeconds = $orderItem->delivered_at->diffInSeconds($orderItem->preparing_at);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Item marked as delivered.',
+            'order_item' => [
+                'id' => $orderItem->id,
+                'status' => $orderItem->status,
+                'preparing_at' => $orderItem->preparing_at,
+                'delivered_at' => $orderItem->delivered_at,
+                'latest_added_quantity' => $orderItem->latest_added_quantity,
+                'delivered_quantity' => $orderItem->delivered_quantity,
+                'preparing_to_delivered_seconds' => $durationSeconds,
+            ],
+        ]);
+    }
+
+    /**
+     * Change a single order item back to preparing (supervisor authorized).
+     */
+    public function markOrderItemPreparing(Request $request, OrderItem $orderItem)
+    {
+        $validated = $request->validate([
+            'supervisor_pin' => 'required|string|size:4',
+        ]);
+
+        $supervisors = \App\Models\User::whereHas('roles', function ($query) {
+            $query->where('name', 'supervisor');
+        })
+            ->where('is_active', true)
+            ->get();
+
+        $supervisor = null;
+        foreach ($supervisors as $sup) {
+            if ($sup->dynamic_pin === $validated['supervisor_pin']) {
+                $supervisor = $sup;
+                break;
+            }
+        }
+
+        if (!$supervisor) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid supervisor PIN'
+            ], 401);
+        }
+
+        $orderItem->loadMissing('order');
+
+        if ($orderItem->order && ($orderItem->order->is_paid || $orderItem->order->status === 'completed')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cannot update items for a closed order.'
+            ], 422);
+        }
+
+        if (in_array($orderItem->status, ['cancelled', 'deleted'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'This item cannot be changed to preparing.'
+            ], 422);
+        }
+
+        if ($orderItem->status === 'preparing') {
+            return response()->json([
+                'success' => true,
+                'message' => 'Item is already preparing.',
+                'order_item' => [
+                    'id' => $orderItem->id,
+                    'status' => 'preparing',
+                    'preparing_at' => $orderItem->preparing_at,
+                    'delivered_at' => $orderItem->delivered_at,
+                    'latest_added_quantity' => $orderItem->latest_added_quantity,
+                    'delivered_quantity' => $orderItem->delivered_quantity,
+                    'preparing_to_delivered_seconds' => null,
+                ],
+            ]);
+        }
+
+        $orderItem->update([
+            'status' => 'preparing',
+            'preparing_at' => now(),
+            'delivered_at' => null,
+        ]);
+        $orderItem->refresh();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Item moved back to preparing by supervisor ' . $supervisor->name . '.',
+            'order_item' => [
+                'id' => $orderItem->id,
+                'status' => 'preparing',
+                'preparing_at' => $orderItem->preparing_at,
+                'delivered_at' => $orderItem->delivered_at,
+                'latest_added_quantity' => $orderItem->latest_added_quantity,
+                'delivered_quantity' => $orderItem->delivered_quantity,
+                'preparing_to_delivered_seconds' => null,
+            ],
+        ]);
+    }
+
+    /**
+     * Alias API for normal inline delivery updates.
+     */
+    public function updateOrderItemDelivery(Request $request)
+    {
+        $validated = $request->validate([
+            'order_item_id' => 'required|exists:order_items,id',
+            'delivered_amount' => 'nullable|integer|min:1',
+        ]);
+
+        $orderItem = OrderItem::findOrFail($validated['order_item_id']);
+
+        return $this->markOrderItemDelivered($request, $orderItem);
+    }
+
+    /**
+     * Supervisor-authorized correction for delivered quantity and delivered item reopening.
+     */
+    public function supervisorOverrideOrderItemDelivery(Request $request)
+    {
+        $validated = $request->validate([
+            'order_item_id' => 'required|exists:order_items,id',
+            'supervisor_pin' => 'required|string|size:4',
+            'delivered_quantity' => 'required|integer|min:0',
+            'action_type' => 'nullable|string|max:64',
+        ]);
+
+        $supervisor = $this->resolveSupervisorByPin($validated['supervisor_pin']);
+        if (!$supervisor) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid supervisor PIN'
+            ], 401);
+        }
+
+        $orderItem = OrderItem::with('order')->findOrFail($validated['order_item_id']);
+
+        if ($orderItem->order && ($orderItem->order->is_paid || $orderItem->order->status === 'completed')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cannot update items for a closed order.'
+            ], 422);
+        }
+
+        if (in_array($orderItem->status, ['cancelled', 'deleted'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'This item cannot be updated.'
+            ], 422);
+        }
+
+        $oldDeliveredQuantity = (int) $orderItem->delivered_quantity;
+        $newDeliveredQuantity = min((int) $validated['delivered_quantity'], (int) $orderItem->quantity);
+
+        $newStatus = $newDeliveredQuantity >= (int) $orderItem->quantity ? 'delivered' : 'preparing';
+        $newDeliveredAt = $newStatus === 'delivered' ? now() : null;
+
+        $orderItem->update([
+            'delivered_quantity' => $newDeliveredQuantity,
+            'status' => $newStatus,
+            'delivered_at' => $newDeliveredAt,
+        ]);
+        $orderItem->refresh();
+
+        OrderItemDeliveryAudit::create([
+            'order_item_id' => $orderItem->id,
+            'order_id' => $orderItem->order_id,
+            'action_type' => $validated['action_type'] ?: 'supervisor_override',
+            'old_value' => $oldDeliveredQuantity,
+            'new_value' => $newDeliveredQuantity,
+            'supervisor_id' => $supervisor->id,
+            'meta' => [
+                'status_before' => $oldDeliveredQuantity >= (int) $orderItem->quantity ? 'delivered' : 'preparing',
+                'status_after' => $orderItem->status,
+            ],
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Supervisor override applied.',
+            'order_item' => $this->orderItemDeliveryPayload($orderItem),
+        ]);
+    }
+
+    private function resolveSupervisorByPin(string $pin): ?\App\Models\User
+    {
+        $supervisors = \App\Models\User::whereHas('roles', function ($query) {
+            $query->where('name', 'supervisor');
+        })
+            ->where('is_active', true)
+            ->get();
+
+        foreach ($supervisors as $supervisor) {
+            if ($supervisor->dynamic_pin === $pin) {
+                return $supervisor;
+            }
+        }
+
+        return null;
+    }
+
+    private function orderItemDeliveryPayload(OrderItem $orderItem): array
+    {
+        $durationSeconds = null;
+        if ($orderItem->preparing_at && $orderItem->delivered_at) {
+            $durationSeconds = $orderItem->delivered_at->diffInSeconds($orderItem->preparing_at);
+        }
+
+        return [
+            'id' => $orderItem->id,
+            'status' => $orderItem->status,
+            'preparing_at' => $orderItem->preparing_at,
+            'delivered_at' => $orderItem->delivered_at,
+            'latest_added_quantity' => $orderItem->latest_added_quantity,
+            'delivered_quantity' => $orderItem->delivered_quantity,
+            'preparing_to_delivered_seconds' => $durationSeconds,
+        ];
     }
 
     /**
@@ -894,6 +1220,18 @@ class POSController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => 'This order has already been paid'
+                ], 400);
+            }
+
+            $hasUndeliveredItems = $order->orderItems()
+                ->whereNotIn('status', ['cancelled', 'deleted'])
+                ->where('status', '!=', 'delivered')
+                ->exists();
+
+            if ($hasUndeliveredItems) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cannot close order until all items are delivered'
                 ], 400);
             }
 
@@ -1345,14 +1683,18 @@ class POSController extends Controller
                     $orderItem->update([
                         'status' => 'cancelled',
                         'quantity' => 0,
-                        'subtotal' => 0
+                        'subtotal' => 0,
+                        'latest_added_quantity' => 0,
+                        'delivered_quantity' => 0,
+                        'delivered_at' => null,
                     ]);
                 } else {
                     // Reduce quantity
-                    $orderItem->update([
+                    $trackingUpdate = $orderItem->quantityDecreaseTrackingAttributes($newQty);
+                    $orderItem->update(array_merge($trackingUpdate, [
                         'quantity' => $newQty,
                         'subtotal' => $unitPrice * $newQty
-                    ]);
+                    ]));
                 }
 
                 // Create void record for audit trail
@@ -1777,16 +2119,21 @@ class POSController extends Controller
                     $newQuantity = $existingItem->quantity + $sourceItem->quantity;
                     $newSubtotal = $existingItem->unit_price * $newQuantity;
 
-                    $existingItem->update([
+                    $trackingUpdate = $existingItem->quantityIncreaseTrackingAttributes($newQuantity);
+
+                    $existingItem->update(array_merge($trackingUpdate, [
                         'quantity' => $newQuantity,
                         'subtotal' => $newSubtotal
-                    ]);
+                    ]));
 
                     // Mark source item as merged/cancelled
                     $sourceItem->update([
                         'status' => 'cancelled',
                         'quantity' => 0,
-                        'subtotal' => 0
+                        'subtotal' => 0,
+                        'latest_added_quantity' => 0,
+                        'delivered_quantity' => 0,
+                        'delivered_at' => null,
                     ]);
                 } else {
                     // Move item to target order

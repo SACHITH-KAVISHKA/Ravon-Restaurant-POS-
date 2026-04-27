@@ -1021,6 +1021,10 @@
                 let voidItemsList = []; // Items selected to void
                 let verifiedSupervisorPin = null; // Store verified PIN for void operation
                 let voidedOrderId = null; // Track order ID when all items are voided (for cancellation when starting new order)
+                let supervisorPinContext = 'void'; // 'void' | 'status-revert' | 'delivery-override'
+                let pendingStatusRevertIndex = null;
+                let pendingDeliveryOverrideIndex = null;
+                let pendingDeliveryOverrideAction = null;
 
                 // Payment Modal Variables
                 let selectedPaymentMethod = null;
@@ -1041,6 +1045,17 @@
                     if (billItems.length === 0) {
                         alert('Please add items to bill before payment');
                         console.log('❌ No items in bill - aborting');
+                        return;
+                    }
+
+                    const hasUndeliveredItems = billItems.some(item => {
+                        const status = (item?.status || '').toString().toLowerCase();
+                        return status !== 'delivered';
+                    });
+
+                    if (hasUndeliveredItems) {
+                        showNotification('Cannot close order until all items are Delivered', 'Action Not Allowed');
+                        console.log('❌ Undelivered items found - aborting close order');
                         return;
                     }
 
@@ -2197,6 +2212,11 @@
                         name: displayName,
                         price: itemPrice,
                         quantity: 1,
+                        delivered_quantity: 0,
+                        delivery_selected_quantity: 0,
+                        showDeliveryControls: false,
+                        isSupervisorMode: false,
+                        supervisorActionType: null,
                         modifiers: [],
                         excluded_ingredients: excludedIngredients || null
                     });
@@ -2206,6 +2226,83 @@
                 }
 
                 // Render bill items
+                function getDeliveryState(item) {
+                    const totalQuantity = Math.max(parseInt(item.quantity) || 0, 0);
+                    const deliveredQuantity = Math.min(Math.max(parseInt(item.delivered_quantity) || 0, 0), totalQuantity);
+                    const remainingQuantity = Math.max(totalQuantity - deliveredQuantity, 0);
+
+                    return {
+                        total_quantity: totalQuantity,
+                        delivered_quantity: deliveredQuantity,
+                        remaining_quantity: remainingQuantity,
+                        showDeliveryControls: !!item.showDeliveryControls && remainingQuantity > 0
+                    };
+                }
+
+                function normalizeDeliverySelection(item) {
+                    const deliveryState = getDeliveryState(item);
+                    const currentSelection = Math.max(parseInt(item.delivery_selected_quantity) || 0, 0);
+                    const inputMax = item.isSupervisorMode ? deliveryState.total_quantity : deliveryState.remaining_quantity;
+                    item.delivery_selected_quantity = Math.min(currentSelection, inputMax);
+                    return deliveryState;
+                }
+
+                function showBillItemDeliveryControls(index) {
+                    const item = billItems[index];
+                    if (!item || !item.id || !currentOrderId) {
+                        return;
+                    }
+
+                    const deliveryState = normalizeDeliverySelection(item);
+                    if (item.status === 'delivered' || deliveryState.remaining_quantity === 0) {
+                        item.showDeliveryControls = false;
+                        renderBill();
+                        return;
+                    }
+
+                    item.showDeliveryControls = true;
+                    item.isSupervisorMode = false;
+                    item.delivery_selected_quantity = deliveryState.remaining_quantity;
+                    renderBill();
+                }
+
+                function requestDeliverySupervisorOverride(index, actionType = 'correction') {
+                    const item = billItems[index];
+                    if (!item || !item.id || !currentOrderId) {
+                        return;
+                    }
+
+                    supervisorPinContext = 'delivery-override';
+                    pendingDeliveryOverrideIndex = index;
+                    pendingDeliveryOverrideAction = actionType;
+
+                    document.getElementById('supervisorPinInput').value = '';
+                    document.getElementById('supervisorPinError').classList.add('hidden');
+                    verifiedSupervisorPin = null;
+
+                    document.getElementById('supervisorPinModal').classList.remove('hidden');
+                    setTimeout(() => {
+                        document.getElementById('supervisorPinInput').focus();
+                    }, 100);
+                }
+
+                function enableSupervisorDeliveryMode(index, actionType) {
+                    const item = billItems[index];
+                    if (!item) {
+                        return;
+                    }
+
+                    const deliveryState = getDeliveryState(item);
+                    item.isSupervisorMode = true;
+                    item.supervisorActionType = actionType;
+                    item.showDeliveryControls = true;
+                    item.delivery_selected_quantity = deliveryState.delivered_quantity;
+                    if (actionType === 'reopen' && deliveryState.delivered_quantity > 0) {
+                        item.delivery_selected_quantity = Math.max(deliveryState.delivered_quantity - 1, 0);
+                    }
+                    renderBill();
+                }
+
                 function renderBill() {
                     const billItemsDiv = document.getElementById('billItems');
 
@@ -2222,25 +2319,78 @@
                     }
 
                     billItemsDiv.innerHTML = billItems.map((item, index) => {
-                        // Check if this item is from the original order (previously ordered) - use modifier_id for accurate matching
                         const originalItem = originalOrderItems.find(o =>
                             o.item_id === item.item_id && o.modifier_id === item.modifier_id && o.name === item.name
                         );
                         const isOriginalItem = !!originalItem;
                         const originalQty = originalItem ? originalItem.quantity : 0;
 
-                        // Determine if the minus button should be disabled
-                        // Only allow reducing if current qty is greater than original qty (newly added qty)
-                        const canDecrement = !isOriginalItem || item.quantity > originalQty;
+                        const deliveryState = normalizeDeliverySelection(item);
+                        const isFullyDelivered = item.status === 'delivered' && deliveryState.remaining_quantity === 0;
 
-                        // Disable button styling
-                        const decrementBtnClass = canDecrement ?
-                            'w-6 h-6 bg-red-600 text-white rounded hover:bg-red-700 cursor-pointer' :
-                            'w-6 h-6 bg-gray-600 text-gray-400 rounded cursor-not-allowed opacity-50';
+                        const canDecrement = !isFullyDelivered && (!isOriginalItem || item.quantity > originalQty);
+                        const canIncrement = true;
 
-                        const decrementOnclick = canDecrement ?
-                            `onclick="decrementQuantity(${index})"` :
-                            'disabled title="Use VOID to reduce previously ordered items"';
+                        const decrementBtnClass = canDecrement
+                            ? 'w-6 h-6 bg-red-600 text-white rounded hover:bg-red-700 cursor-pointer'
+                            : 'w-6 h-6 bg-gray-600 text-gray-400 rounded cursor-not-allowed opacity-50';
+
+                        const decrementDisabledReason = isFullyDelivered
+                            ? 'Fully delivered items cannot be changed'
+                            : 'Use VOID to reduce previously ordered items';
+
+                        const decrementOnclick = canDecrement
+                            ? `onclick="decrementQuantity(${index})"`
+                            : `disabled title="${decrementDisabledReason}"`;
+
+                        const incrementButtonClass = canIncrement
+                            ? 'w-6 h-6 bg-green-600 text-white rounded hover:bg-green-700 cursor-pointer'
+                            : 'w-6 h-6 bg-gray-600 text-gray-400 rounded cursor-not-allowed opacity-50';
+                        const incrementOnclick = canIncrement
+                            ? `onclick="incrementQuantity(${index})"`
+                            : 'disabled';
+
+                        const canShowDeliveryControls = !!(currentOrderId && item.id && deliveryState.remaining_quantity > 0 && item.status !== 'delivered');
+                        const canReopenDelivered = !!(currentOrderId && item.id && isFullyDelivered);
+                        const statusBadgeText = isFullyDelivered ? 'Delivered' : 'Preparing';
+                        const statusBadgeClass = isFullyDelivered
+                            ? 'bg-emerald-600/20 text-emerald-300 border border-emerald-600/40 cursor-pointer'
+                            : (canShowDeliveryControls
+                                ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/40 cursor-pointer hover:bg-yellow-500/30'
+                                : 'bg-gray-600/40 text-gray-300 border border-gray-500/50 cursor-not-allowed');
+
+                        const showInlineDelivery = item.showDeliveryControls && (canShowDeliveryControls || item.isSupervisorMode || canReopenDelivered);
+                        const deliveryInputMax = item.isSupervisorMode ? deliveryState.total_quantity : deliveryState.remaining_quantity;
+                        const deliveryInputValue = Math.min(item.delivery_selected_quantity || 0, deliveryInputMax);
+                        const canDecrementDelivery = deliveryInputValue > 0;
+                        const canIncrementDelivery = deliveryInputValue < deliveryInputMax;
+                        const isPlusDisabled = !canIncrementDelivery;
+                        const canSubmitDelivery = item.isSupervisorMode
+                            ? deliveryInputValue !== deliveryState.delivered_quantity
+                            : deliveryInputValue > 0;
+                        const deliveryButtonText = item.isSupervisorMode ? 'Update' : 'Deliver';
+                        const deliveryHelpText = item.isSupervisorMode
+                            ? `Delivered: ${deliveryInputValue} / ${deliveryState.total_quantity}`
+                            : `Remaining: ${deliveryState.remaining_quantity}`;
+
+                        const deliveryControlsHtml = showInlineDelivery ? `
+                                                                                                                                                                                                                                                        <div class="mt-2 transition-opacity duration-200 ease-in-out">
+                                                                                                                                                                                                                                                            <div class="flex items-center justify-center gap-2">
+                                                                                                                                                                                                                                                                <div class="flex items-center space-x-2">
+                                                                                                                                                                                                                                                                    <button onclick="decrementDeliveryQuantity(${index})" ${canDecrementDelivery ? '' : 'disabled'}
+                                                                                                                                                                                                                                                                        class="w-6 h-6 rounded ${canDecrementDelivery ? 'bg-red-600 text-white hover:bg-red-700 cursor-pointer' : 'bg-gray-600 text-gray-400 cursor-not-allowed opacity-50'}">-</button>
+                                                                                                                                                                                                                                                                    <span class="text-white font-semibold min-w-[1.25rem] text-center">${deliveryInputValue}</span>
+                                                                                                                                                                                                                                                                    <button onclick="handleDeliveryPlusClick(${index}, ${canIncrementDelivery ? 'true' : 'false'})" ondblclick="handleDeliveryPlusDoubleClick(${index}, ${canIncrementDelivery ? 'true' : 'false'})" title="${isPlusDisabled ? 'Double click for supervisor correction' : ''}"
+                                                                                                                                                                                                                                                                        class="w-6 h-6 rounded ${canIncrementDelivery ? 'bg-green-600 text-white hover:bg-green-700 cursor-pointer' : 'bg-gray-600 text-gray-400 cursor-not-allowed opacity-50'}">+</button>
+                                                                                                                                                                                                                                                                </div>
+                                                                                                                                                                                                                                                                <button onclick="deliverBillItem(${index})" ${canSubmitDelivery ? '' : 'disabled'}
+                                                                                                                                                                                                                                                                    class="text-xs px-2 py-1 rounded font-semibold transition ${canSubmitDelivery ? 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer' : 'bg-gray-600 text-gray-400 cursor-not-allowed'}">
+                                                                                                                                                                                                                                                                    ${deliveryButtonText}
+                                                                                                                                                                                                                                                                </button>
+                                                                                                                                                                                                                                                            </div>
+                                                                                                                                                                                                                                                            <div class="text-[11px] text-blue-200 mt-1 text-center">${deliveryHelpText}</div>
+                                                                                                                                                                                                                                                        </div>
+                                                                                                                                                                                                                                                    ` : '';
 
                         return `
                                                                                                                                                                                                                                             <div class="bg-gray-700 rounded-lg p-3 border border-gray-600 ${isOriginalItem && item.quantity <= originalQty ? 'border-l-4 border-l-orange-500' : ''}">
@@ -2248,14 +2398,21 @@
                                                                                                                                                                                                                                                     <div class="col-span-2">
                                                                                                                                                                                                                                                         <div class="font-semibold text-white">${index + 1}. ${item.name}</div>
                                                                                                                                                                                                                                                         <div class="text-xs text-gray-400">Rs. ${item.price.toFixed(2)} each</div>
+                                                                                                                                                                                                                                                        <div class="mt-1 flex items-center gap-2">
+                                                                                                                                                                                                                                                            <span ${(canShowDeliveryControls || canReopenDelivered) ? `onclick="showBillItemDeliveryControls(${index})"` : ''} ${canReopenDelivered ? `ondblclick="requestDeliverySupervisorOverride(${index}, 'reopen')" title="Double click to reopen with supervisor"` : ''}
+                                                                                                                                                                                                                                                                class="text-xs px-2 py-1 rounded-full ${statusBadgeClass} select-none">
+                                                                                                                                                                                                                                                                ${statusBadgeText}
+                                                                                                                                                                                                                                                            </span>
+                                                                                                                                                                                                                                                        </div>
                                                                                                                                                                                                                                                         ${isOriginalItem && item.quantity <= originalQty ? '<div class="text-xs text-orange-400 mt-1"></div>' : ''}
                                                                                                                                                                                                                                                     </div>
                                                                                                                                                                                                                                                     <div class="text-center">
                                                                                                                                                                                                                                                         <div class="flex items-center justify-center space-x-2">
                                                                                                                                                                                                                                                             <button ${decrementOnclick} class="${decrementBtnClass}">-</button>
                                                                                                                                                                                                                                                             <span class="text-white font-semibold">${item.quantity}</span>
-                                                                                                                                                                                                                                                            <button onclick="incrementQuantity(${index})" class="w-6 h-6 bg-green-600 text-white rounded hover:bg-green-700">+</button>
+                                                                                                                                                                                                                                                            <button ${incrementOnclick} class="${incrementButtonClass}">+</button>
                                                                                                                                                                                                                                                         </div>
+                                                                                                                                                                                                                                                        ${deliveryControlsHtml}
                                                                                                                                                                                                                                                     </div>
                                                                                                                                                                                                                                                 </div>
                                                                                                                                                                                                                                                 <div class="text-right mt-2 text-white font-semibold">
@@ -2276,23 +2433,19 @@
                 function decrementQuantity(index) {
                     const item = billItems[index];
 
-                    // Check if this item is from the original order (use modifier_id for accurate matching)
                     const originalItem = originalOrderItems.find(o =>
                         o.item_id === item.item_id && o.modifier_id === item.modifier_id && o.name === item.name
                     );
 
                     if (originalItem) {
-                        // This is a previously ordered item - only allow decrementing additional qty
                         if (item.quantity > originalItem.quantity) {
                             item.quantity--;
                             renderBill();
                             calculateTotals();
                         } else {
-                            // Cannot decrement - must use VOID
                             showNotification('Use the VOID button to reduce previously ordered items', 'Cannot Reduce');
                         }
                     } else {
-                        // This is a newly added item - allow normal decrement/removal
                         if (item.quantity > 1) {
                             item.quantity--;
                         } else {
@@ -2301,6 +2454,56 @@
                         renderBill();
                         calculateTotals();
                     }
+                }
+
+                function incrementDeliveryQuantity(index) {
+                    const item = billItems[index];
+                    if (!item) {
+                        return;
+                    }
+
+                    const deliveryState = normalizeDeliverySelection(item);
+                    const deliveryInputMax = item.isSupervisorMode ? deliveryState.total_quantity : deliveryState.remaining_quantity;
+                    if (deliveryInputMax === 0) {
+                        item.delivery_selected_quantity = 0;
+                        renderBill();
+                        return;
+                    }
+
+                    item.delivery_selected_quantity = Math.min((item.delivery_selected_quantity || 0) + 1, deliveryInputMax);
+                    renderBill();
+                }
+
+                function handleDeliveryPlusClick(index, canIncrementDelivery) {
+                    if (!canIncrementDelivery) {
+                        return;
+                    }
+
+                    incrementDeliveryQuantity(index);
+                }
+
+                function handleDeliveryPlusDoubleClick(index, canIncrementDelivery) {
+                    if (canIncrementDelivery) {
+                        return;
+                    }
+
+                    const item = billItems[index];
+                    if (!item || !item.id || item.isSupervisorMode) {
+                        return;
+                    }
+
+                    requestDeliverySupervisorOverride(index, 'correction');
+                }
+
+                function decrementDeliveryQuantity(index) {
+                    const item = billItems[index];
+                    if (!item) {
+                        return;
+                    }
+
+                    normalizeDeliverySelection(item);
+                    item.delivery_selected_quantity = Math.max((item.delivery_selected_quantity || 0) - 1, 0);
+                    renderBill();
                 }
 
                 // Calculate totals
@@ -2506,6 +2709,11 @@
                         name: displayName,
                         price: portionPrice,
                         quantity: 1,
+                        delivered_quantity: 0,
+                        delivery_selected_quantity: 0,
+                        showDeliveryControls: false,
+                        isSupervisorMode: false,
+                        supervisorActionType: null,
                         modifiers: [],
                         excluded_ingredients: excludedIngredients || null
                     });
@@ -3029,14 +3237,34 @@
                                 if (mergedItems[key]) {
                                     // Duplicate found - merge quantities
                                     mergedItems[key].quantity += parseInt(item.quantity);
+                                    mergedItems[key].delivered_quantity += parseInt(item.delivered_quantity || 0);
+                                    if ((mergedItems[key].status || 'preparing') !== 'delivered' || item.status !== 'delivered') {
+                                        mergedItems[key].status = 'preparing';
+                                        mergedItems[key].delivered_at = null;
+                                        mergedItems[key].preparing_to_delivered_seconds = null;
+                                    }
+
+                                    if (!mergedItems[key].preparing_at && item.preparing_at) {
+                                        mergedItems[key].preparing_at = item.preparing_at;
+                                    }
                                 } else {
                                     // New item - include modifier_id for ID-based stock matching
                                     mergedItems[key] = {
+                                        id: item.id || null,
                                         item_id: item.item_id,
                                         modifier_id: (item.modifier_id !== null && item.modifier_id !== undefined) ? item.modifier_id : null,
                                         name: item.name,
                                         price: parseFloat(item.price),
                                         quantity: parseInt(item.quantity),
+                                        status: item.status || 'preparing',
+                                        delivered_quantity: parseInt(item.delivered_quantity || 0),
+                                        delivery_selected_quantity: 0,
+                                        showDeliveryControls: false,
+                                        isSupervisorMode: false,
+                                        supervisorActionType: null,
+                                        preparing_at: item.preparing_at || null,
+                                        delivered_at: item.delivered_at || null,
+                                        preparing_to_delivered_seconds: item.preparing_to_delivered_seconds ?? null,
                                         modifiers: item.modifiers || []
                                     };
                                 }
@@ -3080,6 +3308,187 @@
                         }
                     } catch (error) {
                         showNotification('Error loading order: ' + error.message, 'Error');
+                    }
+                }
+
+                async function deliverBillItem(index) {
+                    const item = billItems[index];
+                    if (!item || !item.id) {
+                        showNotification('Only saved order items can be delivered', 'Action Not Allowed');
+                        return;
+                    }
+
+                    if (item.isSupervisorMode) {
+                        await applySupervisorDeliveryOverride(index);
+                        return;
+                    }
+
+                    const deliveryState = normalizeDeliverySelection(item);
+                    if (deliveryState.remaining_quantity === 0 || item.status === 'delivered') {
+                        return;
+                    }
+
+                    const selectedDeliveryQty = Math.min(
+                        Math.max(parseInt(item.delivery_selected_quantity) || 0, 0),
+                        deliveryState.remaining_quantity
+                    );
+
+                    if (selectedDeliveryQty <= 0) {
+                        showNotification('Select at least 1 item to deliver', 'Delivery Quantity Required');
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch(`{{ url('/pos/order-item/update-delivery') }}`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                            },
+                            body: JSON.stringify({
+                                order_item_id: item.id,
+                                delivered_amount: selectedDeliveryQty
+                            })
+                        });
+
+                        const result = await response.json();
+                        if (!response.ok || !result.success) {
+                            throw new Error(result.message || 'Failed to update item status');
+                        }
+
+                        billItems[index].status = result.order_item?.status || billItems[index].status;
+                        if (result.order_item) {
+                            billItems[index].delivered_quantity = parseInt(result.order_item.delivered_quantity || billItems[index].delivered_quantity || 0);
+                            billItems[index].preparing_at = result.order_item.preparing_at || billItems[index].preparing_at || null;
+                            billItems[index].delivered_at = result.order_item.delivered_at || null;
+                            billItems[index].preparing_to_delivered_seconds = result.order_item.preparing_to_delivered_seconds ?? null;
+                        }
+
+                        const updatedState = normalizeDeliverySelection(billItems[index]);
+                        billItems[index].isSupervisorMode = false;
+                        billItems[index].supervisorActionType = null;
+                        billItems[index].showDeliveryControls = updatedState.remaining_quantity > 0;
+                        billItems[index].delivery_selected_quantity = updatedState.remaining_quantity;
+
+                        renderBill();
+                        showNotification(`${selectedDeliveryQty} item${selectedDeliveryQty > 1 ? 's' : ''} delivered successfully`, 'Success');
+                    } catch (error) {
+                        showNotification(error.message || 'Failed to deliver item', 'Error');
+                    }
+                }
+
+                async function applySupervisorDeliveryOverride(index) {
+                    const item = billItems[index];
+                    if (!item || !item.id) {
+                        return;
+                    }
+
+                    if (!verifiedSupervisorPin) {
+                        showNotification('Supervisor authorization required', 'Authorization Required');
+                        return;
+                    }
+
+                    const deliveryState = getDeliveryState(item);
+                    const correctedDeliveredQuantity = Math.min(
+                        Math.max(parseInt(item.delivery_selected_quantity) || 0, 0),
+                        deliveryState.total_quantity
+                    );
+
+                    try {
+                        const response = await fetch(`{{ url('/pos/order-item/supervisor-override') }}`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                            },
+                            body: JSON.stringify({
+                                order_item_id: item.id,
+                                supervisor_pin: verifiedSupervisorPin,
+                                delivered_quantity: correctedDeliveredQuantity,
+                                action_type: item.supervisorActionType || 'supervisor_override'
+                            })
+                        });
+
+                        const result = await response.json();
+                        if (!response.ok || !result.success) {
+                            throw new Error(result.message || 'Failed to apply supervisor override');
+                        }
+
+                        billItems[index].status = result.order_item?.status || billItems[index].status;
+                        if (result.order_item) {
+                            billItems[index].delivered_quantity = parseInt(result.order_item.delivered_quantity || billItems[index].delivered_quantity || 0);
+                            billItems[index].preparing_at = result.order_item.preparing_at || billItems[index].preparing_at || null;
+                            billItems[index].delivered_at = result.order_item.delivered_at || null;
+                            billItems[index].preparing_to_delivered_seconds = result.order_item.preparing_to_delivered_seconds ?? null;
+                        }
+
+                        const updatedState = normalizeDeliverySelection(billItems[index]);
+                        billItems[index].isSupervisorMode = false;
+                        billItems[index].supervisorActionType = null;
+                        billItems[index].showDeliveryControls = updatedState.remaining_quantity > 0;
+                        billItems[index].delivery_selected_quantity = updatedState.remaining_quantity;
+
+                        renderBill();
+                        showNotification('Supervisor override applied', 'Success');
+                    } catch (error) {
+                        showNotification(error.message || 'Failed to apply supervisor override', 'Error');
+                    }
+                }
+
+                function requestPrepareStatusChange(index) {
+                    const item = billItems[index];
+                    if (!item || !item.id || item.status !== 'delivered') {
+                        return;
+                    }
+
+                    supervisorPinContext = 'status-revert';
+                    pendingStatusRevertIndex = index;
+
+                    document.getElementById('supervisorPinInput').value = '';
+                    document.getElementById('supervisorPinError').classList.add('hidden');
+                    verifiedSupervisorPin = null;
+
+                    document.getElementById('supervisorPinModal').classList.remove('hidden');
+                    setTimeout(() => {
+                        document.getElementById('supervisorPinInput').focus();
+                    }, 100);
+                }
+
+                async function revertBillItemToPreparing(index, pin) {
+                    const item = billItems[index];
+                    if (!item || !item.id) {
+                        showNotification('Invalid item selected', 'Error');
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch(`{{ url('/pos/order-items') }}/${item.id}/prepare`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                            },
+                            body: JSON.stringify({
+                                supervisor_pin: pin
+                            })
+                        });
+
+                        const result = await response.json();
+                        if (!response.ok || !result.success) {
+                            throw new Error(result.message || 'Failed to update item status');
+                        }
+
+                        billItems[index].status = 'preparing';
+                        billItems[index].preparing_at = result.order_item?.preparing_at || null;
+                        billItems[index].delivered_at = null;
+                        billItems[index].preparing_to_delivered_seconds = null;
+                        renderBill();
+                        showNotification(result.message || 'Item moved to preparing', 'Success');
+                    } catch (error) {
+                        showNotification(error.message || 'Failed to update item status', 'Error');
                     }
                 }
 
@@ -3215,6 +3624,16 @@
                     const paymentMethod = document.getElementById('closeOrderPaymentMethod').value;
                     const amountPaid = parseFloat(document.getElementById('closeOrderAmountPaid').value) || 0;
                     const total = parseFloat(document.getElementById('total').textContent);
+
+                    const hasUndeliveredItems = billItems.some(item => {
+                        const status = (item?.status || '').toString().toLowerCase();
+                        return status !== 'delivered';
+                    });
+
+                    if (hasUndeliveredItems) {
+                        showNotification('Cannot close order until all items are Delivered', 'Action Not Allowed');
+                        return;
+                    }
 
                     if (amountPaid < total) {
                         showNotification('Amount paid is less than total amount', 'Payment Error');
@@ -3580,6 +3999,10 @@
                     document.getElementById('supervisorPinInput').value = '';
                     document.getElementById('supervisorPinError').classList.add('hidden');
                     verifiedSupervisorPin = null;
+                    supervisorPinContext = 'void';
+                    pendingStatusRevertIndex = null;
+                    pendingDeliveryOverrideIndex = null;
+                    pendingDeliveryOverrideAction = null;
 
                     // Show PIN modal
                     document.getElementById('supervisorPinModal').classList.remove('hidden');
@@ -3617,8 +4040,24 @@
                         if (result.success) {
                             verifiedSupervisorPin = pin;
                             closeModal('supervisorPinModal');
-                            openVoidItemsModal();
-                            showNotification('PIN verified. Welcome, ' + result.supervisor_name, 'Authorization Success');
+
+                            if (supervisorPinContext === 'status-revert' && pendingStatusRevertIndex !== null) {
+                                const targetIndex = pendingStatusRevertIndex;
+                                pendingStatusRevertIndex = null;
+                                supervisorPinContext = 'void';
+                                await revertBillItemToPreparing(targetIndex, pin);
+                            } else if (supervisorPinContext === 'delivery-override' && pendingDeliveryOverrideIndex !== null) {
+                                const targetIndex = pendingDeliveryOverrideIndex;
+                                const overrideAction = pendingDeliveryOverrideAction || 'correction';
+                                pendingDeliveryOverrideIndex = null;
+                                pendingDeliveryOverrideAction = null;
+                                supervisorPinContext = 'void';
+                                enableSupervisorDeliveryMode(targetIndex, overrideAction);
+                                showNotification('Supervisor authorization applied', 'Authorization Success');
+                            } else {
+                                openVoidItemsModal();
+                                showNotification('PIN verified. Welcome, ' + result.supervisor_name, 'Authorization Success');
+                            }
                         } else {
                             document.getElementById('supervisorPinError').textContent = result.message || 'Invalid PIN. Please try again.';
                             document.getElementById('supervisorPinError').classList.remove('hidden');

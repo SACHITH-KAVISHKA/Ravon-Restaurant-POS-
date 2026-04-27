@@ -17,18 +17,26 @@ class OrderItem extends Model
         'item_modifier_id',
         'item_display_name',
         'quantity',
+        'latest_added_quantity',
+        'delivered_quantity',
         'unit_price',
         'subtotal',
         'status',
+        'preparing_at',
+        'delivered_at',
         'special_instructions',
         'excluded_ingredients',
     ];
 
     protected $casts = [
         'quantity' => 'integer',
+        'latest_added_quantity' => 'integer',
+        'delivered_quantity' => 'integer',
         'item_modifier_id' => 'integer',
         'unit_price' => 'decimal:2',
         'subtotal' => 'decimal:2',
+        'preparing_at' => 'datetime',
+        'delivered_at' => 'datetime',
         'excluded_ingredients' => 'array',
     ];
 
@@ -43,6 +51,80 @@ class OrderItem extends Model
             $modifiersTotal = $orderItem->modifiers->sum('price_adjustment');
             $orderItem->subtotal = ($orderItem->unit_price + $modifiersTotal) * $orderItem->quantity;
         });
+    }
+
+    /**
+     * Build tracking attributes for a newly created order item.
+     */
+    public function initialTrackingAttributes(): array
+    {
+        return [
+            'latest_added_quantity' => (int) $this->quantity,
+            'delivered_quantity' => 0,
+            'preparing_at' => now(),
+            'delivered_at' => null,
+        ];
+    }
+
+    /**
+     * Build tracking attributes after a quantity increase.
+     */
+    public function quantityIncreaseTrackingAttributes(int $newQuantity): array
+    {
+        $currentQuantity = (int) $this->quantity;
+        $addedQuantity = max($newQuantity - $currentQuantity, 0);
+        $deliveredQuantity = min((int) $this->delivered_quantity, $newQuantity);
+
+        $attributes = [
+            'latest_added_quantity' => $addedQuantity,
+            'delivered_quantity' => $deliveredQuantity,
+        ];
+
+        if ($addedQuantity > 0) {
+            $attributes['preparing_at'] = now();
+            $attributes['delivered_at'] = null;
+        }
+
+        if ($deliveredQuantity >= $newQuantity && $newQuantity > 0) {
+            $attributes['delivered_at'] = $this->delivered_at ?? now();
+        }
+
+        return $attributes;
+    }
+
+    /**
+     * Build tracking attributes after a quantity decrease.
+     */
+    public function quantityDecreaseTrackingAttributes(int $newQuantity): array
+    {
+        $deliveredQuantity = min((int) $this->delivered_quantity, $newQuantity);
+
+        return [
+            'latest_added_quantity' => 0,
+            'delivered_quantity' => $deliveredQuantity,
+            'delivered_at' => $deliveredQuantity >= $newQuantity && $newQuantity > 0 ? ($this->delivered_at ?? now()) : null,
+        ];
+    }
+
+    /**
+     * Build tracking attributes for a partial or full delivery.
+     */
+    public function deliveryTrackingAttributes(int $deliveredAmount): array
+    {
+        $remainingQuantity = max((int) $this->quantity - (int) $this->delivered_quantity, 0);
+        $deliveredAmount = min(max($deliveredAmount, 0), $remainingQuantity);
+        $deliveredQuantity = (int) $this->delivered_quantity + $deliveredAmount;
+
+        $attributes = [
+            'delivered_quantity' => $deliveredQuantity,
+        ];
+
+        if ($deliveredQuantity >= (int) $this->quantity && (int) $this->quantity > 0) {
+            $attributes['delivered_quantity'] = (int) $this->quantity;
+            $attributes['delivered_at'] = now();
+        }
+
+        return $attributes;
     }
 
     /**

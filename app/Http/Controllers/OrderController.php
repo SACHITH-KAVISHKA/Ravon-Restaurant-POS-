@@ -58,8 +58,12 @@ class OrderController extends Controller
                     'order_id' => $order->id,
                     'item_id' => $item->id,
                     'quantity' => $itemData['quantity'],
+                    'latest_added_quantity' => $itemData['quantity'],
+                    'delivered_quantity' => 0,
                     'unit_price' => $item->price,
                     'subtotal' => $subtotal,
+                    'status' => 'preparing',
+                    'preparing_at' => now(),
                     'special_instructions' => $itemData['special_instructions'] ?? null,
                 ]);
 
@@ -108,10 +112,14 @@ class OrderController extends Controller
                 ->where('id', $validated['item_id'])
                 ->firstOrFail();
 
-            $orderItem->update([
+            $trackingUpdate = $validated['quantity'] > $orderItem->quantity
+                ? $orderItem->quantityIncreaseTrackingAttributes($validated['quantity'])
+                : $orderItem->quantityDecreaseTrackingAttributes($validated['quantity']);
+
+            $orderItem->update(array_merge($trackingUpdate, [
                 'quantity' => $validated['quantity'],
                 'subtotal' => $orderItem->unit_price * $validated['quantity'],
-            ]);
+            ]));
 
             $this->recalculateOrderTotals($order);
 
