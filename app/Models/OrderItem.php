@@ -24,6 +24,7 @@ class OrderItem extends Model
         'status',
         'preparing_at',
         'delivered_at',
+        'last_delivered_at',
         'special_instructions',
         'excluded_ingredients',
     ];
@@ -37,6 +38,7 @@ class OrderItem extends Model
         'subtotal' => 'decimal:2',
         'preparing_at' => 'datetime',
         'delivered_at' => 'datetime',
+        'last_delivered_at' => 'datetime',
         'excluded_ingredients' => 'array',
     ];
 
@@ -50,6 +52,45 @@ class OrderItem extends Model
         static::saving(function ($orderItem) {
             $modifiersTotal = $orderItem->modifiers->sum('price_adjustment');
             $orderItem->subtotal = ($orderItem->unit_price + $modifiersTotal) * $orderItem->quantity;
+
+            $quantity = max((int) $orderItem->quantity, 0);
+            $deliveredQuantity = max((int) $orderItem->delivered_quantity, 0);
+            $originalQuantity = max((int) $orderItem->getOriginal('quantity'), 0);
+            $originalDeliveredQuantity = max((int) $orderItem->getOriginal('delivered_quantity'), 0);
+            $originalDeliveredAt = $orderItem->getOriginal('delivered_at');
+            $originalLastDeliveredAt = $orderItem->getOriginal('last_delivered_at');
+
+            if ($deliveredQuantity > $quantity) {
+                $deliveredQuantity = $quantity;
+                $orderItem->delivered_quantity = $deliveredQuantity;
+            }
+
+            if ($orderItem->status === 'delivered' && $deliveredQuantity !== $quantity) {
+                $orderItem->status = 'preparing';
+                $orderItem->delivered_at = null;
+            }
+
+            if ($orderItem->status === 'preparing' && $quantity > 0 && $deliveredQuantity === $quantity) {
+                $orderItem->status = 'delivered';
+            }
+
+            $orderItem->delivered_at = $originalDeliveredAt ?? $orderItem->delivered_at;
+
+            $isFullyDelivered = $quantity > 0 && $deliveredQuantity === $quantity;
+            $wasFullyDelivered = $originalQuantity > 0 && $originalDeliveredQuantity === $originalQuantity;
+
+            if ($isFullyDelivered) {
+                $needsRecalculation = ! $wasFullyDelivered
+                    || $originalQuantity !== $quantity
+                    || $originalDeliveredQuantity !== $deliveredQuantity
+                    || $originalLastDeliveredAt === null;
+
+                $orderItem->last_delivered_at = $needsRecalculation
+                    ? now()
+                    : $originalLastDeliveredAt;
+            } else {
+                $orderItem->last_delivered_at = null;
+            }
         });
     }
 
@@ -63,6 +104,7 @@ class OrderItem extends Model
             'delivered_quantity' => 0,
             'preparing_at' => now(),
             'delivered_at' => null,
+            'last_delivered_at' => null,
         ];
     }
 
@@ -82,12 +124,10 @@ class OrderItem extends Model
 
         if ($addedQuantity > 0) {
             $attributes['preparing_at'] = now();
-            $attributes['delivered_at'] = null;
+            $attributes['last_delivered_at'] = null;
         }
 
-        if ($deliveredQuantity >= $newQuantity && $newQuantity > 0) {
-            $attributes['delivered_at'] = $this->delivered_at ?? now();
-        }
+        $attributes['delivered_at'] = $this->delivered_at;
 
         return $attributes;
     }
@@ -98,11 +138,13 @@ class OrderItem extends Model
     public function quantityDecreaseTrackingAttributes(int $newQuantity): array
     {
         $deliveredQuantity = min((int) $this->delivered_quantity, $newQuantity);
+        $isFullyDelivered = $newQuantity > 0 && $deliveredQuantity === $newQuantity;
 
         return [
             'latest_added_quantity' => 0,
             'delivered_quantity' => $deliveredQuantity,
-            'delivered_at' => $deliveredQuantity >= $newQuantity && $newQuantity > 0 ? ($this->delivered_at ?? now()) : null,
+            'delivered_at' => $this->delivered_at,
+            'last_delivered_at' => $isFullyDelivered ? now() : null,
         ];
     }
 
@@ -114,15 +156,14 @@ class OrderItem extends Model
         $remainingQuantity = max((int) $this->quantity - (int) $this->delivered_quantity, 0);
         $deliveredAmount = min(max($deliveredAmount, 0), $remainingQuantity);
         $deliveredQuantity = (int) $this->delivered_quantity + $deliveredAmount;
+        $isFirstDelivery = (int) $this->delivered_quantity === 0 && $deliveredQuantity > 0;
+        $isFullyDelivered = (int) $this->quantity > 0 && $deliveredQuantity === (int) $this->quantity;
 
         $attributes = [
             'delivered_quantity' => $deliveredQuantity,
+            'delivered_at' => $isFirstDelivery ? now() : $this->delivered_at,
+            'last_delivered_at' => $isFullyDelivered ? ($this->last_delivered_at ?? now()) : null,
         ];
-
-        if ($deliveredQuantity >= (int) $this->quantity && (int) $this->quantity > 0) {
-            $attributes['delivered_quantity'] = (int) $this->quantity;
-            $attributes['delivered_at'] = now();
-        }
 
         return $attributes;
     }

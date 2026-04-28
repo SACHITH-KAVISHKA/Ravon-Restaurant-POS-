@@ -788,7 +788,7 @@ class POSController extends Controller
             ], 422);
         }
 
-        if ($orderItem->status === 'delivered' && (int) $orderItem->delivered_quantity >= (int) $orderItem->quantity) {
+        if ($orderItem->status === 'delivered' && (int) $orderItem->delivered_quantity === (int) $orderItem->quantity) {
             $durationSeconds = null;
             if ($orderItem->preparing_at && $orderItem->delivered_at) {
                 $durationSeconds = $orderItem->delivered_at->diffInSeconds($orderItem->preparing_at);
@@ -802,6 +802,7 @@ class POSController extends Controller
                     'status' => 'delivered',
                     'preparing_at' => $orderItem->preparing_at,
                     'delivered_at' => $orderItem->delivered_at,
+                    'last_delivered_at' => $orderItem->last_delivered_at,
                     'latest_added_quantity' => $orderItem->latest_added_quantity,
                     'delivered_quantity' => $orderItem->delivered_quantity,
                     'preparing_to_delivered_seconds' => $durationSeconds,
@@ -812,19 +813,16 @@ class POSController extends Controller
         $deliveredAmount = $validated['delivered_amount'] ?? max((int) $orderItem->quantity - (int) $orderItem->delivered_quantity, 0);
         $trackingUpdate = $orderItem->deliveryTrackingAttributes($deliveredAmount);
 
+        $nextDeliveredQuantity = (int) ($trackingUpdate['delivered_quantity'] ?? $orderItem->delivered_quantity);
+        $nextQuantity = (int) $orderItem->quantity;
+        $isFullyDelivered = $nextQuantity > 0 && $nextDeliveredQuantity === $nextQuantity;
+
+        $trackingUpdate['status'] = $isFullyDelivered ? 'delivered' : 'preparing';
+
         $orderItem->update([
-            'status' => 'delivered',
-            'delivered_at' => now(),
+            'status' => $trackingUpdate['status'],
         ] + $trackingUpdate);
         $orderItem->refresh();
-
-        if ((int) $orderItem->delivered_quantity < (int) $orderItem->quantity) {
-            $orderItem->update([
-                'status' => 'preparing',
-                'delivered_at' => null,
-            ]);
-            $orderItem->refresh();
-        }
 
         $durationSeconds = null;
         if ($orderItem->preparing_at && $orderItem->delivered_at) {
@@ -833,7 +831,9 @@ class POSController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Item marked as delivered.',
+            'message' => $orderItem->status === 'delivered'
+                ? 'Item marked as delivered.'
+                : 'Item remains in preparing until fully delivered.',
             'order_item' => [
                 'id' => $orderItem->id,
                 'status' => $orderItem->status,
@@ -901,6 +901,7 @@ class POSController extends Controller
                     'status' => 'preparing',
                     'preparing_at' => $orderItem->preparing_at,
                     'delivered_at' => $orderItem->delivered_at,
+                    'last_delivered_at' => $orderItem->last_delivered_at,
                     'latest_added_quantity' => $orderItem->latest_added_quantity,
                     'delivered_quantity' => $orderItem->delivered_quantity,
                     'preparing_to_delivered_seconds' => null,
@@ -911,7 +912,6 @@ class POSController extends Controller
         $orderItem->update([
             'status' => 'preparing',
             'preparing_at' => now(),
-            'delivered_at' => null,
         ]);
         $orderItem->refresh();
 
@@ -984,8 +984,8 @@ class POSController extends Controller
         $oldDeliveredQuantity = (int) $orderItem->delivered_quantity;
         $newDeliveredQuantity = min((int) $validated['delivered_quantity'], (int) $orderItem->quantity);
 
-        $newStatus = $newDeliveredQuantity >= (int) $orderItem->quantity ? 'delivered' : 'preparing';
-        $newDeliveredAt = $newStatus === 'delivered' ? now() : null;
+        $newStatus = $newDeliveredQuantity === (int) $orderItem->quantity ? 'delivered' : 'preparing';
+        $newDeliveredAt = $orderItem->delivered_at ?? ($newDeliveredQuantity > 0 ? now() : null);
 
         $orderItem->update([
             'delivered_quantity' => $newDeliveredQuantity,
@@ -1043,6 +1043,7 @@ class POSController extends Controller
             'status' => $orderItem->status,
             'preparing_at' => $orderItem->preparing_at,
             'delivered_at' => $orderItem->delivered_at,
+            'last_delivered_at' => $orderItem->last_delivered_at,
             'latest_added_quantity' => $orderItem->latest_added_quantity,
             'delivered_quantity' => $orderItem->delivered_quantity,
             'preparing_to_delivered_seconds' => $durationSeconds,
