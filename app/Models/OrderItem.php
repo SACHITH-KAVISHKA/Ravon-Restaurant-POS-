@@ -88,8 +88,6 @@ class OrderItem extends Model
                 $orderItem->last_delivered_at = $needsRecalculation
                     ? now()
                     : $originalLastDeliveredAt;
-            } else {
-                $orderItem->last_delivered_at = null;
             }
         });
     }
@@ -157,12 +155,12 @@ class OrderItem extends Model
         $deliveredAmount = min(max($deliveredAmount, 0), $remainingQuantity);
         $deliveredQuantity = (int) $this->delivered_quantity + $deliveredAmount;
         $isFirstDelivery = (int) $this->delivered_quantity === 0 && $deliveredQuantity > 0;
-        $isFullyDelivered = (int) $this->quantity > 0 && $deliveredQuantity === (int) $this->quantity;
+        $deliveryTimestamp = now();
 
         $attributes = [
             'delivered_quantity' => $deliveredQuantity,
-            'delivered_at' => $isFirstDelivery ? now() : $this->delivered_at,
-            'last_delivered_at' => $isFullyDelivered ? ($this->last_delivered_at ?? now()) : null,
+            'delivered_at' => $isFirstDelivery ? ($this->delivered_at ?? $deliveryTimestamp) : $this->delivered_at,
+            'last_delivered_at' => $deliveryTimestamp,
         ];
 
         return $attributes;
