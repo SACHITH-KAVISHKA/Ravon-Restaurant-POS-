@@ -8,6 +8,7 @@ use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\SalesReportController;
 use App\Http\Controllers\ItemSalesReportController;
 use App\Http\Controllers\ItemTransactionReportController;
+use App\Http\Controllers\OrderDeliveredReportController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\VoidReportController;
 use App\Http\Controllers\WastageController;
@@ -158,6 +159,13 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/', [VatCustomerController::class, 'index'])->name('index');
         Route::post('/', [VatCustomerController::class, 'store'])->name('store');
         Route::put('/{vatCustomer}', [VatCustomerController::class, 'update'])->name('update');
+    });
+
+    Route::middleware(['role:superadmin'])->prefix('super-admin-reports')->name('super-admin-reports.')->group(function () {
+        Route::get('/order-delivered', [OrderDeliveredReportController::class, 'index'])->name('order-delivered.index');
+        Route::get('/order-delivered/{order}/details', [OrderDeliveredReportController::class, 'details'])->name('order-delivered.details');
+        Route::get('/order-delivered/print', [OrderDeliveredReportController::class, 'print'])->name('order-delivered.print');
+        Route::get('/order-delivered/export', [OrderDeliveredReportController::class, 'exportExcel'])->name('order-delivered.export');
     });
 
     // POS (Cashier only)
