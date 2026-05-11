@@ -297,7 +297,24 @@ class OrderDeliveredReportController extends Controller
     {
         $totalQuantity = (int) ($order->total_item_quantity ?? 0);
         $deliveredQuantity = (int) ($order->delivered_item_quantity ?? 0);
-        $isCompleted = $totalQuantity > 0 && $deliveredQuantity >= $totalQuantity;
+
+        // Details endpoint does not select aggregate columns, so derive from loaded items.
+        if (
+            $totalQuantity === 0
+            && $deliveredQuantity === 0
+            && $order->relationLoaded('orderItems')
+        ) {
+            $activeOrderItems = $order->orderItems->where('status', '!=', 'deleted');
+            $totalQuantity = (int) $activeOrderItems->sum(function ($orderItem) {
+                return (int) ($orderItem->quantity ?? 0);
+            });
+            $deliveredQuantity = (int) $activeOrderItems->sum(function ($orderItem) {
+                return (int) ($orderItem->delivered_quantity ?? 0);
+            });
+        }
+
+        $isFullyDelivered = $totalQuantity > 0 && $deliveredQuantity >= $totalQuantity;
+        $isCompleted = $isFullyDelivered && $this->isPaidOrder($order);
 
         return [
             'key' => $isCompleted ? 'completed' : 'incomplete',
