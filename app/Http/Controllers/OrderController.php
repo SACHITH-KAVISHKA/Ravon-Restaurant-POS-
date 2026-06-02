@@ -7,6 +7,7 @@ use App\Models\OrderItem;
 use App\Models\Table;
 use App\Models\Item;
 use App\Models\RestaurantStock;
+use App\Services\TaxService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -33,7 +34,7 @@ class OrderController extends Controller
 
             if (!$order) {
                 $order = Order::create([
-                    'order_number' => 'ORD-' . date('Ymd') . '-' . str_pad(Order::whereDate('created_at', today())->count() + 1, 4, '0', STR_PAD_LEFT),
+                    'order_number' => 'ORD-' . date('Ymd') . '-' . str_pad(Order::all()->filter(fn ($orderRecord) => $orderRecord->created_at?->isToday())->count() + 1, 4, '0', STR_PAD_LEFT),
                     'table_id' => $table->id,
                     'waiter_id' => Auth::id(),
                     'status' => 'pending',
@@ -108,7 +109,7 @@ class OrderController extends Controller
             DB::beginTransaction();
 
             $order = Order::findOrFail($id);
-            $orderItem = OrderItem::where('order_id', $order->id)
+            $orderItem = OrderItem::query()->where('order_id', $order->id)
                 ->where('id', $validated['item_id'])
                 ->firstOrFail();
 
@@ -181,16 +182,16 @@ class OrderController extends Controller
 
     private function recalculateOrderTotals($order)
     {
-        // Only sum active (non-deleted) items
-        $subtotal = $order->items()->active()->sum('subtotal');
-        $taxRate = 0.10; // 10% tax
-        $taxAmount = $subtotal * $taxRate;
-        $total = $subtotal + $taxAmount;
+        $taxService = app(TaxService::class);
+        $activeItems = $order->items()->active()->with('item')->get();
+        $taxTotals = $taxService->calculateOrderTax($activeItems);
 
         $order->update([
-            'subtotal' => $subtotal,
-            'tax_amount' => $taxAmount,
-            'total_amount' => $total,
+            'subtotal' => $taxTotals['subtotal'],
+            'sscl_amount' => $taxTotals['sscl_amount'],
+            'vat_amount' => $taxTotals['vat_amount'],
+            'tax_amount' => $taxTotals['tax_amount'],
+            'total_amount' => $taxTotals['total_amount'],
         ]);
     }
 }

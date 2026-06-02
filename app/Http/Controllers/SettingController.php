@@ -12,7 +12,7 @@ class SettingController extends Controller
      */
     public function index()
     {
-        $setting = Setting::first();
+        $setting = Setting::query()->first();
         return view('settings.index', compact('setting'));
     }
 
@@ -27,7 +27,10 @@ class SettingController extends Controller
             'vat_reg_no' => 'nullable|string|max:50',
         ]);
 
-        $setting = Setting::first();
+        $validated['vat'] = $validated['vat'] ?? 0;
+        $validated['sscl'] = $validated['sscl'] ?? 0;
+
+        $setting = Setting::query()->first();
 
         if ($setting) {
             $setting->update($validated);

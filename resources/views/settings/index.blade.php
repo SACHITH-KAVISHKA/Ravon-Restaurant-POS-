@@ -47,12 +47,12 @@
                                     <label class="block text-sm font-semibold text-gray-800-muted mb-2">VAT Percentage
                                         (%)</label>
                                     <input type="number" step="0.01" name="vat"
-                                        value="{{ old('vat', $setting->vat ?? '') }}" placeholder="e.g. 15.00"
+                                        value="{{ old('vat', $setting?->vat ?? '') }}" placeholder="e.g. 15.00"
                                         class="w-full px-4 py-2 bg-white text-gray-800 rounded-lg border border-gray-300 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 @error('vat') border-red-600 @enderror">
                                     @error('vat')
                                         <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
                                     @enderror
-                                    @if (isset($setting->vat))
+                                    @if (!empty($setting) && $setting->vat !== null)
                                         <p class="text-sm mt-2 font-medium text-indigo-600">Current VAT is set to
                                             {{ $setting->vat }}%
                                         </p>
@@ -78,12 +78,12 @@
                                     <label class="block text-sm font-semibold text-gray-800-muted mb-2">SSCL Percentage
                                         (%)</label>
                                     <input type="number" step="0.01" name="sscl"
-                                        value="{{ old('sscl', $setting->sscl ?? '') }}" placeholder="e.g. 2.50"
+                                        value="{{ old('sscl', $setting?->sscl ?? '') }}" placeholder="e.g. 2.50"
                                         class="w-full px-4 py-2 bg-white text-gray-800 rounded-lg border border-gray-300 focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500 @error('sscl') border-red-600 @enderror">
                                     @error('sscl')
                                         <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
                                     @enderror
-                                    @if (isset($setting->sscl))
+                                    @if (!empty($setting) && $setting->sscl !== null)
                                         <p class="text-sm mt-2 font-medium text-teal-600">Current SSCL is set to
                                             {{ $setting->sscl }}%
                                         </p>
@@ -108,13 +108,13 @@
                             <div class="bg-orange-50 p-4 rounded-lg border border-orange-200">
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">VAT Registration Number</label>
                                 <input type="text" name="vat_reg_no"
-                                    value="{{ old('vat_reg_no', $setting->vat_reg_no ?? '') }}"
+                                    value="{{ old('vat_reg_no', $setting?->vat_reg_no ?? '') }}"
                                     placeholder="e.g. 103803281-7000"
                                     class="w-full px-4 py-2 bg-white text-gray-800 rounded-lg border border-gray-300 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500 @error('vat_reg_no') border-red-600 @enderror">
                                 @error('vat_reg_no')
                                     <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
                                 @enderror
-                                @if (!empty($setting->vat_reg_no))
+                                @if (!empty($setting?->vat_reg_no))
                                     <p class="text-sm mt-2 font-medium text-orange-600">Current: {{ $setting->vat_reg_no }}</p>
                                 @else
                                     <p class="text-sm mt-2 text-gray-500">No VAT Reg No set yet. This appears on printed receipts.</p>

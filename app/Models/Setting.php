@@ -19,4 +19,14 @@ class Setting extends Model
         'vat' => 'decimal:2',
         'sscl' => 'decimal:2',
     ];
+
+    public function getVatAttribute($value): float
+    {
+        return (float) ($value ?? 0);
+    }
+
+    public function getSsclAttribute($value): float
+    {
+        return (float) ($value ?? 0);
+    }
 }

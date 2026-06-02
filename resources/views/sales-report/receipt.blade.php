@@ -156,6 +156,8 @@
         $taxService = app(\App\Services\TaxService::class);
         $activeItems = $order->orderItems->where('status', '!=', 'deleted');
         $orderTax = $taxService->calculateOrderTax(collect($activeItems)->values());
+        $ssclRate = $taxService->getSsclRate();
+        $vatRate = $taxService->getVatRate();
 
         $dateTime = $order->completed_at ?? now();
         $dateText = $dateTime->format('d/m/Y');
@@ -265,18 +267,14 @@
         <span>Sub Total (Base)</span>
         <span>{{ number_format($orderTax['subtotal'], 2) }}</span>
     </div>
-    @if($orderTax['sscl_amount'] > 0)
-        <div class="total-row">
-            <span>SSCL ({{ $taxService->getSsclRate() }}%)</span>
-            <span>{{ number_format($orderTax['sscl_amount'], 2) }}</span>
-        </div>
-    @endif
-    @if($orderTax['vat_amount'] > 0)
-        <div class="total-row">
-            <span>VAT ({{ $taxService->getVatRate() }}%)</span>
-            <span>{{ number_format($orderTax['vat_amount'], 2) }}</span>
-        </div>
-    @endif
+    <div class="total-row">
+        <span>SSCL ({{ $ssclRate }}%)</span>
+        <span>{{ number_format($orderTax['sscl_amount'], 2) }}</span>
+    </div>
+    <div class="total-row">
+        <span>VAT ({{ $vatRate }}%)</span>
+        <span>{{ number_format($orderTax['vat_amount'], 2) }}</span>
+    </div>
 
     <div class="total-row grand-total">
         <span>Total</span>

@@ -232,6 +232,8 @@
         $taxService   = app(\App\Services\TaxService::class);
         $activeItems  = $order->orderItems->where('status', '!=', 'deleted');
         $orderTax     = $taxService->calculateOrderTax(collect($activeItems)->values());
+        $ssclRate = $taxService->getSsclRate();
+        $vatRate = $taxService->getVatRate();
     @endphp
 
     <div class="items">
@@ -283,18 +285,14 @@
             <span>Sub Total (Base):</span>
             <span>Rs. {{ number_format($orderTax['subtotal'], 2) }}</span>
         </div>
-        @if($order->discount_amount > 0)
-            <div class="total-row">
-                <span>Discount ({{ $order->discount_type === 'percentage' ? $order->discount_value . '%' : 'Fixed' }}):</span>
-                <span>- Rs. {{ number_format($order->discount_amount, 2) }}</span>
-            </div>
-        @endif
-        @if($order->service_charge > 0)
-            <div class="total-row">
-                <span>Service Charge:</span>
-                <span>Rs. {{ number_format($order->service_charge, 2) }}</span>
-            </div>
-        @endif
+        <div class="total-row">
+            <span>SSCL ({{ $ssclRate }}%)</span>
+            <span>{{ number_format($orderTax['sscl_amount'], 2) }}</span>
+        </div>
+        <div class="total-row">
+            <span>VAT ({{ $vatRate }}%)</span>
+            <span>{{ number_format($orderTax['vat_amount'], 2) }}</span>
+        </div>
         @if($orderTax['sscl_amount'] > 0)
             <div class="total-row">
                 <span>SSCL ({{ $taxService->getSsclRate() }}%):</span>
