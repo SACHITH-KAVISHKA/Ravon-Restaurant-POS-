@@ -218,6 +218,7 @@ class POSController extends Controller
                 $q->where('status', 'completed')
                     ->orWhere('is_paid', true);
             })
+            ->where('is_deleted', false)
             // Filter for TODAY only
             ->whereBetween('completed_at', [$todayStart, $todayEnd])
             ->orderBy('completed_at', 'desc')

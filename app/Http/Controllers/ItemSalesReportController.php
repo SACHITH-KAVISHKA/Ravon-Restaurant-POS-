@@ -86,6 +86,7 @@ class ItemSalesReportController extends Controller
             ->whereHas('order', function ($query) use ($fromDate, $toDate) {
                 $query->where('status', 'completed')
                     ->where('is_paid', true)
+                    ->where('is_deleted', false)
                     ->whereBetween(DB::raw('DATE(completed_at)'), [$fromDate, $toDate]);
             })
             ->where('item_id', $itemId)
@@ -240,6 +241,7 @@ class ItemSalesReportController extends Controller
             ->whereHas('order', function ($query) use ($fromDate, $toDate) {
                 $query->where('status', 'completed')
                     ->where('is_paid', true)
+                    ->where('is_deleted', false)
                     ->whereBetween(DB::raw('DATE(completed_at)'), [$fromDate, $toDate]);
             })
             ->where('item_id', $itemId)
@@ -304,6 +306,7 @@ class ItemSalesReportController extends Controller
             ->whereHas('order', function ($q) use ($fromDate, $toDate) {
                 $q->where('status', 'completed')
                     ->where('is_paid', true)
+                    ->where('is_deleted', false)
                     ->whereBetween(DB::raw('DATE(completed_at)'), [$fromDate, $toDate]);
             })
             ->where('status', '!=', 'cancelled');

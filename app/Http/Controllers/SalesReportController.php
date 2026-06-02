@@ -408,8 +408,8 @@ class SalesReportController extends Controller
     }
 
     /**
-     * Soft delete an order (mark as deleted).
-     * Also restores stock that was deducted when the order was paid.
+     * Delete an order from the sales report.
+     * Restores the stock that was deducted when the order was paid, then removes the order row.
      */
     public function softDelete(Order $order)
     {
@@ -532,9 +532,8 @@ class SalesReportController extends Controller
                 }
             }
 
-            // Mark order as deleted
-            $order->is_deleted = true;
-            $order->save();
+            // Remove the order row so it disappears from all live report sources.
+            $order->delete();
 
             DB::commit();
 
