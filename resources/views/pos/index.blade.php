@@ -1006,6 +1006,16 @@
                     @endforeach
                             };
 
+                function resolveReceiptTaxFlags(item) {
+                    const taxFlags = item?.tax_flags ?? {};
+                    const nestedItem = item?.item ?? {};
+
+                    return {
+                        vatApplicable: taxFlags.vat_available ?? item?.vat_available ?? nestedItem.vat_available ?? true,
+                        ssclApplicable: taxFlags.sscl_available ?? item?.sscl_available ?? nestedItem.sscl_available ?? true,
+                    };
+                }
+
                 // Global variables
                 let billItems = [];
                 let currentOrderType = null;
@@ -5344,8 +5354,9 @@
                             const itemName = item.item_display_name || item.name || item.item?.name || item.item_name || 'Unknown Item';
                             const quantity = item.quantity || 0;
                             const inclSubtotal_r = parseFloat(item.subtotal || (parseFloat(item.unit_price || item.price || 0) * quantity));
-                            const appliesVat_r = item.vat_available ? vatRate_r : 0;
-                            const appliesSscl_r = item.sscl_available ? ssclRate_r : 0;
+                            const taxFlags_r = resolveReceiptTaxFlags(item);
+                            const appliesVat_r = taxFlags_r.vatApplicable ? vatRate_r : 0;
+                            const appliesSscl_r = taxFlags_r.ssclApplicable ? ssclRate_r : 0;
                             const taxFactor_item_r = (1 + appliesSscl_r / 100) * (1 + appliesVat_r / 100) || 1;
                             const baseSubtotal_r_item = inclSubtotal_r / taxFactor_item_r;
                             const unitPrice = (quantity > 0 ? baseSubtotal_r_item / quantity : 0).toFixed(2);
@@ -5405,8 +5416,9 @@
 
                         const items_r = order.order_items || order.orderItems || [];
                         items_r.forEach(item => {
-                            const appliesVat = item.vat_available ? vatRate_r : 0;
-                            const appliesSscl = item.sscl_available ? ssclRate_r : 0;
+                            const taxFlags_r = resolveReceiptTaxFlags(item);
+                            const appliesVat = taxFlags_r.vatApplicable ? vatRate_r : 0;
+                            const appliesSscl = taxFlags_r.ssclApplicable ? ssclRate_r : 0;
                             const itemTotal = parseFloat(item.subtotal || (item.price * item.quantity));
 
                             const itemBase = itemTotal / ((1 + (appliesSscl / 100)) * (1 + (appliesVat / 100)));
@@ -5730,8 +5742,9 @@
                             const itemName = item.item_display_name || item.name || item.item?.name || item.item_name || 'Unknown Item';
                             const quantity = item.quantity || 0;
                             const inclSubtotal_i = parseFloat(item.subtotal || (parseFloat(item.unit_price || item.price || 0) * quantity));
-                            const appliesVat_i = item.vat_available ? vatRate_i : 0;
-                            const appliesSscl_i = item.sscl_available ? ssclRate_i : 0;
+                            const taxFlags_i = resolveReceiptTaxFlags(item);
+                            const appliesVat_i = taxFlags_i.vatApplicable ? vatRate_i : 0;
+                            const appliesSscl_i = taxFlags_i.ssclApplicable ? ssclRate_i : 0;
                             const taxFactor_item_i = (1 + appliesSscl_i / 100) * (1 + appliesVat_i / 100) || 1;
                             const baseSubtotal_i_item = inclSubtotal_i / taxFactor_item_i;
                             const unitPrice = (quantity > 0 ? baseSubtotal_i_item / quantity : 0).toFixed(2);
@@ -5787,8 +5800,9 @@
 
                         const items_i = order.order_items || order.orderItems || [];
                         items_i.forEach(item => {
-                            const appliesVat = item.vat_available ? vatRate_i : 0;
-                            const appliesSscl = item.sscl_available ? ssclRate_i : 0;
+                            const taxFlags_i = resolveReceiptTaxFlags(item);
+                            const appliesVat = taxFlags_i.vatApplicable ? vatRate_i : 0;
+                            const appliesSscl = taxFlags_i.ssclApplicable ? ssclRate_i : 0;
                             const itemTotal = parseFloat(item.subtotal || (item.price * item.quantity));
 
                             const itemBase = itemTotal / ((1 + (appliesSscl / 100)) * (1 + (appliesVat / 100)));
@@ -5922,8 +5936,9 @@
                             const itemCode = item.item?.item_code || item.item_code || '';
                             const quantity = item.quantity || 0;
                             const inclSubtotal_html = parseFloat(item.subtotal || (parseFloat(item.unit_price || 0) * quantity));
-                            const appliesVat_html = item.vat_available ? vatRate_html : 0;
-                            const appliesSscl_html = item.sscl_available ? ssclRate_html : 0;
+                            const taxFlags_html = resolveReceiptTaxFlags(item);
+                            const appliesVat_html = taxFlags_html.vatApplicable ? vatRate_html : 0;
+                            const appliesSscl_html = taxFlags_html.ssclApplicable ? ssclRate_html : 0;
                             const taxFactor_html = (1 + appliesSscl_html / 100) * (1 + appliesVat_html / 100) || 1;
                             const baseSubtotal_html = inclSubtotal_html / taxFactor_html;
                             const unitPrice = (quantity > 0 ? baseSubtotal_html / quantity : 0).toFixed(2);
@@ -6197,8 +6212,9 @@
 
                             const items_t = order.order_items || order.orderItems || [];
                             items_t.forEach(item => {
-                                const appliesVat = item.vat_available ? vr : 0;
-                                const appliesSscl = item.sscl_available ? sr : 0;
+                                const taxFlags_t = resolveReceiptTaxFlags(item);
+                                const appliesVat = taxFlags_t.vatApplicable ? vr : 0;
+                                const appliesSscl = taxFlags_t.ssclApplicable ? sr : 0;
                                 const itemTotal = parseFloat(item.subtotal || (item.price * item.quantity));
 
                                 const itemBase = itemTotal / ((1 + (appliesSscl / 100)) * (1 + (appliesVat / 100)));

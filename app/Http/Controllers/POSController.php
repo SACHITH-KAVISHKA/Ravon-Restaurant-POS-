@@ -298,6 +298,10 @@ class POSController extends Controller
                     'status' => $orderItem->status,
                     'preparing_at' => $orderItem->preparing_at,
                     'delivered_at' => $orderItem->delivered_at,
+                    'tax_flags' => [
+                        'vat_available' => (bool) ($orderItem->item->vat_available ?? false),
+                        'sscl_available' => (bool) ($orderItem->item->sscl_available ?? false),
+                    ],
                     'preparing_to_delivered_seconds' => (
                         $orderItem->status === 'delivered' && $orderItem->preparing_at && $orderItem->delivered_at
                     ) ? $orderItem->delivered_at->diffInSeconds($orderItem->preparing_at) : null,
@@ -306,7 +310,9 @@ class POSController extends Controller
                     'modifiers' => $modifiers,
                     'item' => [
                         'name' => $orderItem->item->name ?? 'Unknown Item',
-                        'item_code' => $orderItem->item->item_code ?? ''
+                        'item_code' => $orderItem->item->item_code ?? '',
+                        'vat_available' => (bool) ($orderItem->item->vat_available ?? false),
+                        'sscl_available' => (bool) ($orderItem->item->sscl_available ?? false),
                     ]
                 ];
             })->values(); // Reset array keys
@@ -705,6 +711,10 @@ class POSController extends Controller
                     'name' => $orderItem->item_display_name ?? $orderItem->item->name ?? 'Unknown Item',
                     'item_name' => $orderItem->item_display_name ?? $orderItem->item->name ?? 'Unknown Item',
                     'item_code' => $orderItem->item->item_code ?? '',
+                    'tax_flags' => [
+                        'vat_available' => (bool) ($orderItem->item->vat_available ?? false),
+                        'sscl_available' => (bool) ($orderItem->item->sscl_available ?? false),
+                    ],
                     'vat_available' => $orderItem->item->vat_available ?? false,
                     'sscl_available' => $orderItem->item->sscl_available ?? false,
                     'unit_price' => $orderItem->unit_price,
@@ -723,6 +733,8 @@ class POSController extends Controller
                     'item' => [
                         'name' => $orderItem->item->name ?? 'Unknown Item',
                         'item_code' => $orderItem->item->item_code ?? '',
+                        'vat_available' => (bool) ($orderItem->item->vat_available ?? false),
+                        'sscl_available' => (bool) ($orderItem->item->sscl_available ?? false),
                     ],
                 ];
             })->values();
