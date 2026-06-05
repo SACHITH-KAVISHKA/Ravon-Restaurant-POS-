@@ -1779,7 +1779,7 @@
                         let yPosition = 10;
                         const pageWidth = 80;
                         const leftMargin = 5;
-                        const rightMargin = 5;
+                        const rightMargin = 8;
 
                         // Determine if this is an addition (sub_number > 0)
                         const isAddition = orderInfo.kot_sub_number && orderInfo.kot_sub_number > 0;
@@ -1967,7 +1967,7 @@
                         let yPosition = 10;
                         const pageWidth = 80;
                         const leftMargin = 5;
-                        const rightMargin = 5;
+                        const rightMargin = 8;
 
                         // Determine if this is an addition (sub_number > 0)
                         const isAddition = orderInfo.bot_sub_number && orderInfo.bot_sub_number > 0;
@@ -4432,7 +4432,7 @@
                         let yPosition = 10;
                         const pageWidth = 80;
                         const leftMargin = 5;
-                        const rightMargin = 5;
+                        const rightMargin = 8;
 
                         // Header - CANCEL banner
                         pdf.setFont('courier', 'bold');
