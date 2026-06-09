@@ -18,17 +18,30 @@ class SpecialSalesReportController extends Controller
         $minAllowedDate = '2026-01-01';
 
         // 1. Get latest 10 sales filtering by the given dates
-        $lastTenSalesIds = Order::query()
-            ->where('status', 'completed')
-            ->where('is_paid', true)
-            ->where('is_deleted', false)
-            ->whereDate('completed_at', '>=', $minAllowedDate)
-            ->when($startDate, fn($q) => $q->whereDate('completed_at', '>=', $startDate))
-            ->when($endDate, fn($q) => $q->whereDate('completed_at', '<=', $endDate))
-            ->when($orderType, fn($q) => $q->where('order_type', $orderType))
-            ->orderBy('completed_at', 'desc')
-            ->limit(2)
-            ->pluck('id');
+        $lastTenSalesIds = collect();
+
+        $currentDate = Carbon::parse($startDate);
+        $lastDate = Carbon::parse($endDate);
+
+        while ($currentDate->lte($lastDate)) {
+
+            $dailyLatestIds = Order::query()
+                ->where('status', 'completed')
+                ->where('is_paid', true)
+                ->where('is_deleted', false)
+                ->whereDate('completed_at', $currentDate->format('Y-m-d'))
+                ->whereDate('completed_at', '>=', $minAllowedDate)
+                ->when($orderType, fn($q) => $q->where('order_type', $orderType))
+                ->orderBy('completed_at', 'desc')
+                ->limit(10)
+                ->pluck('id');
+
+            $lastTenSalesIds = $lastTenSalesIds->merge($dailyLatestIds);
+
+            $currentDate->addDay();
+        }
+
+        $lastTenSalesIds = $lastTenSalesIds->unique()->values();
 
         // 2. Base query for paginated results
         $query = Order::query()
@@ -55,13 +68,10 @@ class SpecialSalesReportController extends Controller
         });
 
         // Apply date filter
-        if ($startDate) {
-            $query->whereDate('completed_at', '>=', $startDate);
-        }
-
-        if ($endDate) {
-            $query->whereDate('completed_at', '<=', $endDate);
-        }
+        $query->whereBetween('completed_at', [
+            Carbon::parse($startDate)->startOfDay(),
+            Carbon::parse($endDate)->endOfDay(),
+        ]);
 
         if ($orderType) {
             $query->where('order_type', $orderType);
@@ -91,8 +101,10 @@ class SpecialSalesReportController extends Controller
                 })
                     ->orWhereIn('id', $lastTenSalesIds);
             })
-            ->when($startDate, fn($q) => $q->whereDate('completed_at', '>=', $startDate))
-            ->when($endDate, fn($q) => $q->whereDate('completed_at', '<=', $endDate))
+            ->whereBetween('completed_at', [
+                Carbon::parse($startDate)->startOfDay(),
+                Carbon::parse($endDate)->endOfDay(),
+            ])
             ->when($orderType, fn($q) => $q->where('order_type', $orderType));
 
         $allSales = $allSalesQuery->with('payment')->get();
