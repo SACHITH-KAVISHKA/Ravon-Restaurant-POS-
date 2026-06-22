@@ -347,6 +347,16 @@
                         Search
                     </button>
                 </div>
+                <div class="filter-group">
+                    <label>&nbsp;</label>
+                    <a id="exportExcelBtn" href="{{ route('wastage-report.export') }}"
+                        class="px-5 py-2 bg-gradient-to-r from-green-600 to-emerald-500 text-white font-semibold rounded-lg hover:shadow-lg transition flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        Excel
+                    </a>
+                </div>
             </div>
         </div>
 
@@ -407,6 +417,7 @@
         const today = new Date().toISOString().split('T')[0];
         document.getElementById('fromDate').value = today;
         document.getElementById('toDate').value = today;
+        updateExportLink();
 
         const reasonColors = [
             '#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#8b5cf6', '#ec4899', '#64748b'
@@ -414,23 +425,18 @@
 
         // Apply filter
         document.getElementById('applyFilterBtn').addEventListener('click', loadData);
+        document.getElementById('exportExcelBtn').addEventListener('click', () => updateExportLink());
+
+        ['fromDate', 'toDate', 'filterItemType', 'filterReason', 'filterItem'].forEach((id) => {
+            document.getElementById(id).addEventListener('change', () => updateExportLink());
+        });
 
         // Auto-load on page load
         loadData();
 
         async function loadData() {
-            const fromDate = document.getElementById('fromDate').value;
-            const toDate = document.getElementById('toDate').value;
-            const itemType = document.getElementById('filterItemType').value;
-            const reason = document.getElementById('filterReason').value;
-            const itemId = document.getElementById('filterItem').value;
-
-            const params = new URLSearchParams();
-            if (fromDate) params.append('from_date', fromDate);
-            if (toDate) params.append('to_date', toDate);
-            if (itemType !== 'all') params.append('item_type', itemType);
-            if (reason !== 'all') params.append('reason', reason);
-            if (itemId) params.append('item_id', itemId);
+            const params = buildFilterParams();
+            updateExportLink(params);
 
             // Show loading
             document.getElementById('loadingOverlay').style.display = 'flex';
@@ -457,6 +463,28 @@
             } finally {
                 document.getElementById('loadingOverlay').style.display = 'none';
             }
+        }
+
+        function buildFilterParams() {
+            const fromDate = document.getElementById('fromDate').value;
+            const toDate = document.getElementById('toDate').value;
+            const itemType = document.getElementById('filterItemType').value;
+            const reason = document.getElementById('filterReason').value;
+            const itemId = document.getElementById('filterItem').value;
+
+            const params = new URLSearchParams();
+            if (fromDate) params.append('from_date', fromDate);
+            if (toDate) params.append('to_date', toDate);
+            if (itemType !== 'all') params.append('item_type', itemType);
+            if (reason !== 'all') params.append('reason', reason);
+            if (itemId) params.append('item_id', itemId);
+
+            return params;
+        }
+
+        function updateExportLink(params = buildFilterParams()) {
+            const query = params.toString();
+            document.getElementById('exportExcelBtn').href = `{{ route('wastage-report.export') }}${query ? '?' + query : ''}`;
         }
 
         function updateSummary(summary) {

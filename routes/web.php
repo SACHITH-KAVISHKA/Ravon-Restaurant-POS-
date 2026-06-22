@@ -69,6 +69,7 @@ Route::middleware(['auth'])->group(function () {
 
         // RM Report
         Route::get('/rm-report', [RmReportController::class, 'index'])->name('rm-report.index');
+        Route::get('/rm-report/export', [RmReportController::class, 'exportExcel'])->name('rm-report.export');
         Route::put('/rm-report/{recipe}', [RmReportController::class, 'update'])->name('rm-report.update');
         Route::delete('/rm-report/{recipe}', [RmReportController::class, 'destroy'])->name('rm-report.destroy');
     });
@@ -276,6 +277,7 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware(['role:admin|manager|superadmin'])->prefix('wastage-report')->name('wastage-report.')->group(function () {
         Route::get('/', [WastageReportController::class, 'index'])->name('index');
         Route::get('/data', [WastageReportController::class, 'getData'])->name('data');
+        Route::get('/export', [WastageReportController::class, 'exportExcel'])->name('export');
     });
 
     // VAT Report Routes (Admin, Manager & SuperAdmin only)
