@@ -199,6 +199,14 @@ class OrderItem extends Model
     }
 
     /**
+     * Get the individual preparation tracking logs.
+     */
+    public function preparationLogs(): HasMany
+    {
+        return $this->hasMany(OrderItemPreparationLog::class);
+    }
+
+    /**
      * Get KOT items.
      */
     public function kotItems(): HasMany

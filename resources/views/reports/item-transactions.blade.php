@@ -54,8 +54,8 @@
     <div class="flex-1 overflow-y-auto">
         <div class="container mx-auto px-4 py-8">
             <div class="mb-8">
-                <h1 class="text-3xl font-bold bg-gradient-to-r from-[#667eea] to-[#764ba2] bg-clip-text text-transparent mb-2">Item Transaction Details</h1>
-                <p class="text-gray-600">Track opening balance, transfers, sales, and all stock movements by item.</p>
+                <h1 id="historyTitle" class="text-3xl font-bold bg-gradient-to-r from-[#667eea] to-[#764ba2] bg-clip-text text-transparent mb-2">Item Transaction Details</h1>
+                <p id="historySubTitle" class="text-gray-600">Track opening balance, transfers, sales, and all stock movements by item.</p>
             </div>
 
             <div class="bg-white border border-gray-200 rounded-xl shadow-md p-6 mb-6">
@@ -193,8 +193,13 @@
         const branchLabel = meta.branch_name ? meta.branch_name : 'All Branches';
         const itemLabel = `${meta.item_name} (${meta.item_code || 'N/A'})`;
 
-        historyTitle.textContent = `Transaction History for ${itemLabel}`;
-        historySubTitle.textContent = `${branchLabel} | ${meta.from_date} to ${meta.to_date} | Unit: ${meta.unit}`;
+        if (historyTitle) {
+            historyTitle.textContent = `Transaction History for ${itemLabel}`;
+        }
+
+        if (historySubTitle) {
+            historySubTitle.textContent = `${branchLabel} | ${meta.from_date} to ${meta.to_date} | Unit: ${meta.unit}`;
+        }
 
         let html = `
             <tr class="row-opening">

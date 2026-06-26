@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Order Delivered Report - Ravon Restaurant POS')
+@section('title', 'Item Preparation Performance Report - Ravon Restaurant POS')
 
 @push('styles')
 <style>
@@ -27,6 +27,15 @@
     .modal-backdrop {
         background-color: rgba(0, 0, 0, 0.7);
     }
+
+    .summary-card {
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .summary-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px -5px rgba(102, 126, 234, 0.25);
+    }
 </style>
 @endpush
 
@@ -37,10 +46,11 @@
     <div class="flex-1 overflow-y-auto">
         <div class="container mx-auto px-4 py-8">
             <div class="mb-8">
-                <h1 class="text-3xl font-bold bg-gradient-to-r from-[#667eea] to-[#764ba2] bg-clip-text text-transparent mb-2">Order Delivered Report</h1>
-                <p class="text-gray-600">Track completed and incomplete order delivery progress for Super Admin users.</p>
+                <h1 class="text-3xl font-bold bg-gradient-to-r from-[#667eea] to-[#764ba2] bg-clip-text text-transparent mb-2">Item Preparation Performance Report</h1>
+                <p class="text-gray-600">Analyze kitchen preparation times per menu item to identify bottlenecks and optimize performance.</p>
             </div>
 
+            {{-- Filter Section (kept exactly as original) --}}
             <div class="bg-white border border-gray-200 rounded-xl shadow-md p-6 mb-6">
                 <form method="GET" action="{{ route('super-admin-reports.order-delivered.index') }}" class="space-y-4">
                     <div class="grid grid-cols-1 lg:grid-cols-6 gap-3 items-end">
@@ -67,11 +77,12 @@
                         </div>
 
                         <div>
-                            <label for="payment_status" class="block text-sm font-medium text-gray-700 mb-1">Paid or Not</label>
-                            <select id="payment_status" name="payment_status" class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                                <option value="all" {{ $filters['payment_status'] === 'all' ? 'selected' : '' }}>All</option>
-                                <option value="paid" {{ $filters['payment_status'] === 'paid' ? 'selected' : '' }}>Paid</option>
-                                <option value="unpaid" {{ $filters['payment_status'] === 'unpaid' ? 'selected' : '' }}>Unpaid</option>
+                            <label for="performance_check" class="block text-sm font-medium text-gray-700 mb-1">Performance Check</label>
+                            <select id="performance_check" name="performance_check" class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                                <option value="all" {{ $filters['performance_check'] === 'all' ? 'selected' : '' }}>All</option>
+                                <option value="high" {{ $filters['performance_check'] === 'high' ? 'selected' : '' }}>High</option>
+                                <option value="normal" {{ $filters['performance_check'] === 'normal' ? 'selected' : '' }}>Normal</option>
+                                <option value="slow" {{ $filters['performance_check'] === 'slow' ? 'selected' : '' }}>Slow</option>
                             </select>
                         </div>
 
@@ -93,44 +104,80 @@
                 </form>
             </div>
 
+            {{-- Summary Cards --}}
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 mb-6">
+                {{-- Fastest Item --}}
+                <div class="summary-card bg-white border border-gray-200 rounded-xl shadow-md p-5">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider">Fastest Item</h3>
+                        <div class="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
+                            <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
+                        </div>
+                    </div>
+                    <p class="text-lg font-bold text-gray-800 truncate">{{ $summary['fastest_item']['name'] }}</p>
+                    <p class="text-sm text-green-600 font-semibold">{{ $summary['fastest_item']['time'] }} mins</p>
+                </div>
+
+                {{-- Slowest Item --}}
+                <div class="summary-card bg-white border border-gray-200 rounded-xl shadow-md p-5">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider">Slowest Item</h3>
+                        <div class="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center">
+                            <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                    </div>
+                    <p class="text-lg font-bold text-gray-800 truncate">{{ $summary['slowest_item']['name'] }}</p>
+                    <p class="text-sm text-red-600 font-semibold">{{ $summary['slowest_item']['time'] }} mins</p>
+                </div>
+            </div>
+
+            {{-- Report Table --}}
             <div class="bg-white border border-gray-200 rounded-xl shadow-md overflow-hidden">
                 <div class="table-responsive">
                     <table class="w-full">
                         <thead class="bg-gradient-to-r from-[#667eea] to-[#764ba2]">
                             <tr>
-                                <th class="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">Order Number</th>
-                                <th class="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">Table ID</th>
-                                <th class="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">Date</th>
-                                <th class="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">Order Type</th>
-                                <th class="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">Paid or Not</th>
-                                <th class="px-6 py-4 text-right text-xs font-semibold text-white uppercase tracking-wider">Sub Total</th>
-                                <th class="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">Order Created Time</th>
-                                <th class="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">Order Closed Time</th>
+                                <th class="px-6 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider">Item Name</th>
+                                <th class="px-6 py-4 text-center text-xs font-semibold text-white uppercase tracking-wider">Times Ordered</th>
+                                <th class="px-6 py-4 text-center text-xs font-semibold text-white uppercase tracking-wider">Total Quantity</th>
+                                <th class="px-6 py-4 text-center text-xs font-semibold text-white uppercase tracking-wider">Avg Prep Time</th>
+                                <th class="px-6 py-4 text-center text-xs font-semibold text-white uppercase tracking-wider">Fastest Time</th>
+                                <th class="px-6 py-4 text-center text-xs font-semibold text-white uppercase tracking-wider">Slowest Time</th>
+                                <th class="px-6 py-4 text-center text-xs font-semibold text-white uppercase tracking-wider">Performance</th>
                                 <th class="px-6 py-4 text-center text-xs font-semibold text-white uppercase tracking-wider">Action</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-200">
-                            @forelse($orders as $order)
+                            @forelse($items as $item)
                                 @php
-                                    $paymentBadge = ($order->payment?->payment_status === 'completed' || $order->is_paid) ? 'Paid' : 'Unpaid';
+                                    $avgPrepTime = (int) ($item->avg_prep_time ?? 0);
+                                    if ($avgPrepTime < 10) {
+                                        $perfLabel = 'High';
+                                        $perfClass = 'bg-green-100 text-green-700';
+                                    } elseif ($avgPrepTime <= 20) {
+                                        $perfLabel = 'Normal';
+                                        $perfClass = 'bg-yellow-100 text-yellow-700';
+                                    } else {
+                                        $perfLabel = 'Slow';
+                                        $perfClass = 'bg-red-100 text-red-700';
+                                    }
                                 @endphp
                                 <tr class="hover:bg-purple-50 transition-colors">
-                                    <td class="px-6 py-4 whitespace-nowrap"><span class="text-purple-600 font-mono font-semibold">{{ $order->order_number }}</span></td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-gray-700">{{ $order->table?->table_number ?? 'N/A' }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-gray-600 text-sm">{{ $order->created_at?->format('Y-m-d') ?? 'N/A' }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap"><span class="badge-status bg-blue-600/20 text-blue-600">{{ ucfirst(str_replace('_', ' ', $order->order_type)) }}</span></td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        @if($paymentBadge === 'Paid')
-                                            <span class="inline-block px-3 py-1 text-xs font-bold rounded-md bg-green-100 text-green-700">Paid</span>
-                                        @else
-                                            <span class="inline-block px-3 py-1 text-xs font-bold rounded-md bg-gray-100 text-gray-700">Unpaid</span>
-                                        @endif
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-right font-semibold text-gray-800">LKR {{ number_format($order->subtotal ?? 0, 2) }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-gray-600 text-sm">{{ $order->created_at?->format('H:i:s') ?? 'N/A' }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-gray-600 text-sm">{{ $order->updated_at?->format('H:i:s') ?? 'N/A' }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap"><span class="text-purple-600 font-semibold">{{ $item->item_name }}</span></td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-center text-gray-700">{{ number_format($item->times_ordered) }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-center text-gray-700">{{ number_format($item->total_quantity) }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-center font-semibold text-gray-800">{{ $avgPrepTime }} min</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-center text-gray-600">{{ (int) ($item->min_prep_time ?? 0) }} min</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-center text-gray-600">{{ (int) ($item->max_prep_time ?? 0) }} min</td>
                                     <td class="px-6 py-4 whitespace-nowrap text-center">
-                                        <button class="btn-action bg-gradient-to-r from-[#667eea] to-[#764ba2] hover:shadow-lg hover:shadow-purple-500/50 text-white view-details-btn" data-order-id="{{ $order->id }}" title="View Details">
+                                        <span class="inline-block px-3 py-1 text-xs font-bold rounded-md {{ $perfClass }}">{{ $perfLabel }}</span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-center">
+                                        <button class="btn-action bg-gradient-to-r from-[#667eea] to-[#764ba2] hover:shadow-lg hover:shadow-purple-500/50 text-white view-details-btn" data-item-id="{{ $item->item_id }}" data-item-modifier-id="{{ $item->item_modifier_id }}" title="View Details">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
@@ -140,7 +187,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="9" class="px-6 py-12 text-center">
+                                    <td colspan="8" class="px-6 py-12 text-center">
                                         <div class="flex flex-col items-center justify-center">
                                             <svg class="w-16 h-16 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -154,21 +201,22 @@
                     </table>
                 </div>
 
-                @if($orders->hasPages())
+                @if($items->hasPages())
                     <div class="bg-gray-50 px-6 py-4 border-t border-gray-200">
-                        {{ $orders->links() }}
+                        {{ $items->links() }}
                     </div>
                 @endif
             </div>
         </div>
     </div>
 
-    <div class="modal fade hidden fixed inset-0 z-50 overflow-y-auto" id="orderDetailsModal">
+    {{-- Item Details Modal --}}
+    <div class="modal fade hidden fixed inset-0 z-50 overflow-y-auto" id="itemDetailsModal">
         <div class="flex items-center justify-center min-h-screen px-4">
             <div class="modal-backdrop fixed inset-0"></div>
-            <div class="relative bg-white rounded-xl shadow-2xl border border-gray-200 max-w-6xl w-full">
+            <div class="relative bg-white rounded-xl shadow-2xl border border-gray-200 max-w-3xl w-full">
                 <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-purple-100">
-                    <h3 class="text-xl font-bold text-purple-700">Order Details</h3>
+                    <h3 class="text-xl font-bold text-purple-700">Item Preparation Details</h3>
                     <button class="text-gray-500 hover:text-gray-700 close-modal">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -180,36 +228,52 @@
                     <div id="details-loading" class="flex items-center justify-center py-10">
                         <div class="flex flex-col items-center justify-center">
                             <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mb-4"></div>
-                            <p class="text-gray-600">Loading order details...</p>
+                            <p class="text-gray-600">Loading item details...</p>
                         </div>
                     </div>
 
                     <div id="details-content" class="hidden space-y-6">
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div><p class="text-sm text-gray-600">Order Number</p><p class="text-lg font-semibold text-gray-800" id="modal-order-id">-</p></div>
-                            <div><p class="text-sm text-gray-600">Table ID</p><p class="text-lg font-semibold text-gray-800" id="modal-table-id">-</p></div>
-                            <div><p class="text-sm text-gray-600">Date</p><p class="text-lg font-semibold text-gray-800" id="modal-date">-</p></div>
-                            <div><p class="text-sm text-gray-600">Order Type</p><p class="text-lg font-semibold text-gray-800" id="modal-order-type">-</p></div>
-                            <div><p class="text-sm text-gray-600">Paid or Not</p><p class="text-lg font-semibold text-gray-800" id="modal-paid-status">-</p></div>
-                            <div><p class="text-sm text-gray-600">Status</p><p class="text-lg font-semibold text-gray-800" id="modal-status">-</p></div>
+                        {{-- Item Name Header --}}
+                        <div class="text-center">
+                            <h4 class="text-2xl font-bold bg-gradient-to-r from-[#667eea] to-[#764ba2] bg-clip-text text-transparent" id="modal-item-name">-</h4>
                         </div>
 
-                        <div class="bg-gray-50 rounded-lg overflow-hidden">
-                            <table class="w-full">
-                                <thead class="bg-gradient-to-r from-[#667eea] to-[#764ba2]">
-                                    <tr>
-                                        <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase">Item Name</th>
-                                        <th class="px-4 py-3 text-center text-xs font-semibold text-white uppercase">All Quantity</th>
-                                        <th class="px-4 py-3 text-center text-xs font-semibold text-white uppercase">Delivered Quantity</th>
-                                        <th class="px-4 py-3 text-center text-xs font-semibold text-white uppercase">Start Prepare Item Time</th>
-                                        <th class="px-4 py-3 text-center text-xs font-semibold text-white uppercase">First Delivery Time</th>
-                                        <th class="px-4 py-3 text-center text-xs font-semibold text-white uppercase">Last Prepare Time Start</th>
-                                        <th class="px-4 py-3 text-center text-xs font-semibold text-white uppercase">Last Quantity Deliver Time</th>
-                                        <th class="px-4 py-3 text-center text-xs font-semibold text-white uppercase">Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="modal-items-body" class="divide-y divide-gray-200"></tbody>
-                            </table>
+                        {{-- Preparation Statistics --}}
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div class="bg-purple-50 rounded-lg p-4 text-center">
+                                <p class="text-sm text-gray-600 mb-1">Average Time</p>
+                                <p class="text-xl font-bold text-purple-700" id="modal-avg-time">-</p>
+                            </div>
+                            <div class="bg-green-50 rounded-lg p-4 text-center">
+                                <p class="text-sm text-gray-600 mb-1">Fastest Time</p>
+                                <p class="text-xl font-bold text-green-700" id="modal-min-time">-</p>
+                            </div>
+                            <div class="bg-red-50 rounded-lg p-4 text-center">
+                                <p class="text-sm text-gray-600 mb-1">Slowest Time</p>
+                                <p class="text-xl font-bold text-red-700" id="modal-max-time">-</p>
+                            </div>
+                            <div class="bg-blue-50 rounded-lg p-4 text-center">
+                                <p class="text-sm text-gray-600 mb-1">Total Quantity</p>
+                                <p class="text-xl font-bold text-blue-700" id="modal-total-qty">-</p>
+                            </div>
+                        </div>
+
+                        {{-- Preparation Records Table --}}
+                        <div>
+                            <h5 class="text-lg font-semibold text-gray-700 mb-3">Preparation Records</h5>
+                            <div class="bg-gray-50 rounded-lg overflow-hidden">
+                                <table class="w-full">
+                                    <thead class="bg-gradient-to-r from-[#667eea] to-[#764ba2]">
+                                        <tr>
+                                            <th class="px-4 py-3 text-left text-xs font-semibold text-white uppercase">Order ID</th>
+                                            <th class="px-4 py-3 text-center text-xs font-semibold text-white uppercase">Prepared At</th>
+                                            <th class="px-4 py-3 text-center text-xs font-semibold text-white uppercase">Delivered At</th>
+                                            <th class="px-4 py-3 text-center text-xs font-semibold text-white uppercase">Kitchen Time</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="modal-orders-body" class="divide-y divide-gray-200"></tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -227,74 +291,79 @@
 <script>
     $(document).ready(function () {
         $('.view-details-btn').on('click', function () {
-            const orderId = $(this).data('order-id');
+            const itemId = $(this).data('item-id');
+            const itemModifierId = $(this).data('item-modifier-id');
 
-            $('#orderDetailsModal').removeClass('hidden');
+            const startDate = $('#start_date').val();
+            const endDate = $('#end_date').val();
+            const orderType = $('#order_type').val();
+            const performanceCheck = $('#performance_check').val();
+            const paymentStatus = 'all';
+            const params = $.param({
+                item_id: itemId,
+                item_modifier_id: itemModifierId || '',
+                start_date: startDate,
+                end_date: endDate,
+                order_type: orderType,
+                performance_check: performanceCheck,
+                payment_status: paymentStatus
+            });
+
+            $('#itemDetailsModal').removeClass('hidden');
             $('#details-loading').removeClass('hidden');
             $('#details-content').addClass('hidden');
 
-            $.get(`/super-admin-reports/order-delivered/${orderId}/details`)
+            $.get(`/super-admin-reports/order-delivered/item-details?${params}`)
                 .done(function (response) {
                     if (!response.success) {
-                        throw new Error('Unable to load order details');
+                        throw new Error('Unable to load item details');
                     }
 
-                    const order = response.order;
-                    const items = response.items || [];
+                    const item = response.item;
+                    const records = response.preparation_records || [];
 
-                    $('#modal-order-id').text(order.order_number ?? '-');
-                    $('#modal-table-id').text(order.table_id ?? 'N/A');
-                    $('#modal-date').text(order.date ?? '-');
-                    $('#modal-order-type').text(order.order_type ?? '-');
-                    $('#modal-paid-status').html(order.paid_status === 'Paid'
-                        ? '<span class="inline-block px-3 py-1 text-xs font-bold rounded-md bg-green-100 text-green-700">Paid</span>'
-                        : '<span class="inline-block px-3 py-1 text-xs font-bold rounded-md bg-gray-100 text-gray-700">Unpaid</span>');
-                    $('#modal-status').html(order.status === 'Completed'
-                        ? '<span class="inline-block px-3 py-1 text-xs font-bold rounded-md bg-green-100 text-green-700">Completed</span>'
-                        : '<span class="inline-block px-3 py-1 text-xs font-bold rounded-md bg-orange-100 text-orange-700">Not Yet Completed</span>');
+                    $('#modal-item-name').text(item.name ?? '-');
+                    $('#modal-avg-time').text((item.avg_prep_time ?? 0) + ' min');
+                    $('#modal-min-time').text((item.min_prep_time ?? 0) + ' min');
+                    $('#modal-max-time').text((item.max_prep_time ?? 0) + ' min');
+                    $('#modal-total-qty').text(Number(item.total_quantity ?? 0).toLocaleString());
 
                     let rows = '';
-                    if (items.length === 0) {
-                        rows = '<tr><td colspan="8" class="px-4 py-8 text-center text-gray-500">No Data Found</td></tr>';
+                    if (records.length === 0) {
+                        rows = '<tr><td colspan="4" class="px-4 py-8 text-center text-gray-500">No preparation records found</td></tr>';
                     } else {
-                        items.forEach(function (item) {
-                            const itemStatusClass = item.status === 'Delivered'
-                                ? 'bg-green-100 text-green-700'
-                                : 'bg-orange-100 text-orange-700';
-
+                        records.forEach(function (record) {
                             rows += `
                                 <tr class="bg-white hover:bg-gray-50">
-                                    <td class="px-4 py-3 text-gray-800">${escapeHtml(item.item_name)}</td>
-                                    <td class="px-4 py-3 text-center text-gray-700">${escapeHtml(item.all_quantity)}</td>
-                                    <td class="px-4 py-3 text-center text-gray-700">${escapeHtml(item.delivered_quantity)}</td>
-                                    <td class="px-4 py-3 text-center text-gray-700">${escapeHtml(item.start_prepare_time)}</td>
-                                    <td class="px-4 py-3 text-center text-gray-700">${escapeHtml(item.first_delivery_time)}</td>
-                                    <td class="px-4 py-3 text-center text-gray-700">${escapeHtml(item.last_prepare_time_start)}</td>
-                                    <td class="px-4 py-3 text-center text-gray-700">${escapeHtml(item.last_quantity_deliver_time)}</td>
-                                    <td class="px-4 py-3 text-center"><span class="inline-block px-3 py-1 text-xs font-bold rounded-md ${itemStatusClass}">${escapeHtml(item.status)}</span></td>
+                                    <td class="px-4 py-3 text-gray-800">
+                                        <span class="text-purple-600 font-mono font-semibold">${escapeHtml(record.order_number)}</span>
+                                    </td>
+                                    <td class="px-4 py-3 text-center text-gray-700">${escapeHtml(record.prepared_at)}</td>
+                                    <td class="px-4 py-3 text-center text-gray-700">${escapeHtml(record.delivered_at)}</td>
+                                    <td class="px-4 py-3 text-center font-semibold text-gray-800">${escapeHtml(record.kitchen_time)} min</td>
                                 </tr>
                             `;
                         });
                     }
 
-                    $('#modal-items-body').html(rows);
+                    $('#modal-orders-body').html(rows);
                     $('#details-loading').addClass('hidden');
                     $('#details-content').removeClass('hidden');
                 })
                 .fail(function () {
                     $('#details-loading').addClass('hidden');
                     $('#details-content').removeClass('hidden');
-                    $('#modal-items-body').html('<tr><td colspan="8" class="px-4 py-8 text-center text-red-600">Failed to load order details</td></tr>');
+                    $('#modal-orders-body').html('<tr><td colspan="4" class="px-4 py-8 text-center text-red-600">Failed to load item details</td></tr>');
                 });
         });
 
         $('.close-modal').on('click', function () {
-            $('#orderDetailsModal').addClass('hidden');
+            $('#itemDetailsModal').addClass('hidden');
         });
 
         $(document).on('keydown', function (e) {
             if (e.key === 'Escape') {
-                $('#orderDetailsModal').addClass('hidden');
+                $('#itemDetailsModal').addClass('hidden');
             }
         });
     });

@@ -16,6 +16,7 @@ use App\Models\CashierRmStockLog;
 use App\Models\ItemRecipe;
 use App\Models\ItemModifier;
 use App\Models\OrderItemDeliveryAudit;
+use App\Models\OrderItemPreparationLog;
 use App\Models\VoidRecord;
 use App\Models\OrderLog;
 use App\Services\TaxService;
@@ -547,6 +548,8 @@ class POSController extends Controller
                                     'quantity' => 0,
                                     'subtotal' => 0
                                 ]);
+                                // Mark all preparation logs as cancelled
+                                $this->syncPreparationLogStatus($matchedItem, 'cancelled');
                             } else {
                                 $matchedItem->delete();
                             }
@@ -609,8 +612,12 @@ class POSController extends Controller
                                 'quantity' => 0,
                                 'subtotal' => 0
                             ]);
+                            // Mark all preparation logs as cancelled
+                            $this->syncPreparationLogStatus($existingItem, 'cancelled');
                         } else {
                             $existingItem->update(['status' => 'deleted']);
+                            // Mark all preparation logs as deleted
+                            $this->syncPreparationLogStatus($existingItem, 'deleted');
                         }
                     }
                 }
@@ -642,9 +649,20 @@ class POSController extends Controller
                         'preparing_at' => now(),
                         'excluded_ingredients' => !empty($itemData['excluded_ingredients']) ? $itemData['excluded_ingredients'] : null,
                     ]);
+
+                    // Create individual preparation log entries for each unit
+                    $this->createPreparationLogs($orderItem, $itemData['quantity']);
                 } else {
                     // Updated item - use existing order_item
                     $orderItem = OrderItem::find($processItem['order_item_id']);
+
+                    // If quantity increased, create additional preparation logs for the added units
+                    if ($orderItem) {
+                        $addedQty = $itemData['quantity']; // This is already the difference (requestedQty - currentQty) for KOT
+                        if ($addedQty > 0) {
+                            $this->createPreparationLogs($orderItem, $addedQty);
+                        }
+                    }
                 }
 
                 // Add to KOT - ONLY new/changed items go here
@@ -837,6 +855,9 @@ class POSController extends Controller
         ] + $trackingUpdate);
         $orderItem->refresh();
 
+        // FIFO delivery: mark oldest undelivered preparation logs as delivered
+        $this->deliverPreparationLogs($orderItem, $deliveredAmount);
+
         $durationSeconds = null;
         if ($orderItem->preparing_at && $orderItem->delivered_at) {
             $durationSeconds = $orderItem->delivered_at->diffInSeconds($orderItem->preparing_at);
@@ -927,6 +948,19 @@ class POSController extends Controller
             'preparing_at' => now(),
         ]);
         $orderItem->refresh();
+
+        // Create new preparation logs for the quantity being re-prepared
+        $undeliveredCount = (int) $orderItem->quantity - (int) $orderItem->delivered_quantity;
+        if ($undeliveredCount > 0) {
+            // Mark any existing undelivered logs as cancelled (they are being re-prepared)
+            OrderItemPreparationLog::where('order_item_id', $orderItem->id)
+                ->undelivered()
+                ->reportable()
+                ->update(['item_status' => 'cancelled']);
+
+            // Create fresh preparation logs for the undelivered quantity
+            $this->createPreparationLogs($orderItem, $undeliveredCount);
+        }
 
         return response()->json([
             'success' => true,
@@ -1020,6 +1054,9 @@ class POSController extends Controller
             ],
         ]);
 
+        // Sync preparation logs with supervisor override
+        $this->syncPreparationLogsForSupervisorOverride($orderItem, $oldDeliveredQuantity, $newDeliveredQuantity);
+
         return response()->json([
             'success' => true,
             'message' => 'Supervisor override applied.',
@@ -1061,6 +1098,92 @@ class POSController extends Controller
             'delivered_quantity' => $orderItem->delivered_quantity,
             'preparing_to_delivered_seconds' => $durationSeconds,
         ];
+    }
+
+    /**
+     * Create individual preparation log entries for each unit of quantity.
+     */
+    private function createPreparationLogs(OrderItem $orderItem, int $quantity): void
+    {
+        $now = now();
+        for ($i = 0; $i < $quantity; $i++) {
+            OrderItemPreparationLog::create([
+                'order_id' => $orderItem->order_id,
+                'order_item_id' => $orderItem->id,
+                'item_id' => $orderItem->item_id,
+                'item_modifier_id' => $orderItem->item_modifier_id,
+                'item_display_name' => $orderItem->item_display_name ?? 'Unknown',
+                'quantity' => 1,
+                'item_status' => 'preparing',
+                'prepared_at' => $now,
+            ]);
+        }
+    }
+
+    /**
+     * FIFO delivery: mark the oldest undelivered preparation logs as delivered.
+     */
+    private function deliverPreparationLogs(OrderItem $orderItem, int $deliveredAmount): void
+    {
+        $now = now();
+        $logs = OrderItemPreparationLog::where('order_item_id', $orderItem->id)
+            ->undelivered()
+            ->reportable()
+            ->orderBy('prepared_at', 'asc')
+            ->orderBy('id', 'asc')
+            ->limit($deliveredAmount)
+            ->get();
+
+        foreach ($logs as $log) {
+            $log->update([
+                'delivered_at' => $now,
+                'preparation_minutes' => $log->prepared_at->diffInMinutes($now),
+                'item_status' => 'delivered',
+            ]);
+        }
+    }
+
+    /**
+     * Sync preparation log statuses when an order item is cancelled or deleted.
+     */
+    private function syncPreparationLogStatus(OrderItem $orderItem, string $status): void
+    {
+        OrderItemPreparationLog::where('order_item_id', $orderItem->id)
+            ->whereNotIn('item_status', ['cancelled', 'deleted'])
+            ->update(['item_status' => $status]);
+    }
+
+    /**
+     * Sync preparation logs when supervisor overrides delivered quantity.
+     */
+    private function syncPreparationLogsForSupervisorOverride(
+        OrderItem $orderItem,
+        int $oldDeliveredQuantity,
+        int $newDeliveredQuantity
+    ): void {
+        if ($newDeliveredQuantity > $oldDeliveredQuantity) {
+            // Supervisor increased delivered quantity — deliver additional logs (FIFO)
+            $additionalDelivered = $newDeliveredQuantity - $oldDeliveredQuantity;
+            $this->deliverPreparationLogs($orderItem, $additionalDelivered);
+        } elseif ($newDeliveredQuantity < $oldDeliveredQuantity) {
+            // Supervisor decreased delivered quantity — reopen the most recently delivered logs
+            $reopenCount = $oldDeliveredQuantity - $newDeliveredQuantity;
+            $logs = OrderItemPreparationLog::where('order_item_id', $orderItem->id)
+                ->where('item_status', 'delivered')
+                ->whereNotNull('delivered_at')
+                ->orderBy('delivered_at', 'desc')
+                ->orderBy('id', 'desc')
+                ->limit($reopenCount)
+                ->get();
+
+            foreach ($logs as $log) {
+                $log->update([
+                    'delivered_at' => null,
+                    'preparation_minutes' => null,
+                    'item_status' => 'preparing',
+                ]);
+            }
+        }
     }
 
     /**

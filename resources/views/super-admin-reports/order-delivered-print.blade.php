@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Order Delivered Report</title>
+    <title>Item Preparation Performance Report</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -39,36 +39,29 @@
             color: #ffffff;
         }
 
-        .right {
-            text-align: right;
-        }
-
         .center {
             text-align: center;
         }
 
-        .badge-paid,
-        .badge-unpaid,
-        .badge-completed,
-        .badge-incomplete {
+        .badge-fast {
             padding: 2px 8px;
             border-radius: 9999px;
-        }
-
-        .badge-paid,
-        .badge-completed {
             color: #166534;
             background: #dcfce7;
         }
 
-        .badge-unpaid {
-            color: #374151;
-            background: #f3f4f6;
+        .badge-normal {
+            padding: 2px 8px;
+            border-radius: 9999px;
+            color: #854d0e;
+            background: #fef9c3;
         }
 
-        .badge-incomplete {
-            color: #9a3412;
-            background: #ffedd5;
+        .badge-slow {
+            padding: 2px 8px;
+            border-radius: 9999px;
+            color: #991b1b;
+            background: #fee2e2;
         }
 
         @media print {
@@ -79,38 +72,48 @@
     </style>
 </head>
 <body onload="window.print()">
-    <h1>Order Delivered Report</h1>
+    <h1>Item Preparation Performance Report</h1>
     <p>Filtered results from {{ $filters['start_date'] }} to {{ $filters['end_date'] }}</p>
 
     <table>
         <thead>
             <tr>
-                <th>Order Number</th>
-                <th>Table ID</th>
-                <th>Date</th>
-                <th>Order Type</th>
-                <th>Paid or Not</th>
-                <th class="right">Sub Total</th>
-                <th>Order Created Time</th>
-                <th>Order Closed Time</th>
+                <th>Item Name</th>
+                <th class="center">Times Ordered</th>
+                <th class="center">Total Quantity</th>
+                <th class="center">Avg Prep Time</th>
+                <th class="center">Fastest Time</th>
+                <th class="center">Slowest Time</th>
+                <th class="center">Performance</th>
             </tr>
         </thead>
         <tbody>
-            @forelse($orders as $order)
-                @php $paid = ($order->payment?->payment_status === 'completed' || $order->is_paid); @endphp
+            @forelse($items as $item)
+                @php
+                    $avgPrepTime = (int) ($item->avg_prep_time ?? 0);
+                    if ($avgPrepTime < 10) {
+                        $perfLabel = 'Fast';
+                        $perfClass = 'badge-fast';
+                    } elseif ($avgPrepTime <= 20) {
+                        $perfLabel = 'Normal';
+                        $perfClass = 'badge-normal';
+                    } else {
+                        $perfLabel = 'Slow';
+                        $perfClass = 'badge-slow';
+                    }
+                @endphp
                 <tr>
-                    <td>{{ $order->order_number }}</td>
-                    <td>{{ $order->table?->table_number ?? 'N/A' }}</td>
-                    <td>{{ $order->created_at?->format('Y-m-d') ?? 'N/A' }}</td>
-                    <td>{{ ucfirst(str_replace('_', ' ', $order->order_type)) }}</td>
-                    <td>{!! $paid ? '<span class="badge-paid">Paid</span>' : '<span class="badge-unpaid">Unpaid</span>' !!}</td>
-                    <td class="right">LKR {{ number_format($order->subtotal ?? 0, 2) }}</td>
-                    <td>{{ $order->created_at?->format('H:i:s') ?? 'N/A' }}</td>
-                    <td>{{ $order->updated_at?->format('H:i:s') ?? 'N/A' }}</td>
+                    <td>{{ $item->item_name }}</td>
+                    <td class="center">{{ number_format($item->times_ordered) }}</td>
+                    <td class="center">{{ number_format($item->total_quantity) }}</td>
+                    <td class="center">{{ $avgPrepTime }} min</td>
+                    <td class="center">{{ (int) ($item->min_prep_time ?? 0) }} min</td>
+                    <td class="center">{{ (int) ($item->max_prep_time ?? 0) }} min</td>
+                    <td class="center"><span class="{{ $perfClass }}">{{ $perfLabel }}</span></td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="8" class="center">No Data Found</td>
+                    <td colspan="7" class="center">No Data Found</td>
                 </tr>
             @endforelse
         </tbody>

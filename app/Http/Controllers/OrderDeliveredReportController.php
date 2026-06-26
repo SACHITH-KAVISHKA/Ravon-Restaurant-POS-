@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Order;
-use App\Models\OrderItem;
+use App\Models\OrderItemPreparationLog;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -19,117 +19,129 @@ class OrderDeliveredReportController extends Controller
         $filters = $this->resolveFilters($request);
         $orderTypes = $this->orderTypeOptions();
 
-        $query = $this->buildReportQuery($filters);
-
-        $orders = $query
-            ->with(['payment:id,order_id,payment_status,payment_method,processed_at,updated_at'])
-            ->orderByDesc('orders.created_at')
-            ->orderByDesc('orders.id')
+        $items = $this->buildItemPreparationQuery($filters)
             ->paginate(100)
             ->withQueryString();
 
-        $summary = $this->buildSummary(clone $query);
+        $summary = $this->buildItemSummary($filters);
 
         return view('super-admin-reports.order-delivered', compact(
-            'orders',
+            'items',
             'summary',
             'orderTypes',
             'filters'
         ));
     }
 
-    public function details(Order $order): JsonResponse
+    public function itemDetails(Request $request): JsonResponse
     {
         abort_unless(Auth::user()?->hasRole('superadmin'), 403);
 
-        $order->load([
-            'payment:id,order_id,payment_status,payment_method,processed_at,updated_at',
-            'table:id,table_number',
-            'orderItems' => function ($query) {
-                $query->where('status', '!=', 'deleted')
-                    ->with(['item:id,name'])
-                    ->orderBy('id');
-            },
-        ]);
+        $filters = $this->resolveFilters($request);
 
-        $items = $order->orderItems->map(function ($orderItem) {
-            $deliveredQuantity = (int) ($orderItem->delivered_quantity ?? 0);
-            $totalQuantity = (int) ($orderItem->quantity ?? 0);
-            $status = $deliveredQuantity >= $totalQuantity ? 'Delivered' : 'Preparing';
+        $itemId = $request->input('item_id');
+        $itemModifierId = $request->input('item_modifier_id');
 
-            return [
-                'item_name' => $orderItem->item_display_name
-                    ?? $orderItem->item?->name
-                    ?? 'N/A',
-                'all_quantity' => $totalQuantity,
-                'delivered_quantity' => $deliveredQuantity,
-                'start_prepare_time' => $orderItem->created_at?->format('H:i:s') ?? '-',
-                'first_delivery_time' => $orderItem->delivered_at?->format('H:i:s') ?? '-',
-                'last_prepare_time_start' => $orderItem->preparing_at?->format('H:i:s') ?? '-',
-                'last_quantity_deliver_time' => $orderItem->last_delivered_at?->format('H:i:s')
-                    ?? $orderItem->delivered_at?->format('H:i:s')
-                    ?? '-',
-                'status' => $status,
-            ];
-        })->values();
+        abort_unless($itemId, 400, 'item_id is required');
+
+        $statsQuery = OrderItemPreparationLog::query()
+            ->join('orders', 'order_item_preparation_logs.order_id', '=', 'orders.id', 'inner', false)
+            ->reportable()
+            ->whereNotNull('order_item_preparation_logs.delivered_at')
+            ->whereNotNull('order_item_preparation_logs.preparation_minutes')
+            ->where('order_item_preparation_logs.item_id', $itemId)
+            ->where('orders.is_deleted', false)
+            ->whereNotIn('orders.status', ['cancelled', 'deleted'])
+            ->whereBetween('orders.created_at', [
+                Carbon::parse($filters['start_date'])->startOfDay(),
+                Carbon::parse($filters['end_date'])->endOfDay(),
+            ]);
+
+        if ($itemModifierId) {
+            $statsQuery->where('order_item_preparation_logs.item_modifier_id', $itemModifierId);
+        } else {
+            $statsQuery->whereNull('order_item_preparation_logs.item_modifier_id');
+        }
+
+        if (!empty($filters['order_type'])) {
+            $statsQuery->where('orders.order_type', $filters['order_type']);
+        }
+
+        $this->applyPaymentFilter($statsQuery, $filters['payment_status']);
+
+        $stats = (clone $statsQuery)
+            ->selectRaw('MAX(order_item_preparation_logs.item_display_name) as item_name')
+            ->selectRaw('COUNT(DISTINCT order_item_preparation_logs.order_id) as times_ordered')
+            ->selectRaw('COUNT(*) as total_quantity')
+            ->selectRaw('ROUND(AVG(order_item_preparation_logs.preparation_minutes)) as avg_prep_time')
+            ->selectRaw('MIN(order_item_preparation_logs.preparation_minutes) as min_prep_time')
+            ->selectRaw('MAX(order_item_preparation_logs.preparation_minutes) as max_prep_time')
+            ->first();
+
+        $preparationRecords = (clone $statsQuery)
+            ->select(
+                'orders.order_number',
+                'order_item_preparation_logs.item_display_name',
+                'order_item_preparation_logs.prepared_at',
+                'order_item_preparation_logs.delivered_at',
+                'order_item_preparation_logs.preparation_minutes'
+            )
+            ->orderByDesc('order_item_preparation_logs.prepared_at')
+            ->limit(20)
+            ->get();
 
         return response()->json([
             'success' => true,
-            'order' => [
-                'order_number' => $order->order_number,
-                'table_id' => $order->table?->table_number ?? 'N/A',
-                'date' => $order->created_at?->format('Y-m-d') ?? '-',
-                'order_type' => ucfirst(str_replace('_', ' ', (string) $order->order_type)),
-                'paid_status' => $this->isPaidOrder($order) ? 'Paid' : 'Unpaid',
-                'subtotal' => number_format((float) ($order->subtotal ?? 0), 2),
-                'created_time' => $order->created_at?->format('H:i:s') ?? '-',
-                'closed_time' => $this->resolveClosedTime($order)?->format('H:i:s') ?? '-',
-                'status' => $this->resolveOrderStatus($order)['label'],
+            'item' => [
+                'name' => $stats->item_name ?? '-',
+                'times_ordered' => (int) ($stats->times_ordered ?? 0),
+                'total_quantity' => (int) ($stats->total_quantity ?? 0),
+                'avg_prep_time' => (int) ($stats->avg_prep_time ?? 0),
+                'min_prep_time' => (int) ($stats->min_prep_time ?? 0),
+                'max_prep_time' => (int) ($stats->max_prep_time ?? 0),
             ],
-            'items' => $items,
+            'preparation_records' => $preparationRecords->map(function ($record) {
+                // DB datetimes may be stored in UTC; parse as UTC then convert to app timezone
+                $tz = config('app.timezone') ?: date_default_timezone_get();
+                $formatWithSeconds = 'Y-m-d H:i:s';
+
+                return [
+                    'order_number' => $record->order_number,
+                    'item_name' => $record->item_display_name,
+                    'prepared_at' => $record->prepared_at ? Carbon::parse($record->prepared_at, 'UTC')->setTimezone($tz)->format($formatWithSeconds) : '-',
+                    'delivered_at' => $record->delivered_at ? Carbon::parse($record->delivered_at, 'UTC')->setTimezone($tz)->format($formatWithSeconds) : '-',
+                    'kitchen_time' => (int) ($record->preparation_minutes ?? 0),
+                ];
+            })->values(),
         ]);
     }
 
     public function print(Request $request)
     {
         $filters = $this->resolveFilters($request);
-        $query = $this->buildReportQuery($filters);
+        $items = $this->buildItemPreparationQuery($filters)->get();
+        $summary = $this->buildItemSummary($filters);
 
-        $orders = $query
-            ->with(['payment:id,order_id,payment_status,payment_method,processed_at,updated_at'])
-            ->orderByDesc('orders.created_at')
-            ->orderByDesc('orders.id')
-            ->get();
-
-        $summary = $this->buildSummary(clone $query);
-
-        return view('super-admin-reports.order-delivered-print', compact('orders', 'summary', 'filters'));
+        return view('super-admin-reports.order-delivered-print', compact('items', 'summary', 'filters'));
     }
 
     public function exportExcel(Request $request)
     {
         $filters = $this->resolveFilters($request);
-        $query = $this->buildReportQuery($filters);
-
-        $orders = $query
-            ->with(['payment:id,order_id,payment_status,payment_method,processed_at,updated_at'])
-            ->orderByDesc('orders.created_at')
-            ->orderByDesc('orders.id')
-            ->get();
+        $items = $this->buildItemPreparationQuery($filters)->get();
 
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
-        $sheet->setTitle('Order Delivered Report');
+        $sheet->setTitle('Item Preparation Report');
 
         $headers = [
-            'A1' => 'Order Number',
-            'B1' => 'Table ID',
-            'C1' => 'Date',
-            'D1' => 'Order Type',
-            'E1' => 'Paid or Not',
-            'F1' => 'Sub Total',
-            'G1' => 'Order Created Time',
-            'H1' => 'Order Closed Time',
+            'A1' => 'Item Name',
+            'B1' => 'Times Ordered',
+            'C1' => 'Total Quantity',
+            'D1' => 'Avg Prep Time (min)',
+            'E1' => 'Fastest Time (min)',
+            'F1' => 'Slowest Time (min)',
+            'G1' => 'Performance',
         ];
 
         foreach ($headers as $cell => $header) {
@@ -142,31 +154,26 @@ class OrderDeliveredReportController extends Controller
         }
 
         $row = 2;
-        foreach ($orders as $order) {
-            $resolved = $this->resolveOrderStatus($order);
+        foreach ($items as $item) {
+            $avgPrepTime = (int) ($item->avg_prep_time ?? 0);
+            $performance = $avgPrepTime < 10 ? 'High' : ($avgPrepTime <= 20 ? 'Normal' : 'Slow');
 
-            $sheet->setCellValue('A' . $row, $order->order_number);
-            $sheet->setCellValue('B' . $row, $order->table?->table_number ?? 'N/A');
-            $sheet->setCellValue('C' . $row, $order->created_at?->format('Y-m-d') ?? '-');
-            $sheet->setCellValue('D' . $row, ucfirst(str_replace('_', ' ', (string) $order->order_type)));
-            $sheet->setCellValue('E' . $row, $this->isPaidOrder($order) ? 'Paid' : 'Unpaid');
-            $sheet->setCellValue('F' . $row, (float) ($order->subtotal ?? 0));
-            $sheet->setCellValue('G' . $row, $order->created_at?->format('H:i:s') ?? '-');
-            $sheet->setCellValue('H' . $row, $this->resolveClosedTime($order)?->format('H:i:s') ?? '-');
+            $sheet->setCellValue('A' . $row, $item->item_name);
+            $sheet->setCellValue('B' . $row, (int) $item->times_ordered);
+            $sheet->setCellValue('C' . $row, (int) $item->total_quantity);
+            $sheet->setCellValue('D' . $row, $avgPrepTime);
+            $sheet->setCellValue('E' . $row, (int) ($item->min_prep_time ?? 0));
+            $sheet->setCellValue('F' . $row, (int) ($item->max_prep_time ?? 0));
+            $sheet->setCellValue('G' . $row, $performance);
 
             $row++;
         }
 
-        $lastRow = max($row - 1, 2);
-        $sheet->getStyle('F2:F' . $lastRow)
-            ->getNumberFormat()
-            ->setFormatCode('#,##0.00');
-
-        foreach (range('A', 'H') as $column) {
+        foreach (range('A', 'G') as $column) {
             $sheet->getColumnDimension($column)->setAutoSize(true);
         }
 
-        $filename = 'order_delivered_report_' . $filters['start_date'] . '_to_' . $filters['end_date'] . '.xlsx';
+        $filename = 'item_preparation_report_' . $filters['start_date'] . '_to_' . $filters['end_date'] . '.xlsx';
 
         return new StreamedResponse(function () use ($spreadsheet) {
             $writer = new Xlsx($spreadsheet);
@@ -185,6 +192,7 @@ class OrderDeliveredReportController extends Controller
             'end_date' => 'nullable|date|after_or_equal:start_date',
             'order_type' => 'nullable|string',
             'payment_status' => 'nullable|in:all,paid,unpaid',
+            'performance_check' => 'nullable|in:all,high,normal,slow',
         ]);
 
         return [
@@ -192,148 +200,123 @@ class OrderDeliveredReportController extends Controller
             'end_date' => Carbon::parse($validated['end_date'] ?? now()->toDateString())->toDateString(),
             'order_type' => $validated['order_type'] ?? '',
             'payment_status' => $validated['payment_status'] ?? 'all',
+            'performance_check' => $validated['performance_check'] ?? 'all',
         ];
     }
 
-    private function buildReportQuery(array $filters)
+    private function buildItemPreparationQuery(array $filters)
     {
-        $itemStats = OrderItem::query()
-            ->select('order_id')
-            ->selectRaw('SUM(quantity) as total_item_quantity')
-            ->selectRaw('SUM(COALESCE(delivered_quantity, 0)) as delivered_item_quantity')
-            ->selectRaw('MIN(delivered_at) as first_delivery_at')
-            ->selectRaw('MAX(preparing_at) as last_prepare_at')
-            ->selectRaw('MAX(COALESCE(last_delivered_at, delivered_at)) as last_delivery_at')
-            ->where('status', '!=', 'deleted')
-            ->groupBy('order_id');
-
-        $query = Order::query()
-            ->select('orders.*')
-            ->selectRaw('COALESCE(order_item_stats.total_item_quantity, 0) as total_item_quantity')
-            ->selectRaw('COALESCE(order_item_stats.delivered_item_quantity, 0) as delivered_item_quantity')
-            ->selectRaw('GREATEST(COALESCE(order_item_stats.total_item_quantity, 0) - COALESCE(order_item_stats.delivered_item_quantity, 0), 0) as pending_item_quantity')
-            ->selectRaw('order_item_stats.first_delivery_at')
-            ->selectRaw('order_item_stats.last_prepare_at')
-            ->selectRaw('order_item_stats.last_delivery_at')
-            ->joinSub($itemStats, 'order_item_stats', function ($join) {
-                $join->on('orders.id', '=', 'order_item_stats.order_id');
-            })
+        $query = OrderItemPreparationLog::query()
+            ->join('orders', 'order_item_preparation_logs.order_id', '=', 'orders.id', 'inner', false)
+            ->reportable()
+            ->whereNotNull('order_item_preparation_logs.delivered_at')
+            ->whereNotNull('order_item_preparation_logs.preparation_minutes')
             ->where('orders.is_deleted', false)
+            ->whereNotIn('orders.status', ['cancelled', 'deleted'])
             ->whereBetween('orders.created_at', [
                 Carbon::parse($filters['start_date'])->startOfDay(),
                 Carbon::parse($filters['end_date'])->endOfDay(),
-            ]);
+            ])
+            ->select(
+                'order_item_preparation_logs.item_id',
+                'order_item_preparation_logs.item_modifier_id',
+                DB::raw('MAX(order_item_preparation_logs.item_display_name) as item_name'),
+                DB::raw('COUNT(DISTINCT order_item_preparation_logs.order_id) as times_ordered'),
+                DB::raw('COUNT(*) as total_quantity'),
+                DB::raw('ROUND(AVG(order_item_preparation_logs.preparation_minutes)) as avg_prep_time'),
+                DB::raw('MIN(order_item_preparation_logs.preparation_minutes) as min_prep_time'),
+                DB::raw('MAX(order_item_preparation_logs.preparation_minutes) as max_prep_time')
+            )
+            ->groupBy('order_item_preparation_logs.item_id', 'order_item_preparation_logs.item_modifier_id')
+            ->orderByDesc('avg_prep_time');
 
         if (!empty($filters['order_type'])) {
             $query->where('orders.order_type', $filters['order_type']);
         }
 
-        if ($filters['payment_status'] === 'paid') {
-            $query->where(function ($paymentQuery) {
-                $paymentQuery->where('orders.is_paid', true)
-                    ->orWhereHas('payment', function ($paidPaymentQuery) {
-                        $paidPaymentQuery->where('payment_status', 'completed');
-                    });
-            });
-        }
-
-        if ($filters['payment_status'] === 'unpaid') {
-            $query->where(function ($paymentQuery) {
-                $paymentQuery->where('orders.is_paid', false)
-                    ->where(function ($statusQuery) {
-                        $statusQuery->whereDoesntHave('payment', function ($unpaidPaymentQuery) {
-                            $unpaidPaymentQuery->where('payment_status', 'completed');
-                        })->orWhereHas('payment', function ($unpaidPaymentQuery) {
-                            $unpaidPaymentQuery->where('payment_status', '!=', 'completed');
-                        });
-                    });
-            });
-        }
+        $this->applyPaymentFilter($query, $filters['payment_status']);
+        $this->applyPerformanceFilter($query, $filters['performance_check']);
 
         return $query;
     }
 
-    private function buildSummary($query): array
+    private function buildItemSummary(array $filters): array
     {
-        $orders = $query
-            ->with(['payment:id,order_id,payment_status,payment_method,processed_at,updated_at'])
-            ->orderByDesc('orders.created_at')
-            ->orderByDesc('orders.id')
-            ->get();
+        $items = $this->buildItemPreparationQuery($filters)->get();
 
-        $totalSubtotal = 0;
-        $paidOrders = 0;
-        $unpaidOrders = 0;
-        $completedOrders = 0;
-        $incompleteOrders = 0;
-
-        foreach ($orders as $order) {
-            $totalSubtotal += (float) ($order->subtotal ?? 0);
-
-            if ($this->isPaidOrder($order)) {
-                $paidOrders++;
-            } else {
-                $unpaidOrders++;
-            }
-
-            if ($this->resolveOrderStatus($order)['key'] === 'completed') {
-                $completedOrders++;
-            } else {
-                $incompleteOrders++;
-            }
+        if ($items->isEmpty()) {
+            return [
+                'fastest_item' => ['name' => '-', 'time' => 0],
+                'slowest_item' => ['name' => '-', 'time' => 0],
+                'avg_kitchen_time' => 0,
+                'total_items_prepared' => 0,
+            ];
         }
 
+        $fastest = $items->sortBy('avg_prep_time')->first();
+        $slowest = $items->sortByDesc('avg_prep_time')->first();
+
         return [
-            'total_orders' => $orders->count(),
-            'total_subtotal' => $totalSubtotal,
-            'paid_orders' => $paidOrders,
-            'unpaid_orders' => $unpaidOrders,
-            'completed_orders' => $completedOrders,
-            'incomplete_orders' => $incompleteOrders,
+            'fastest_item' => [
+                'name' => $fastest->item_name ?? '-',
+                'time' => (int) ($fastest->avg_prep_time ?? 0),
+            ],
+            'slowest_item' => [
+                'name' => $slowest->item_name ?? '-',
+                'time' => (int) ($slowest->avg_prep_time ?? 0),
+            ],
+            'avg_kitchen_time' => (int) round($items->avg('avg_prep_time')),
+            'total_items_prepared' => (int) $items->sum('total_quantity'),
         ];
     }
 
-    private function resolveOrderStatus(Order $order): array
+    private function applyPaymentFilter($query, string $paymentStatus): void
     {
-        $totalQuantity = (int) ($order->total_item_quantity ?? 0);
-        $deliveredQuantity = (int) ($order->delivered_item_quantity ?? 0);
-
-        // Details endpoint does not select aggregate columns, so derive from loaded items.
-        if (
-            $totalQuantity === 0
-            && $deliveredQuantity === 0
-            && $order->relationLoaded('orderItems')
-        ) {
-            $activeOrderItems = $order->orderItems->where('status', '!=', 'deleted');
-            $totalQuantity = (int) $activeOrderItems->sum(function ($orderItem) {
-                return (int) ($orderItem->quantity ?? 0);
-            });
-            $deliveredQuantity = (int) $activeOrderItems->sum(function ($orderItem) {
-                return (int) ($orderItem->delivered_quantity ?? 0);
+        if ($paymentStatus === 'paid') {
+            $query->where(function ($q) {
+                $q->where('orders.is_paid', true)
+                    ->orWhereExists(function ($sub) {
+                        $sub->select(DB::raw(1))
+                            ->from('payments')
+                            ->whereColumn('payments.order_id', 'orders.id')
+                            ->where('payments.payment_status', 'completed');
+                    });
             });
         }
 
-        $isFullyDelivered = $totalQuantity > 0 && $deliveredQuantity >= $totalQuantity;
-        $isCompleted = $isFullyDelivered && $this->isPaidOrder($order);
-
-        return [
-            'key' => $isCompleted ? 'completed' : 'incomplete',
-            'label' => $isCompleted ? 'Completed' : 'Not Yet Completed',
-        ];
+        if ($paymentStatus === 'unpaid') {
+            $query->where(function ($q) {
+                $q->where('orders.is_paid', false)
+                    ->where(function ($sub) {
+                        $sub->whereNotExists(function ($notExists) {
+                            $notExists->select(DB::raw(1))
+                                ->from('payments')
+                                ->whereColumn('payments.order_id', 'orders.id')
+                                ->where('payments.payment_status', 'completed');
+                        })->orWhereExists(function ($exists) {
+                            $exists->select(DB::raw(1))
+                                ->from('payments')
+                                ->whereColumn('payments.order_id', 'orders.id')
+                                ->where('payments.payment_status', '!=', 'completed');
+                        });
+                    });
+            });
+        }
     }
 
-    private function isPaidOrder(Order $order): bool
+    private function applyPerformanceFilter($query, string $performanceCheck): void
     {
-        return (bool) ($order->payment?->payment_status === 'completed' || $order->is_paid);
-    }
-
-    private function resolveClosedTime(Order $order): ?Carbon
-    {
-        if (!$this->isPaidOrder($order) && $order->status !== 'completed') {
-            return null;
+        if ($performanceCheck === 'high') {
+            $query->havingRaw('ROUND(AVG(order_item_preparation_logs.preparation_minutes)) < ?', [10]);
         }
 
-        return $order->updated_at ? Carbon::parse($order->updated_at) : null;
+        if ($performanceCheck === 'normal') {
+            $query->havingRaw('ROUND(AVG(order_item_preparation_logs.preparation_minutes)) BETWEEN ? AND ?', [10, 20]);
+        }
+
+        if ($performanceCheck === 'slow') {
+            $query->havingRaw('ROUND(AVG(order_item_preparation_logs.preparation_minutes)) > ?', [20]);
+        }
     }
 
     private function orderTypeOptions(): array

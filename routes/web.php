@@ -18,6 +18,7 @@ use App\Http\Controllers\VatReportController;
 use App\Http\Controllers\RmReportController;
 use App\Http\Controllers\RmSalesReportController;
 use App\Http\Controllers\SpecialSalesReportController;
+use App\Http\Controllers\Admin\Analysis\LastOrderDateController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -164,9 +165,15 @@ Route::middleware(['auth'])->group(function () {
 
     Route::middleware(['role:superadmin'])->prefix('super-admin-reports')->name('super-admin-reports.')->group(function () {
         Route::get('/order-delivered', [OrderDeliveredReportController::class, 'index'])->name('order-delivered.index');
-        Route::get('/order-delivered/{order}/details', [OrderDeliveredReportController::class, 'details'])->name('order-delivered.details');
+        Route::get('/order-delivered/item-details', [OrderDeliveredReportController::class, 'itemDetails'])->name('order-delivered.details');
         Route::get('/order-delivered/print', [OrderDeliveredReportController::class, 'print'])->name('order-delivered.print');
         Route::get('/order-delivered/export', [OrderDeliveredReportController::class, 'exportExcel'])->name('order-delivered.export');
+    });
+
+    // Analysis Reports (SuperAdmin only)
+    Route::middleware(['role:superadmin'])->prefix('admin/analysis')->name('analysis.')->group(function () {
+        Route::get('/last-order-date', [LastOrderDateController::class, 'index'])->name('last-order-date');
+        Route::get('/last-order-date/export', [LastOrderDateController::class, 'exportExcel'])->name('last-order-date.export');
     });
 
     // POS (Cashier only)
@@ -215,8 +222,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/items/list', [App\Http\Controllers\StockRequestController::class, 'getItems'])->name('items');
     });
 
-    // Main Stock Management Routes (Supervisor only)
-    Route::middleware(['role:supervisor'])->prefix('main-stock')->name('main-stock.')->group(function () {
+    // Main Stock Management Routes (Supervisor, Cashier, SuperAdmin)
+    Route::middleware(['role:supervisor|cashier|superadmin'])->prefix('main-stock')->name('main-stock.')->group(function () {
         // Stock Items CRUD
         Route::get('/', [App\Http\Controllers\MainStockController::class, 'index'])->name('index');
         Route::get('/create', [App\Http\Controllers\MainStockController::class, 'create'])->name('create');
@@ -237,14 +244,14 @@ Route::middleware(['auth'])->group(function () {
     // Stock Transfer Routes (Supervisor to Cashier transfers)
     Route::prefix('stock-transfer')->name('stock-transfer.')->group(function () {
         // Supervisor routes - create and manage transfers
-        Route::middleware(['role:supervisor'])->group(function () {
+        Route::middleware(['role:supervisor|cashier|superadmin'])->group(function () {
             Route::get('/supervisor', [App\Http\Controllers\StockTransferController::class, 'supervisorIndex'])->name('supervisor.index');
             Route::post('/', [App\Http\Controllers\StockTransferController::class, 'store'])->name('store');
             Route::get('/history', [App\Http\Controllers\StockTransferController::class, 'getTransferHistory'])->name('history');
         });
 
         // Cashier routes - receive and respond to transfers
-        Route::middleware(['role:cashier'])->group(function () {
+        Route::middleware(['role:cashier|supervisor|superadmin'])->group(function () {
             Route::get('/cashier', [App\Http\Controllers\StockTransferController::class, 'cashierIndex'])->name('cashier.index');
             Route::get('/cashier/sub-stock', [App\Http\Controllers\StockTransferController::class, 'cashierSubStock'])->name('cashier.sub-stock');
             Route::post('/{stockTransfer}/respond', [App\Http\Controllers\StockTransferController::class, 'cashierRespond'])->name('cashier.respond');
@@ -265,8 +272,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/history-data', [App\Http\Controllers\StockAdjustmentController::class, 'getHistory'])->name('get-history');
     });
 
-    // Wastage Routes (Cashier)
-    Route::middleware(['role:cashier'])->prefix('wastage')->name('wastage.')->group(function () {
+    // Wastage Routes (Cashier, Supervisor, SuperAdmin)
+    Route::middleware(['role:cashier|supervisor|superadmin'])->prefix('wastage')->name('wastage.')->group(function () {
         Route::get('/', [WastageController::class, 'index'])->name('index');
         Route::post('/', [WastageController::class, 'store'])->name('store');
         Route::get('/item/{item}', [WastageController::class, 'getItemDetails'])->name('item-details');
