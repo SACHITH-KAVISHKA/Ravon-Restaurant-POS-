@@ -18,20 +18,34 @@ class ItemModifier extends Model
         'price_adjustment',
         'is_active',
         'pork_available',
+        'status',
     ];
 
     protected $casts = [
         'price_adjustment' => 'decimal:2',
         'is_active' => 'boolean',
         'pork_available' => 'boolean',
+        'status' => 'integer',
     ];
+
+    /**
+     * Boot method to add global active scope.
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::addGlobalScope('active', function ($builder) {
+            $builder->where('status', 1);
+        });
+    }
 
     /**
      * Get the item.
      */
     public function item(): BelongsTo
     {
-        return $this->belongsTo(Item::class);
+        return $this->belongsTo(Item::class)->withoutGlobalScope('active');
     }
 
     /**

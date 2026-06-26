@@ -22,11 +22,11 @@ class ItemRecipe extends Model
     ];
 
     /**
-     * Get the menu item this recipe belongs to.
+     * Get the item.
      */
     public function item(): BelongsTo
     {
-        return $this->belongsTo(Item::class);
+        return $this->belongsTo(Item::class)->withoutGlobalScope('active');
     }
 
     /**
@@ -34,7 +34,7 @@ class ItemRecipe extends Model
      */
     public function modifier(): BelongsTo
     {
-        return $this->belongsTo(ItemModifier::class, 'item_modifier_id');
+        return $this->belongsTo(ItemModifier::class, 'item_modifier_id')->withoutGlobalScope('active');
     }
 
     /**

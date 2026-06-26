@@ -93,7 +93,7 @@ class MainStockItem extends Model
      */
     public function linkedItem(): BelongsTo
     {
-        return $this->belongsTo(Item::class, 'linked_item_id');
+        return $this->belongsTo(Item::class, 'linked_item_id')->withoutGlobalScope('active');
     }
 
     /**
@@ -101,7 +101,7 @@ class MainStockItem extends Model
      */
     public function linkedModifier(): BelongsTo
     {
-        return $this->belongsTo(ItemModifier::class, 'linked_item_modifier_id');
+        return $this->belongsTo(ItemModifier::class, 'linked_item_modifier_id')->withoutGlobalScope('active');
     }
 
     /**

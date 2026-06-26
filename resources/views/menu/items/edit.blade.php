@@ -382,7 +382,7 @@
                                                         Edit
                                                     </button>
                                                     <form action="{{ route('menu.modifiers.destroy', $modifier) }}"
-                                                        method="POST" onsubmit="return confirm('Delete this portion?')">
+                                                        method="POST" onsubmit="event.preventDefault(); confirmDeletePortion(this);">
                                                         @csrf
                                                         @method('DELETE')
                                                         <button type="submit"
@@ -1487,6 +1487,28 @@
                         }, 50);
                     }
                 }
+            }
+
+            function confirmDeletePortion(form) {
+                Swal.fire({
+                    title: 'Delete Portion?',
+                    text: 'This portion will be marked as inactive and can be restored later.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#764ba2',
+                    cancelButtonColor: '#9ca3af',
+                    confirmButtonText: 'Yes, delete it!',
+                    cancelButtonText: 'Cancel',
+                    customClass: {
+                        popup: 'rounded-xl shadow-lg border border-gray-150',
+                        confirmButton: 'rounded-lg px-4 py-2 text-white font-bold',
+                        cancelButton: 'rounded-lg px-4 py-2 text-white font-bold'
+                    }
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        form.submit();
+                    }
+                });
             }
         </script>
 @endsection

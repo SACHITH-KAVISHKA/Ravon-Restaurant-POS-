@@ -62,11 +62,13 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/items/{item}/edit', [MenuController::class, 'editItem'])->name('items.edit');
         Route::put('/items/{item}', [MenuController::class, 'updateItem'])->name('items.update');
         Route::delete('/items/{item}', [MenuController::class, 'destroyItem'])->name('items.destroy');
+        Route::post('/items/{id}/activate', [MenuController::class, 'activateItem'])->name('items.activate');
 
         // Modifier routes
         Route::post('/items/{item}/modifiers', [MenuController::class, 'storeModifier'])->name('modifiers.store');
         Route::put('/modifiers/{modifier}', [MenuController::class, 'updateModifier'])->name('modifiers.update');
         Route::delete('/modifiers/{modifier}', [MenuController::class, 'destroyModifier'])->name('modifiers.destroy');
+        Route::post('/modifiers/{id}/activate', [MenuController::class, 'activateModifier'])->name('modifiers.activate');
 
         // RM Report
         Route::get('/rm-report', [RmReportController::class, 'index'])->name('rm-report.index');
@@ -302,4 +304,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/', [App\Http\Controllers\SettingController::class, 'index'])->name('index');
         Route::post('/', [App\Http\Controllers\SettingController::class, 'store'])->name('store');
     });
+
+    // Inactive endpoints (APIs returning JSON)
+    Route::get('/menu-items/inactive', [MenuController::class, 'inactiveItems'])->name('menu.items.inactive');
+    Route::get('/menu-item-portions/inactive', [MenuController::class, 'inactivePortions'])->name('menu.portions.inactive');
 });

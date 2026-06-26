@@ -81,7 +81,7 @@ class OrderItemPreparationLog extends Model
      */
     public function item(): BelongsTo
     {
-        return $this->belongsTo(Item::class);
+        return $this->belongsTo(Item::class)->withoutGlobalScope('active');
     }
 
     /**
@@ -89,6 +89,6 @@ class OrderItemPreparationLog extends Model
      */
     public function itemModifier(): BelongsTo
     {
-        return $this->belongsTo(ItemModifier::class, 'item_modifier_id');
+        return $this->belongsTo(ItemModifier::class, 'item_modifier_id')->withoutGlobalScope('active');
     }
 }

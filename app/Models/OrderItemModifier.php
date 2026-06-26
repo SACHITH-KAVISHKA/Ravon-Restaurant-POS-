@@ -33,6 +33,6 @@ class OrderItemModifier extends Model
      */
     public function modifier(): BelongsTo
     {
-        return $this->belongsTo(ItemModifier::class, 'modifier_id');
+        return $this->belongsTo(ItemModifier::class, 'modifier_id')->withoutGlobalScope('active');
     }
 }

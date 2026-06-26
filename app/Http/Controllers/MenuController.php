@@ -21,8 +21,23 @@ class MenuController extends Controller
     {
         $categories = Category::with(['items.modifiers'])->get();
         $items = Item::with(['category', 'modifiers'])->orderBy('display_order')->get();
+        
+        $inactiveItems = Item::withoutGlobalScope('active')
+            ->where('status', 0)
+            ->with(['category'])
+            ->get();
 
-        return view('menu.index', compact('categories', 'items'));
+        $inactivePortions = ItemModifier::withoutGlobalScope('active')
+            ->where('status', 0)
+            ->whereHas('item', function ($query) {
+                $query->where('status', 1);
+            })
+            ->with(['item.category', 'item.modifiers' => function ($query) {
+                $query->withoutGlobalScope('active');
+            }])
+            ->get();
+
+        return view('menu.index', compact('categories', 'items', 'inactiveItems', 'inactivePortions'));
     }
 
     /**
@@ -374,7 +389,8 @@ class MenuController extends Controller
      */
     public function destroyItem(Item $item)
     {
-        $item->delete();
+        $item->status = 0;
+        $item->save();
 
         return redirect()->route('menu.index')->with('success', 'Item deleted successfully!');
     }
@@ -523,8 +539,65 @@ class MenuController extends Controller
     public function destroyModifier(ItemModifier $modifier)
     {
         $item = $modifier->item;
-        $modifier->delete();
+        $modifier->status = 0;
+        $modifier->save();
 
         return redirect()->route('menu.items.edit', $item)->with('success', 'Portion deleted successfully!');
+    }
+
+    /**
+     * Activate a menu item.
+     */
+    public function activateItem($id)
+    {
+        $item = Item::withoutGlobalScope('active')->findOrFail($id);
+        $item->status = 1;
+        $item->save();
+
+        return redirect()->route('menu.index')->with('success', 'Item activated successfully!');
+    }
+
+    /**
+     * Activate a portion/modifier.
+     */
+    public function activateModifier($id)
+    {
+        $modifier = ItemModifier::withoutGlobalScope('active')->findOrFail($id);
+        $modifier->status = 1;
+        $modifier->save();
+
+        return redirect()->route('menu.index')->with('success', 'Portion activated successfully!');
+    }
+
+    /**
+     * Get inactive items (JSON).
+     */
+    public function inactiveItems()
+    {
+        $items = Item::withoutGlobalScope('active')
+            ->where('status', 0)
+            ->with(['category'])
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'items' => $items
+        ]);
+    }
+
+    /**
+     * Get inactive portions (JSON).
+     */
+    public function inactivePortions()
+    {
+        $portions = ItemModifier::withoutGlobalScope('active')
+            ->where('status', 0)
+            ->with(['item.category'])
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'portions' => $portions
+        ]);
     }
 }

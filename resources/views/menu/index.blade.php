@@ -64,6 +64,10 @@
                                 {{ $category->name }}
                             </button>
                         @endforeach
+                        <button onclick="filterCategory('inactive', this)"
+                            class="category-filter px-5 py-3 text-gray-600 hover:text-purple-600 font-semibold border-b-2 border-transparent hover:border-purple-300 whitespace-nowrap flex-shrink-0 transition text-sm">
+                            Inactive
+                        </button>
                     </div>
                 </div>
             </div>
@@ -193,7 +197,7 @@
                                                 </svg>
                                             </a>
                                             <form action="{{ route('menu.items.destroy', $item) }}" method="POST"
-                                                onsubmit="return confirm('Are you sure you want to delete this item?')">
+                                                onsubmit="event.preventDefault(); confirmDelete(this, 'item');">
                                                 @csrf
                                                 @method('DELETE')
                                                 <button type="submit"
@@ -211,7 +215,7 @@
                                     </td>
                                 </tr>
                             @empty
-                                <tr>
+                                <tr id="menu-active-empty-row">
                                     <td colspan="3" class="px-6 py-12 text-center">
                                         <svg class="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none"
                                             stroke="currentColor" viewBox="0 0 24 24">
@@ -225,20 +229,174 @@
                                     </td>
                                 </tr>
                             @endforelse
-                            @if ($items->isNotEmpty())
-                                <tr id="menu-search-empty" class="hidden">
-                                    <td colspan="3" class="px-6 py-12 text-center">
-                                        <svg class="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none"
-                                            stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-2M9 5a2 2 0 012-2h2a2 2 0 012 2M9 5h6m-6 4h6m-6 4h3" />
-                                        </svg>
-                                        <p class="text-gray-600 text-lg">No items match your search</p>
-                                        <p class="text-gray-500 text-sm mt-1">Try a different keyword or clear the search.
-                                        </p>
+
+                            <!-- Inactive Menu Items -->
+                            @foreach($inactiveItems as $item)
+                                <tr class="item-row hover:bg-purple-50 transition hidden" data-category="inactive" data-inactive="true"
+                                    data-search="{{ Str::lower($item->name . ' ' . ($item->description ?? '')) }}">
+                                    <!-- Item Name -->
+                                    <td class="px-6 py-3" style="width: 50%;">
+                                        <div class="flex items-center">
+                                            <div class="flex-shrink-0 h-10 w-10 mr-3">
+                                                @if ($item->image)
+                                                    <img src="{{ asset('storage/' . $item->image) }}"
+                                                        alt="{{ $item->name }}" class="h-10 w-10 rounded-lg object-cover">
+                                                @else
+                                                    <div
+                                                        class="h-10 w-10 rounded-lg bg-gray-100 flex items-center justify-center">
+                                                        <svg class="w-5 h-5 text-gray-400" fill="none"
+                                                            stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                                stroke-width="2"
+                                                                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                        </svg>
+                                                    </div>
+                                                @endif
+                                            </div>
+                                            <div>
+                                                <div class="text-sm font-semibold text-gray-800">{{ $item->name }}</div>
+                                                @if ($item->description)
+                                                    <div class="text-xs text-gray-500">
+                                                        {{ Str::limit($item->description, 40) }}</div>
+                                                @endif
+                                                <div class="text-xs text-red-500 mt-0.5 font-medium">Status: Inactive Item</div>
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                    <!-- Category -->
+                                    <td class="px-6 py-3" style="width: 30%;">
+                                        <span class="text-sm text-gray-700">{{ $item->category->name }}</span>
+                                    </td>
+
+                                    <!-- Actions -->
+                                    <td class="px-6 py-3" style="width: 20%;">
+                                        <div class="flex items-center justify-center gap-2">
+                                            <form action="{{ route('menu.items.activate', $item->id) }}" method="POST"
+                                                onsubmit="event.preventDefault(); confirmActivate(this, 'item');">
+                                                @csrf
+                                                <button type="submit"
+                                                    class="inline-flex items-center px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-xs font-semibold gap-1"
+                                                    title="Activate">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                    </svg>
+                                                    Activate
+                                                </button>
+                                            </form>
+                                        </div>
                                     </td>
                                 </tr>
-                            @endif
+                            @endforeach
+
+                            <!-- Inactive Item Portions -->
+                            @foreach($inactivePortions as $portion)
+                                @php
+                                    $item = $portion->item;
+                                @endphp
+                                @if($item)
+                                    <tr class="item-row hover:bg-purple-50 transition hidden" data-category="inactive" data-inactive="true"
+                                        data-search="{{ Str::lower($item->name . ' ' . $portion->name) }}">
+                                        <!-- Item Name (Parent + Portions Tree) -->
+                                        <td class="px-6 py-3" style="width: 50%;">
+                                            <div class="flex items-start">
+                                                <div class="flex-shrink-0 h-10 w-10 mr-3 mt-1">
+                                                    @if ($item->image)
+                                                        <img src="{{ asset('storage/' . $item->image) }}"
+                                                            alt="{{ $item->name }}" class="h-10 w-10 rounded-lg object-cover">
+                                                    @else
+                                                        <div
+                                                            class="h-10 w-10 rounded-lg bg-gray-100 flex items-center justify-center">
+                                                            <svg class="w-5 h-5 text-gray-400" fill="none"
+                                                                stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                                    stroke-width="2"
+                                                                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                            </svg>
+                                                        </div>
+                                                    @endif
+                                                </div>
+                                                <div>
+                                                    <div class="text-sm font-semibold text-gray-800">{{ $item->name }}</div>
+                                                    <div class="text-xs font-semibold font-mono mt-1 leading-relaxed">
+                                                        @php
+                                                            // Get all portions (both active and inactive) of this item
+                                                            $allPortions = $item->modifiers;
+                                                            $total = count($allPortions);
+                                                        @endphp
+                                                        @foreach($allPortions as $idx => $p)
+                                                            @php
+                                                                $isLast = $idx === $total - 1;
+                                                                $prefix = $isLast ? '└── ' : '├── ';
+                                                                $isPortionInactive = $p->status == 0;
+                                                            @endphp
+                                                            @if($isPortionInactive)
+                                                                <span class="text-red-500 font-bold">
+                                                                    {{ $prefix }}{{ $p->name }} (Inactive)
+                                                                </span>
+                                                            @else
+                                                                <span class="text-gray-500 font-normal">
+                                                                    {{ $prefix }}{{ $p->name }} (Active)
+                                                                </span>
+                                                            @endif
+                                                            @if(!$isLast)<br>@endif
+                                                        @endforeach
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </td>
+
+                                        <!-- Category -->
+                                        <td class="px-6 py-3" style="width: 30%;">
+                                            <span class="text-sm text-gray-700">{{ $item->category->name }}</span>
+                                        </td>
+
+                                        <!-- Actions -->
+                                        <td class="px-6 py-3" style="width: 20%;">
+                                            <div class="flex items-center justify-center gap-2">
+                                                <form action="{{ route('menu.modifiers.activate', $portion->id) }}" method="POST"
+                                                    onsubmit="event.preventDefault(); confirmActivate(this, 'portion');">
+                                                    @csrf
+                                                    <button type="submit"
+                                                        class="inline-flex items-center px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-xs font-semibold gap-1"
+                                                        title="Activate">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                        </svg>
+                                                        Activate
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @endif
+                            @endforeach
+
+                            <tr id="menu-inactive-empty-row" class="hidden">
+                                <td colspan="3" class="px-6 py-12 text-center">
+                                    <svg class="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none"
+                                        stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                                    </svg>
+                                    <p class="text-gray-600 text-lg">No inactive menu items or portions found</p>
+                                </td>
+                            </tr>
+
+                            <tr id="menu-search-empty" class="hidden">
+                                <td colspan="3" class="px-6 py-12 text-center">
+                                    <svg class="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none"
+                                        stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-2M9 5a2 2 0 012-2h2a2 2 0 012 2M9 5h6m-6 4h6m-6 4h3" />
+                                    </svg>
+                                    <p class="text-gray-600 text-lg">No items match your search</p>
+                                    <p class="text-gray-500 text-sm mt-1">Try a different keyword or clear the search.
+                                    </p>
+                                </td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -255,7 +413,15 @@
             let visibleCount = 0;
 
             items.forEach(item => {
-                const matchesCategory = activeCategory === 'all' || item.dataset.category == activeCategory;
+                const isRowInactive = item.dataset.inactive === 'true';
+                
+                let matchesCategory = false;
+                if (activeCategory === 'inactive') {
+                    matchesCategory = isRowInactive;
+                } else {
+                    matchesCategory = !isRowInactive && (activeCategory === 'all' || item.dataset.category == activeCategory);
+                }
+
                 const haystack = item.dataset.search || '';
                 const matchesSearch = searchQuery === '' || haystack.includes(searchQuery);
 
@@ -267,9 +433,30 @@
                 }
             });
 
-            const emptyRow = document.getElementById('menu-search-empty');
-            if (emptyRow) {
-                emptyRow.classList.toggle('hidden', visibleCount !== 0);
+            const activeEmptyRow = document.getElementById('menu-active-empty-row');
+            const inactiveEmptyRow = document.getElementById('menu-inactive-empty-row');
+            const searchEmptyRow = document.getElementById('menu-search-empty');
+
+            if (activeCategory === 'inactive') {
+                if (activeEmptyRow) activeEmptyRow.classList.add('hidden');
+                if (inactiveEmptyRow) {
+                    inactiveEmptyRow.classList.toggle('hidden', visibleCount !== 0);
+                }
+                if (searchEmptyRow) searchEmptyRow.classList.add('hidden');
+            } else {
+                if (inactiveEmptyRow) inactiveEmptyRow.classList.add('hidden');
+                
+                if (searchQuery !== '') {
+                    if (activeEmptyRow) activeEmptyRow.classList.add('hidden');
+                    if (searchEmptyRow) {
+                        searchEmptyRow.classList.toggle('hidden', visibleCount !== 0);
+                    }
+                } else {
+                    if (searchEmptyRow) searchEmptyRow.classList.add('hidden');
+                    if (activeEmptyRow) {
+                        activeEmptyRow.classList.toggle('hidden', visibleCount !== 0);
+                    }
+                }
             }
         }
 
@@ -288,6 +475,50 @@
             }
 
             applyFilters();
+        }
+
+        function confirmDelete(form, type) {
+            Swal.fire({
+                title: 'Delete ' + (type === 'item' ? 'Item' : 'Portion') + '?',
+                text: 'This will move the ' + type + ' to the Inactive list. It can be restored later.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#764ba2',
+                cancelButtonColor: '#9ca3af',
+                confirmButtonText: 'Yes, delete it!',
+                cancelButtonText: 'Cancel',
+                customClass: {
+                    popup: 'rounded-xl shadow-lg border border-gray-150',
+                    confirmButton: 'rounded-lg px-4 py-2 text-white font-bold',
+                    cancelButton: 'rounded-lg px-4 py-2 text-white font-bold'
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    form.submit();
+                }
+            });
+        }
+
+        function confirmActivate(form, type) {
+            Swal.fire({
+                title: 'Activate ' + (type === 'item' ? 'Item' : 'Portion') + '?',
+                text: 'This will restore the ' + type + ' and make it active throughout the POS system.',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#28a745',
+                cancelButtonColor: '#9ca3af',
+                confirmButtonText: 'Yes, activate it!',
+                cancelButtonText: 'Cancel',
+                customClass: {
+                    popup: 'rounded-xl shadow-lg border border-gray-150',
+                    confirmButton: 'rounded-lg px-4 py-2 text-white font-bold',
+                    cancelButton: 'rounded-lg px-4 py-2 text-white font-bold'
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    form.submit();
+                }
+            });
         }
 
         document.addEventListener('DOMContentLoaded', () => {

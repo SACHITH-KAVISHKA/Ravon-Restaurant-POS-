@@ -30,6 +30,7 @@ class Item extends Model
         'sscl_available',
         'pork_available',
         'display_order',
+        'status',
     ];
 
     protected $casts = [
@@ -44,6 +45,7 @@ class Item extends Model
         'sscl_available' => 'boolean',
         'pork_available' => 'boolean',
         'display_order' => 'integer',
+        'status' => 'integer',
     ];
 
     /**
@@ -57,6 +59,10 @@ class Item extends Model
             if (empty($item->slug)) {
                 $item->slug = Str::slug($item->name);
             }
+        });
+
+        static::addGlobalScope('active', function ($builder) {
+            $builder->where('status', 1);
         });
     }
 
