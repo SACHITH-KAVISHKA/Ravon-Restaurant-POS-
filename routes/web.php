@@ -19,6 +19,7 @@ use App\Http\Controllers\RmReportController;
 use App\Http\Controllers\RmSalesReportController;
 use App\Http\Controllers\SpecialSalesReportController;
 use App\Http\Controllers\Admin\Analysis\LastOrderDateController;
+use App\Http\Controllers\PriceListActivityController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -47,7 +48,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');
 
     // Menu Management (Admin & SuperAdmin only)
-    Route::middleware(['role:admin|superadmin'])->prefix('menu')->name('menu.')->group(function () {
+    Route::middleware(['role:admin|manager|superadmin'])->prefix('menu')->name('menu.')->group(function () {
         Route::get('/', [MenuController::class, 'index'])->name('index');
 
         // Category routes
@@ -59,6 +60,7 @@ Route::middleware(['auth'])->group(function () {
         // Item routes
         Route::get('/items/create', [MenuController::class, 'createItem'])->name('items.create');
         Route::post('/items', [MenuController::class, 'storeItem'])->name('items.store');
+        Route::get('/items/export-price-list', [MenuController::class, 'exportPriceList'])->name('items.export-price-list');
         Route::get('/items/{item}/edit', [MenuController::class, 'editItem'])->name('items.edit');
         Route::put('/items/{item}', [MenuController::class, 'updateItem'])->name('items.update');
         Route::delete('/items/{item}', [MenuController::class, 'destroyItem'])->name('items.destroy');
@@ -75,6 +77,10 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/rm-report/export', [RmReportController::class, 'exportExcel'])->name('rm-report.export');
         Route::put('/rm-report/{recipe}', [RmReportController::class, 'update'])->name('rm-report.update');
         Route::delete('/rm-report/{recipe}', [RmReportController::class, 'destroy'])->name('rm-report.destroy');
+
+        // Price List Activity
+        Route::get('/price-list-activity', [PriceListActivityController::class, 'index'])->name('price-list-activity.index');
+        Route::get('/price-list-activity/export', [PriceListActivityController::class, 'exportExcel'])->name('price-list-activity.export');
     });
 
     // Kitchen Display (Kitchen staff) - Placeholder routes
@@ -165,7 +171,7 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/{vatCustomer}', [VatCustomerController::class, 'update'])->name('update');
     });
 
-    Route::middleware(['role:superadmin'])->prefix('super-admin-reports')->name('super-admin-reports.')->group(function () {
+    Route::middleware(['role:superadmin|manager'])->prefix('super-admin-reports')->name('super-admin-reports.')->group(function () {
         Route::get('/order-delivered', [OrderDeliveredReportController::class, 'index'])->name('order-delivered.index');
         Route::get('/order-delivered/item-details', [OrderDeliveredReportController::class, 'itemDetails'])->name('order-delivered.details');
         Route::get('/order-delivered/print', [OrderDeliveredReportController::class, 'print'])->name('order-delivered.print');
@@ -173,7 +179,7 @@ Route::middleware(['auth'])->group(function () {
     });
 
     // Analysis Reports (SuperAdmin only)
-    Route::middleware(['role:superadmin'])->prefix('admin/analysis')->name('analysis.')->group(function () {
+    Route::middleware(['role:manager|superadmin'])->prefix('admin/analysis')->name('analysis.')->group(function () {
         Route::get('/last-order-date', [LastOrderDateController::class, 'index'])->name('last-order-date');
         Route::get('/last-order-date/export', [LastOrderDateController::class, 'exportExcel'])->name('last-order-date.export');
     });
@@ -225,7 +231,7 @@ Route::middleware(['auth'])->group(function () {
     });
 
     // Main Stock Management Routes (Supervisor, Cashier, SuperAdmin)
-    Route::middleware(['role:supervisor|cashier|superadmin'])->prefix('main-stock')->name('main-stock.')->group(function () {
+    Route::middleware(['role:manager|supervisor|cashier|superadmin'])->prefix('main-stock')->name('main-stock.')->group(function () {
         // Stock Items CRUD
         Route::get('/', [App\Http\Controllers\MainStockController::class, 'index'])->name('index');
         Route::get('/create', [App\Http\Controllers\MainStockController::class, 'create'])->name('create');
@@ -246,14 +252,14 @@ Route::middleware(['auth'])->group(function () {
     // Stock Transfer Routes (Supervisor to Cashier transfers)
     Route::prefix('stock-transfer')->name('stock-transfer.')->group(function () {
         // Supervisor routes - create and manage transfers
-        Route::middleware(['role:supervisor|cashier|superadmin'])->group(function () {
+        Route::middleware(['role:manager|supervisor|cashier|superadmin'])->group(function () {
             Route::get('/supervisor', [App\Http\Controllers\StockTransferController::class, 'supervisorIndex'])->name('supervisor.index');
             Route::post('/', [App\Http\Controllers\StockTransferController::class, 'store'])->name('store');
             Route::get('/history', [App\Http\Controllers\StockTransferController::class, 'getTransferHistory'])->name('history');
         });
 
         // Cashier routes - receive and respond to transfers
-        Route::middleware(['role:cashier|supervisor|superadmin'])->group(function () {
+        Route::middleware(['role:manager|cashier|supervisor|superadmin'])->group(function () {
             Route::get('/cashier', [App\Http\Controllers\StockTransferController::class, 'cashierIndex'])->name('cashier.index');
             Route::get('/cashier/sub-stock', [App\Http\Controllers\StockTransferController::class, 'cashierSubStock'])->name('cashier.sub-stock');
             Route::post('/{stockTransfer}/respond', [App\Http\Controllers\StockTransferController::class, 'cashierRespond'])->name('cashier.respond');
@@ -266,7 +272,7 @@ Route::middleware(['auth'])->group(function () {
     });
 
     // Stock Adjustment Routes (Admin & SuperAdmin only)
-    Route::middleware(['role:admin|superadmin'])->prefix('stock-adjustment')->name('stock-adjustment.')->group(function () {
+    Route::middleware(['role:admin|superadmin|manager'])->prefix('stock-adjustment')->name('stock-adjustment.')->group(function () {
         Route::get('/', [App\Http\Controllers\StockAdjustmentController::class, 'index'])->name('index');
         Route::post('/', [App\Http\Controllers\StockAdjustmentController::class, 'store'])->name('store');
         Route::get('/item/{item}', [App\Http\Controllers\StockAdjustmentController::class, 'getItemDetails'])->name('item-details');

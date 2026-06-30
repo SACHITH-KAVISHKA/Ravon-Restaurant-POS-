@@ -64,6 +64,22 @@ class Item extends Model
         static::addGlobalScope('active', function ($builder) {
             $builder->where('status', 1);
         });
+
+        static::updated(function ($item) {
+            if ($item->wasChanged('price')) {
+                $previous = $item->getOriginal('price');
+                $new = $item->price;
+                if ($previous !== null && (float)$previous !== (float)$new) {
+                    \App\Models\PriceListActivity::create([
+                        'item_id' => $item->id,
+                        'item_portion_id' => null,
+                        'previous_price' => $previous,
+                        'new_price' => $new,
+                        'updated_by' => auth()->id(),
+                    ]);
+                }
+            }
+        });
     }
 
     /**

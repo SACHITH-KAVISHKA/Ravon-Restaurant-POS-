@@ -56,7 +56,7 @@
                             </div>
                             <div id="categoryDropdown"
                                 class="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto hidden">
-                                @foreach($categories as $category)
+                                @foreach ($categories as $category)
                                     <div class="category-option px-4 py-2 hover:bg-purple-100 cursor-pointer transition"
                                         data-id="{{ $category->id }}" data-name="{{ $category->name }}">
                                         {{ $category->name }}
@@ -72,7 +72,8 @@
                         <div class="flex gap-4">
                             <div class="flex-1 bg-blue-50 p-4 rounded-lg border border-blue-200">
                                 <label class="flex items-center cursor-pointer">
-                                    <input type="checkbox" name="is_finished_goods" id="isFinishedGoods" value="1" {{ old('is_finished_goods') ? 'checked' : '' }}
+                                    <input type="checkbox" name="is_finished_goods" id="isFinishedGoods" value="1"
+                                        {{ old('is_finished_goods') ? 'checked' : '' }}
                                         class="w-5 h-5 text-blue-600 bg-gray-50 border-gray-300 rounded focus:ring-blue-500"
                                         onchange="toggleFinishedGoodsRecipe()">
                                     <span class="ml-3 text-gray-800 font-semibold">Finished Goods</span>
@@ -81,7 +82,8 @@
 
                             <div class="flex-1 bg-green-50 p-4 rounded-lg border border-green-200">
                                 <label class="flex items-center cursor-pointer">
-                                    <input type="checkbox" name="is_stock_count" value="1" {{ old('is_stock_count', true) ? 'checked' : '' }}
+                                    <input type="checkbox" name="is_stock_count" value="1"
+                                        {{ old('is_stock_count', true) ? 'checked' : '' }}
                                         class="w-5 h-5 text-green-600 bg-gray-50 border-gray-300 rounded focus:ring-green-500">
                                     <span class="ml-3 text-gray-800 font-semibold">Stock Count</span>
                                 </label>
@@ -89,7 +91,8 @@
 
                             <div class="flex-1 bg-pink-50 p-4 rounded-lg border border-pink-200">
                                 <label class="flex items-center cursor-pointer">
-                                    <input type="checkbox" name="pork_available" value="1" {{ old('pork_available') ? 'checked' : '' }}
+                                    <input type="checkbox" name="pork_available" value="1"
+                                        {{ old('pork_available') ? 'checked' : '' }}
                                         class="w-5 h-5 text-pink-600 bg-gray-50 border-gray-300 rounded focus:ring-pink-500">
                                     <span class="ml-3 text-gray-800 font-semibold">Pork Available</span>
                                 </label>
@@ -101,8 +104,8 @@
                         <div>
                             <label class="block text-sm font-semibold text-gray-800-muted mb-2">Default Price (Rs.)
                                 *</label>
-                            <input type="number" name="price" id="defaultPrice" value="{{ old('price', 0) }}" step="0.01"
-                                min="0" required
+                            <input type="number" name="price" id="defaultPrice" value="{{ old('price', 0) }}"
+                                step="0.01" min="0" required
                                 class="w-full px-4 py-2 bg-gray-50 text-gray-800 rounded-lg border border-gray-300 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500">
                         </div>
 
@@ -148,10 +151,12 @@
                         <!-- Has Portions Checkbox -->
                         <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
                             <label class="flex items-center cursor-pointer">
-                                <input type="checkbox" id="hasPortions" name="has_portions" value="1" {{ old('has_portions') ? 'checked' : '' }}
+                                <input type="checkbox" id="hasPortions" name="has_portions" value="1"
+                                    {{ old('has_portions') ? 'checked' : '' }}
                                     class="w-5 h-5 text-purple-600 bg-white border-gray-300 rounded focus:ring-purple-500"
                                     onchange="togglePortionFields()">
-                                <span class="ml-3 text-gray-800 font-semibold">This item has different portions/sizes</span>
+                                <span class="ml-3 text-gray-800 font-semibold">This item has different
+                                    portions/sizes</span>
                             </label>
                         </div>
 
@@ -159,14 +164,16 @@
                         <div class="flex gap-4">
                             <div class="flex-1 bg-indigo-50 p-4 rounded-lg border border-indigo-200">
                                 <label class="flex items-center cursor-pointer">
-                                    <input type="checkbox" name="vat_available" value="1" {{ old('vat_available') ? 'checked' : '' }}
+                                    <input type="checkbox" name="vat_available" value="1"
+                                        {{ old('vat_available') ? 'checked' : '' }}
                                         class="w-5 h-5 text-indigo-600 bg-white border-gray-300 rounded focus:ring-indigo-500">
                                     <span class="ml-3 text-gray-800 font-semibold">Vat available</span>
                                 </label>
                             </div>
                             <div class="flex-1 bg-teal-50 p-4 rounded-lg border border-teal-200">
                                 <label class="flex items-center cursor-pointer">
-                                    <input type="checkbox" name="sscl_available" value="1" {{ old('sscl_available') ? 'checked' : '' }}
+                                    <input type="checkbox" name="sscl_available" value="1"
+                                        {{ old('sscl_available') ? 'checked' : '' }}
                                         class="w-5 h-5 text-teal-600 bg-white border-gray-300 rounded focus:ring-teal-500">
                                     <span class="ml-3 text-gray-800 font-semibold">SSCL available</span>
                                 </label>
@@ -177,7 +184,8 @@
                         <div id="portionsSection" class="{{ old('has_portions') ? '' : 'hidden' }}">
                             <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
                                 <h3 class="text-lg font-bold text-gray-800 mb-3">Add Portions/Sizes</h3>
-                                <p class="text-gray-800-muted text-sm mb-4">Add different sizes with their individual prices
+                                <p class="text-gray-800-muted text-sm mb-4">Add different sizes with their individual
+                                    prices
                                     and recipes</p>
 
                                 <div id="portionsList" class="space-y-3">
@@ -245,7 +253,8 @@
                 const isSelected = selectedValue == item.id;
                 const isDisabled = selectedIds.includes(item.id) && !isSelected;
                 if (!isDisabled) {
-                    optionsHtml += `<option value="${item.id}" data-unit="${item.unit_abbreviation}" ${isSelected ? 'selected' : ''}>${item.item_name}</option>`;
+                    optionsHtml +=
+                        `<option value="${item.id}" data-unit="${item.unit_abbreviation}" ${isSelected ? 'selected' : ''}>${item.item_name}</option>`;
                 }
             });
             return optionsHtml;
@@ -276,7 +285,8 @@
                 recipeSection.classList.add('opacity-50', 'pointer-events-none');
                 // Disable all portion recipe sections and buttons
                 portionRecipeSections.forEach(section => {
-                    section.closest('.border-t.border-amber-200')?.classList.add('opacity-50', 'pointer-events-none');
+                    section.closest('.border-t.border-amber-200')?.classList.add('opacity-50',
+                        'pointer-events-none');
                 });
                 portionRecipeButtons.forEach(btn => {
                     btn.closest('.border-t.border-amber-200')?.classList.add('opacity-50', 'pointer-events-none');
@@ -289,10 +299,12 @@
                 }
                 // Enable all portion recipe sections
                 portionRecipeSections.forEach(section => {
-                    section.closest('.border-t.border-amber-200')?.classList.remove('opacity-50', 'pointer-events-none');
+                    section.closest('.border-t.border-amber-200')?.classList.remove('opacity-50',
+                        'pointer-events-none');
                 });
                 portionRecipeButtons.forEach(btn => {
-                    btn.closest('.border-t.border-amber-200')?.classList.remove('opacity-50', 'pointer-events-none');
+                    btn.closest('.border-t.border-amber-200')?.classList.remove('opacity-50',
+                        'pointer-events-none');
                 });
             }
         }
@@ -370,13 +382,14 @@
                     if (searchTerm && !name.includes(searchTerm.toLowerCase())) return;
 
                     const optionDiv = document.createElement('div');
-                    optionDiv.className = 'recipe-option px-3 py-2 hover:bg-amber-100 cursor-pointer transition text-sm';
+                    optionDiv.className =
+                        'recipe-option px-3 py-2 hover:bg-amber-100 cursor-pointer transition text-sm';
                     optionDiv.dataset.id = item.id;
                     optionDiv.dataset.name = item.item_name;
                     optionDiv.dataset.unit = item.unit_abbreviation || '';
                     optionDiv.textContent = item.item_name;
 
-                    optionDiv.addEventListener('click', function () {
+                    optionDiv.addEventListener('click', function() {
                         searchInput.value = this.dataset.name;
                         hiddenInput.value = this.dataset.id;
                         updateRecipeUnit(rowId, this.dataset.unit);
@@ -388,13 +401,13 @@
             }
 
             // Show dropdown on focus
-            searchInput.addEventListener('focus', function () {
+            searchInput.addEventListener('focus', function() {
                 populateOptions('');
                 dropdown.classList.remove('hidden');
             });
 
             // Filter options as user types
-            searchInput.addEventListener('input', function () {
+            searchInput.addEventListener('input', function() {
                 populateOptions(this.value);
                 dropdown.classList.remove('hidden');
                 hiddenInput.value = '';
@@ -402,14 +415,14 @@
             });
 
             // Close dropdown when clicking outside
-            document.addEventListener('click', function (e) {
+            document.addEventListener('click', function(e) {
                 if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
                     dropdown.classList.add('hidden');
                 }
             });
 
             // Keyboard navigation
-            searchInput.addEventListener('keydown', function (e) {
+            searchInput.addEventListener('keydown', function(e) {
                 const options = dropdown.querySelectorAll('.recipe-option');
                 const currentIndex = [...options].findIndex(o => o.classList.contains('bg-amber-200'));
 
@@ -418,13 +431,17 @@
                     options.forEach(o => o.classList.remove('bg-amber-200'));
                     const nextIndex = currentIndex < options.length - 1 ? currentIndex + 1 : 0;
                     options[nextIndex]?.classList.add('bg-amber-200');
-                    options[nextIndex]?.scrollIntoView({ block: 'nearest' });
+                    options[nextIndex]?.scrollIntoView({
+                        block: 'nearest'
+                    });
                 } else if (e.key === 'ArrowUp') {
                     e.preventDefault();
                     options.forEach(o => o.classList.remove('bg-amber-200'));
                     const prevIndex = currentIndex > 0 ? currentIndex - 1 : options.length - 1;
                     options[prevIndex]?.classList.add('bg-amber-200');
-                    options[prevIndex]?.scrollIntoView({ block: 'nearest' });
+                    options[prevIndex]?.scrollIntoView({
+                        block: 'nearest'
+                    });
                 } else if (e.key === 'Enter') {
                     e.preventDefault();
                     const highlighted = [...options].find(o => o.classList.contains('bg-amber-200'));
@@ -464,7 +481,8 @@
                     event.preventDefault();
                     addRecipeRow();
                     setTimeout(() => {
-                        const newSelect = document.querySelector(`select[name="recipes[${recipeCount}][main_stock_item_id]"]`);
+                        const newSelect = document.querySelector(
+                            `select[name="recipes[${recipeCount}][main_stock_item_id]"]`);
                         if (newSelect) newSelect.focus();
                     }, 50);
                 }
@@ -493,7 +511,8 @@
                 const isSelected = selectedValue == item.id;
                 const isDisabled = selectedIds.includes(item.id) && !isSelected;
                 if (!isDisabled) {
-                    optionsHtml += `<option value="${item.id}" data-unit="${item.unit_abbreviation}" ${isSelected ? 'selected' : ''}>${item.item_name}</option>`;
+                    optionsHtml +=
+                        `<option value="${item.id}" data-unit="${item.unit_abbreviation}" ${isSelected ? 'selected' : ''}>${item.item_name}</option>`;
                 }
             });
             return optionsHtml;
@@ -596,13 +615,14 @@
                     if (searchTerm && !name.includes(searchTerm.toLowerCase())) return;
 
                     const optionDiv = document.createElement('div');
-                    optionDiv.className = 'portion-recipe-option px-2 py-1.5 hover:bg-amber-100 cursor-pointer transition text-xs';
+                    optionDiv.className =
+                        'portion-recipe-option px-2 py-1.5 hover:bg-amber-100 cursor-pointer transition text-xs';
                     optionDiv.dataset.id = item.id;
                     optionDiv.dataset.name = item.item_name;
                     optionDiv.dataset.unit = item.unit_abbreviation || '';
                     optionDiv.textContent = item.item_name;
 
-                    optionDiv.addEventListener('click', function () {
+                    optionDiv.addEventListener('click', function() {
                         searchInput.value = this.dataset.name;
                         hiddenInput.value = this.dataset.id;
                         updatePortionRecipeUnit(portionId, recipeId, this.dataset.unit);
@@ -613,25 +633,25 @@
                 });
             }
 
-            searchInput.addEventListener('focus', function () {
+            searchInput.addEventListener('focus', function() {
                 populateOptions('');
                 dropdown.classList.remove('hidden');
             });
 
-            searchInput.addEventListener('input', function () {
+            searchInput.addEventListener('input', function() {
                 populateOptions(this.value);
                 dropdown.classList.remove('hidden');
                 hiddenInput.value = '';
                 updatePortionRecipeUnit(portionId, recipeId, '--');
             });
 
-            document.addEventListener('click', function (e) {
+            document.addEventListener('click', function(e) {
                 if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
                     dropdown.classList.add('hidden');
                 }
             });
 
-            searchInput.addEventListener('keydown', function (e) {
+            searchInput.addEventListener('keydown', function(e) {
                 const options = dropdown.querySelectorAll('.portion-recipe-option');
                 const currentIndex = [...options].findIndex(o => o.classList.contains('bg-amber-200'));
 
@@ -640,13 +660,17 @@
                     options.forEach(o => o.classList.remove('bg-amber-200'));
                     const nextIndex = currentIndex < options.length - 1 ? currentIndex + 1 : 0;
                     options[nextIndex]?.classList.add('bg-amber-200');
-                    options[nextIndex]?.scrollIntoView({ block: 'nearest' });
+                    options[nextIndex]?.scrollIntoView({
+                        block: 'nearest'
+                    });
                 } else if (e.key === 'ArrowUp') {
                     e.preventDefault();
                     options.forEach(o => o.classList.remove('bg-amber-200'));
                     const prevIndex = currentIndex > 0 ? currentIndex - 1 : options.length - 1;
                     options[prevIndex]?.classList.add('bg-amber-200');
-                    options[prevIndex]?.scrollIntoView({ block: 'nearest' });
+                    options[prevIndex]?.scrollIntoView({
+                        block: 'nearest'
+                    });
                 } else if (e.key === 'Enter') {
                     e.preventDefault();
                     const highlighted = [...options].find(o => o.classList.contains('bg-amber-200'));
@@ -747,7 +771,7 @@
                     document.querySelector('form').appendChild(hiddenInput);
                 }
                 hiddenInput.value = priceInput.value;
-                priceInput.addEventListener('input', function () {
+                priceInput.addEventListener('input', function() {
                     hiddenInput.value = this.value;
                 });
             } else if (hiddenInput) {
@@ -818,7 +842,7 @@
                     document.querySelector('form').appendChild(hiddenInput);
                 }
                 hiddenInput.value = priceInput.value;
-                priceInput.addEventListener('input', function () {
+                priceInput.addEventListener('input', function() {
                     hiddenInput.value = this.value;
                 });
             } else if (hiddenInput) {
@@ -969,7 +993,7 @@
         }
 
         // Initialize on page load
-        document.addEventListener('DOMContentLoaded', function () {
+        document.addEventListener('DOMContentLoaded', function() {
             togglePortionFields();
             toggleFinishedGoodsRecipe();
             initCategorySearch();
@@ -993,13 +1017,13 @@
             }
 
             // Show dropdown on focus
-            searchInput.addEventListener('focus', function () {
+            searchInput.addEventListener('focus', function() {
                 dropdown.classList.remove('hidden');
                 filterOptions('');
             });
 
             // Filter options as user types
-            searchInput.addEventListener('input', function () {
+            searchInput.addEventListener('input', function() {
                 const searchTerm = this.value.toLowerCase();
                 filterOptions(searchTerm);
                 dropdown.classList.remove('hidden');
@@ -1023,7 +1047,7 @@
 
             // Select option on click
             options.forEach(option => {
-                option.addEventListener('click', function () {
+                option.addEventListener('click', function() {
                     searchInput.value = this.dataset.name;
                     hiddenInput.value = this.dataset.id;
                     dropdown.classList.add('hidden');
@@ -1031,7 +1055,7 @@
             });
 
             // Close dropdown when clicking outside
-            document.addEventListener('click', function (e) {
+            document.addEventListener('click', function(e) {
                 if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
                     dropdown.classList.add('hidden');
                     // If no category selected, clear input
@@ -1053,7 +1077,7 @@
             });
 
             // Handle keyboard navigation
-            searchInput.addEventListener('keydown', function (e) {
+            searchInput.addEventListener('keydown', function(e) {
                 const visibleOptions = [...options].filter(o => !o.classList.contains('hidden'));
                 const currentIndex = visibleOptions.findIndex(o => o.classList.contains('bg-purple-200'));
 
@@ -1062,13 +1086,17 @@
                     visibleOptions.forEach(o => o.classList.remove('bg-purple-200'));
                     const nextIndex = currentIndex < visibleOptions.length - 1 ? currentIndex + 1 : 0;
                     visibleOptions[nextIndex]?.classList.add('bg-purple-200');
-                    visibleOptions[nextIndex]?.scrollIntoView({ block: 'nearest' });
+                    visibleOptions[nextIndex]?.scrollIntoView({
+                        block: 'nearest'
+                    });
                 } else if (e.key === 'ArrowUp') {
                     e.preventDefault();
                     visibleOptions.forEach(o => o.classList.remove('bg-purple-200'));
                     const prevIndex = currentIndex > 0 ? currentIndex - 1 : visibleOptions.length - 1;
                     visibleOptions[prevIndex]?.classList.add('bg-purple-200');
-                    visibleOptions[prevIndex]?.scrollIntoView({ block: 'nearest' });
+                    visibleOptions[prevIndex]?.scrollIntoView({
+                        block: 'nearest'
+                    });
                 } else if (e.key === 'Enter') {
                     e.preventDefault();
                     const highlighted = visibleOptions.find(o => o.classList.contains('bg-purple-200'));

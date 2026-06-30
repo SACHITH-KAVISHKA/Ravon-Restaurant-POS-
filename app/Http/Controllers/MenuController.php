@@ -11,6 +11,12 @@ use App\Models\MainStockItem;
 use App\Models\KitchenStation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class MenuController extends Controller
 {
@@ -598,6 +604,142 @@ class MenuController extends Controller
         return response()->json([
             'success' => true,
             'portions' => $portions
+        ]);
+    }
+
+    /**
+     * Export active menu items and portions to a professionally formatted Excel price list.
+     */
+    public function exportPriceList()
+    {
+        $categories = Category::with(['items' => function($q) {
+            $q->where('status', 1)->orderBy('name');
+        }, 'items.modifiers' => function($q) {
+            $q->where('status', 1)->orderBy('name');
+        }])
+        ->where('is_active', true)
+        ->orderBy('name')
+        ->get();
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('POS Price List');
+
+        // Set Headers
+        $sheet->setCellValue('A1', 'Category');
+        $sheet->setCellValue('B1', 'Item Name');
+        $sheet->setCellValue('C1', 'Portion');
+        $sheet->setCellValue('D1', 'Price');
+
+        // Freeze the header row
+        $sheet->freezePane('A2');
+
+        // Header Styling
+        $headerStyle = [
+            'font' => [
+                'bold' => true,
+                'color' => ['argb' => 'FFFFFFFF'],
+                'size' => 11,
+            ],
+            'fill' => [
+                'fillType' => Fill::FILL_SOLID,
+                'startColor' => ['argb' => 'FF667EEA'], // Purple color matching UI
+            ],
+            'alignment' => [
+                'horizontal' => Alignment::HORIZONTAL_CENTER,
+                'vertical' => Alignment::VERTICAL_CENTER,
+            ],
+        ];
+        $sheet->getStyle('A1:D1')->applyFromArray($headerStyle);
+        $sheet->getRowDimension(1)->setRowHeight(25);
+
+        $row = 2;
+
+        foreach ($categories as $category) {
+            foreach ($category->items as $item) {
+                $hasPortions = $item->modifiers->isNotEmpty();
+
+                if (!$hasPortions) {
+                    $sheet->setCellValue('A' . $row, $category->name);
+                    $sheet->setCellValue('B' . $row, $item->name);
+                    $sheet->setCellValue('C' . $row, '-');
+                    $sheet->setCellValue('D' . $row, $item->price);
+                    
+                    // Zebra striping
+                    if ($row % 2 === 0) {
+                        $sheet->getStyle("A{$row}:D{$row}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFF9FAFB');
+                    }
+                    // Price formatting & alignment
+                    $sheet->getStyle('D' . $row)->getNumberFormat()->setFormatCode('"Rs. " #,##0');
+                    $sheet->getStyle('D' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+                    $row++;
+                } else {
+                    // Item row as a header/parent
+                    $sheet->setCellValue('A' . $row, $category->name);
+                    $sheet->setCellValue('B' . $row, $item->name);
+                    $sheet->setCellValue('C' . $row, '');
+                    $sheet->setCellValue('D' . $row, '');
+                    
+                    if ($row % 2 === 0) {
+                        $sheet->getStyle("A{$row}:D{$row}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFF9FAFB');
+                    }
+                    $row++;
+
+                    // Portion rows
+                    foreach ($item->modifiers as $portion) {
+                        $sheet->setCellValue('A' . $row, '');
+                        $sheet->setCellValue('B' . $row, '  ↳ ' . $portion->name);
+                        $sheet->setCellValue('C' . $row, $portion->name);
+                        $sheet->setCellValue('D' . $row, $portion->price_adjustment);
+
+                        if ($row % 2 === 0) {
+                            $sheet->getStyle("A{$row}:D{$row}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFF9FAFB');
+                        }
+                        
+                        $sheet->getStyle('D' . $row)->getNumberFormat()->setFormatCode('"Rs. " #,##0');
+                        $sheet->getStyle('D' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+                        $row++;
+                    }
+                }
+            }
+        }
+
+        $lastRow = $row - 1;
+
+        // Apply borders to all cells
+        $borderStyle = [
+            'borders' => [
+                'allBorders' => [
+                    'borderStyle' => Border::BORDER_THIN,
+                    'color' => ['argb' => 'FFE5E7EB'], // Light gray borders
+                ],
+            ],
+        ];
+        if ($lastRow >= 1) {
+            $sheet->getStyle('A1:D' . $lastRow)->applyFromArray($borderStyle);
+        }
+
+        // Auto-fit column widths
+        foreach (range('A', 'D') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        // Alignments
+        if ($lastRow >= 2) {
+            $sheet->getStyle('A2:A' . $lastRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
+            $sheet->getStyle('B2:B' . $lastRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
+            $sheet->getStyle('C2:C' . $lastRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        }
+
+        $filename = 'POS_Price_List_' . date('Y-m-d') . '.xlsx';
+
+        return new StreamedResponse(function () use ($spreadsheet) {
+            $writer = new Xlsx($spreadsheet);
+            $writer->save('php://output');
+        }, 200, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Cache-Control' => 'max-age=0',
         ]);
     }
 }

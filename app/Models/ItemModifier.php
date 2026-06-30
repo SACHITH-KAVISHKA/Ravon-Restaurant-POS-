@@ -38,6 +38,22 @@ class ItemModifier extends Model
         static::addGlobalScope('active', function ($builder) {
             $builder->where('status', 1);
         });
+
+        static::updated(function ($modifier) {
+            if ($modifier->wasChanged('price_adjustment')) {
+                $previous = $modifier->getOriginal('price_adjustment');
+                $new = $modifier->price_adjustment;
+                if ($previous !== null && (float)$previous !== (float)$new) {
+                    \App\Models\PriceListActivity::create([
+                        'item_id' => $modifier->item_id,
+                        'item_portion_id' => $modifier->id,
+                        'previous_price' => $previous,
+                        'new_price' => $new,
+                        'updated_by' => auth()->id(),
+                    ]);
+                }
+            }
+        });
     }
 
     /**
