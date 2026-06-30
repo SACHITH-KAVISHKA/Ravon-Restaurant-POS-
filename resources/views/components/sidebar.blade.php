@@ -4,6 +4,7 @@
         <h2 class="text-lg font-bold text-white">Management</h2>
     </div>
     <nav class="flex-1 p-4 space-y-2">
+        @hasanyrole('admin|supervisor|manager|superadmin|cashier')
         <a href="{{ route('dashboard') }}"
             class="flex items-center gap-3 px-4 py-3 {{ request()->routeIs('dashboard') ? 'bg-white/25 text-white border-l-4 border-white font-semibold' : 'text-white/80 hover:bg-white/15 hover:text-white' }} rounded-lg transition">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -12,8 +13,9 @@
             </svg>
             <span class="font-medium">Dashboard</span>
         </a>
+        @endhasanyrole
 
-        @hasanyrole('admin|manager|superadmin')
+        @hasanyrole('superadmin')
         <div x-data="{ open: {{ request()->routeIs('menu.index') || request()->routeIs('menu.categories.*') || request()->routeIs('menu.price-list-activity.*') ? 'true' : 'false' }} }">
             <button @click="open = !open"
                 class="w-full flex items-center justify-between gap-3 px-4 py-3 {{ request()->routeIs('menu.index') || request()->routeIs('menu.categories.*') || request()->routeIs('menu.price-list-activity.*') ? 'bg-white/25 text-white border-l-4 border-white font-semibold' : 'text-white/80 hover:bg-white/15 hover:text-white' }} rounded-lg transition">
@@ -60,7 +62,37 @@
         </div>
         @endhasanyrole
 
-        @hasanyrole('admin|manager|superadmin')
+        @hasanyrole('admin|superadmin')
+        <div x-data="{ open: {{ request()->routeIs('special-sales-report.index') ? 'true' : 'false' }} }">
+            <button @click="open = !open"
+                class="w-full flex items-center justify-between gap-3 px-4 py-3 {{ request()->routeIs('special-sales-report.index') ? 'bg-white/25 text-white border-l-4 border-white font-semibold' : 'text-white/80 hover:bg-white/15 hover:text-white' }} rounded-lg transition">
+                <div class="flex items-center gap-3">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 17v-2a4 4 0 014-4h8m0 0l-3-3m3 3l-3 3M3 7h12m0 0l-3-3m3 3l-3 3" />
+                    </svg>
+                    <span class="font-medium">Details</span>
+                </div>
+                <svg class="w-4 h-4 transition-transform" :class="{'rotate-180': open}" fill="none"
+                    stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+            </button>
+
+            <div x-show="open" x-collapse class="ml-4 mt-2 space-y-1">
+                <a href="{{ route('special-sales-report.index') }}"
+                    class="flex items-center gap-3 px-4 py-2 {{ request()->routeIs('special-sales-report.index') ? 'bg-white/20 text-white font-medium' : 'text-white/70 hover:bg-white/10 hover:text-white' }} rounded-lg transition text-sm">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 17v-2a4 4 0 014-4h8m0 0l-3-3m3 3l-3 3M3 7h12m0 0l-3-3m3 3l-3 3" />
+                    </svg>
+                    <span>Sales Report</span>
+                </a>
+            </div>
+        </div>
+        @endhasanyrole
+
+        @hasanyrole('superadmin')
         <div x-data="{ open: {{ request()->routeIs('sales-report.*') || request()->routeIs('reports.item-sales*') ? 'true' : 'false' }} }">
             <button @click="open = !open"
                 class="w-full flex items-center justify-between gap-3 px-4 py-3 {{ request()->routeIs('sales-report.*') || request()->routeIs('reports.item-sales*') ? 'bg-white/25 text-white border-l-4 border-white font-semibold' : 'text-white/80 hover:bg-white/15 hover:text-white' }} rounded-lg transition">
@@ -99,7 +131,7 @@
         </div>
         @endhasanyrole
 
-        @hasanyrole('admin|manager|superadmin')
+        @hasanyrole('manager|superadmin')
         <div x-data="{ open: {{ request()->routeIs('wastage-report.*') || request()->routeIs('void-report.*') || request()->routeIs('stock-adjustment.history') ? 'true' : 'false' }} }">
             <button @click="open = !open"
                 class="w-full flex items-center justify-between gap-3 px-4 py-3 {{ request()->routeIs('wastage-report.*') || request()->routeIs('void-report.*') || request()->routeIs('stock-adjustment.history') ? 'bg-white/25 text-white border-l-4 border-white font-semibold' : 'text-white/80 hover:bg-white/15 hover:text-white' }} rounded-lg transition">
@@ -147,7 +179,7 @@
         </div>
         @endhasanyrole
 
-        @hasanyrole('admin|manager|superadmin')
+        @hasanyrole('supervisor|superadmin')
         <div x-data="{ open: {{ request()->routeIs('menu.rm-report.*') || request()->routeIs('reports.rm-sales*') || request()->routeIs('reports.item-transactions*') ? 'true' : 'false' }} }">
             <button @click="open = !open"
                 class="w-full flex items-center justify-between gap-3 px-4 py-3 {{ request()->routeIs('menu.rm-report.*') || request()->routeIs('reports.rm-sales*') || request()->routeIs('reports.item-transactions*') ? 'bg-white/25 text-white border-l-4 border-white font-semibold' : 'text-white/80 hover:bg-white/15 hover:text-white' }} rounded-lg transition">
@@ -191,20 +223,11 @@
                     </svg>
                     <span>RM Transaction History</span>
                 </a>
-
-                <a href="{{ route('stock-transfer.cashier.sub-stock', ['type' => 'raw_material']) }}"
-                    class="flex items-center gap-3 px-4 py-2 {{ request()->is('*sub-stock*') && request()->get('type') == 'raw_material' ? 'bg-white/20 text-white font-medium' : 'text-white/70 hover:bg-white/10 hover:text-white' }} rounded-lg transition text-sm">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                    </svg>
-                    <span>RM Stock</span>
-                </a>
             </div>
         </div>
         @endhasanyrole
 
-        @hasanyrole('admin|manager|superadmin')
+        @hasanyrole('manager|superadmin')
         <div x-data="{ open: {{ request()->routeIs('analysis.*') || request()->routeIs('super-admin-reports.*') ? 'true' : 'false' }} }">
             <button @click="open = !open"
                 class="w-full flex items-center justify-between gap-3 px-4 py-3 {{ request()->routeIs('analysis.*') || request()->routeIs('super-admin-reports.*') ? 'bg-white/25 text-white border-l-4 border-white font-semibold' : 'text-white/80 hover:bg-white/15 hover:text-white' }} rounded-lg transition">
@@ -282,7 +305,7 @@
         </div>
         @endhasanyrole
 
-        @hasanyrole('manager|supervisor|superadmin')
+        @hasanyrole('supervisor|superadmin')
         <div x-data="{ open: {{ request()->routeIs('main-stock.*') || request()->routeIs('stock-transfer.supervisor.*') ? 'true' : 'false' }} }">
             <button @click="open = !open"
                 class="w-full flex items-center justify-between gap-3 px-4 py-3 {{ request()->routeIs('main-stock.*') || request()->routeIs('stock-transfer.supervisor.*') ? 'bg-white/25 text-white border-l-4 border-white font-semibold' : 'text-white/80 hover:bg-white/15 hover:text-white' }} rounded-lg transition">
@@ -330,7 +353,7 @@
         </div>
         @endhasanyrole
 
-        @role('cashier|supervisor|superadmin')
+        @hasanyrole('cashier|supervisor|manager|superadmin')
         <div x-data="{ open: {{ request()->routeIs('stock-transfer.cashier.sub-stock') ? 'true' : 'false' }} }">
             <button @click="open = !open"
                 class="w-full flex items-center justify-between gap-3 px-4 py-3 {{ request()->routeIs('stock-transfer.cashier.sub-stock') ? 'bg-white/25 text-white border-l-4 border-white font-semibold' : 'text-white/80 hover:bg-white/15 hover:text-white' }} rounded-lg transition">
@@ -367,9 +390,9 @@
                 </a>
             </div>
         </div>
-        @endrole
+        @endhasanyrole
 
-        @hasanyrole('admin|manager|superadmin')
+        @hasanyrole('superadmin')
         <div x-data="{ open: {{ request()->routeIs('stock-adjustment.index') ? 'true' : 'false' }} }">
             <button @click="open = !open"
                 class="w-full flex items-center justify-between gap-3 px-4 py-3 {{ request()->routeIs('stock-adjustment.index') ? 'bg-white/25 text-white border-l-4 border-white font-semibold' : 'text-white/80 hover:bg-white/15 hover:text-white' }} rounded-lg transition">
@@ -399,7 +422,7 @@
         </div>
         @endhasanyrole
 
-        @role('cashier|supervisor|superadmin')
+        @hasanyrole('cashier|supervisor|superadmin')
         <a href="{{ route('stock-transfer.cashier.index') }}"
             class="flex items-center gap-3 px-4 py-3 {{ request()->routeIs('stock-transfer.cashier.index') ? 'bg-white/25 text-white border-l-4 border-white font-semibold' : 'text-white/80 hover:bg-white/15 hover:text-white' }} rounded-lg transition">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -417,7 +440,7 @@
             </svg>
             <span class="font-medium">Wastage</span>
         </a>
-        @endrole
+        @endhasanyrole
 
         @hasanyrole('superadmin')
         <a href="{{ route('users.index') }}"

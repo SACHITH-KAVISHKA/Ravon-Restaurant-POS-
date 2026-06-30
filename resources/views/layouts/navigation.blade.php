@@ -30,14 +30,6 @@
                 </a>
                 @endrole
 
-                @role('admin')
-                <a href="{{ route('sales-report.index') }}" class="px-4 py-2 rounded-lg text-gray-700 hover:bg-purple-50 hover:text-purple-600 transition flex items-center space-x-2 {{ request()->routeIs('sales-report.*') ? 'bg-purple-100 text-purple-700 font-semibold border border-purple-200' : '' }}">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                    </svg>
-                    <span class="font-medium">Reports</span>
-                </a>
-                @endrole
             </div>
 
             <!-- User Menu -->
@@ -66,13 +58,6 @@
                     </button>
 
                     <div x-show="open" @click.away="open = false" x-cloak class="absolute right-0 mt-2 w-48 rounded-lg shadow-lg border border-gray-200 py-1 z-50 bg-white">
-                        <div class="px-4 py-2 border-b border-gray-200">
-                            <div class="text-xs text-gray-500">Logged in as</div>
-                            <div class="text-sm font-semibold text-gray-800">{{ Auth::user()->username }}</div>
-                        </div>
-                        <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-600">
-                            Profile Settings
-                        </a>
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf
                             <button type="submit" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50">

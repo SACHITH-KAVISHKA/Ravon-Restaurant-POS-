@@ -35,7 +35,7 @@ class OrderDeliveredReportController extends Controller
 
     public function itemDetails(Request $request): JsonResponse
     {
-        abort_unless(Auth::user()?->hasRole('superadmin'), 403);
+        abort_unless(Auth::user()?->hasAnyRole(['superadmin', 'manager']), 403);
 
         $filters = $this->resolveFilters($request);
 
