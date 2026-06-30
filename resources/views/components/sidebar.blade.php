@@ -99,7 +99,7 @@
         </div>
         @endhasanyrole
 
-        @hasanyrole('admin|cashier|manager|superadmin')
+        @hasanyrole('admin|manager|superadmin')
         <div x-data="{ open: {{ request()->routeIs('wastage-report.*') || request()->routeIs('void-report.*') || request()->routeIs('stock-adjustment.history') ? 'true' : 'false' }} }">
             <button @click="open = !open"
                 class="w-full flex items-center justify-between gap-3 px-4 py-3 {{ request()->routeIs('wastage-report.*') || request()->routeIs('void-report.*') || request()->routeIs('stock-adjustment.history') ? 'bg-white/25 text-white border-l-4 border-white font-semibold' : 'text-white/80 hover:bg-white/15 hover:text-white' }} rounded-lg transition">
@@ -282,7 +282,7 @@
         </div>
         @endhasanyrole
 
-        @hasanyrole('manager|supervisor|cashier|superadmin')
+        @hasanyrole('manager|supervisor|superadmin')
         <div x-data="{ open: {{ request()->routeIs('main-stock.*') || request()->routeIs('stock-transfer.supervisor.*') ? 'true' : 'false' }} }">
             <button @click="open = !open"
                 class="w-full flex items-center justify-between gap-3 px-4 py-3 {{ request()->routeIs('main-stock.*') || request()->routeIs('stock-transfer.supervisor.*') ? 'bg-white/25 text-white border-l-4 border-white font-semibold' : 'text-white/80 hover:bg-white/15 hover:text-white' }} rounded-lg transition">
