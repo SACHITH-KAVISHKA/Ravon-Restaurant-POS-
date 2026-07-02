@@ -19,6 +19,7 @@ use App\Http\Controllers\RmReportController;
 use App\Http\Controllers\RmSalesReportController;
 use App\Http\Controllers\SpecialSalesReportController;
 use App\Http\Controllers\Admin\Analysis\LastOrderDateController;
+use App\Http\Controllers\Admin\Analysis\CostReportController;
 use App\Http\Controllers\PriceListActivityController;
 
 Route::get('/', function () {
@@ -190,6 +191,10 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware(['role:manager|superadmin'])->prefix('admin/analysis')->name('analysis.')->group(function () {
         Route::get('/last-order-date', [LastOrderDateController::class, 'index'])->name('last-order-date');
         Route::get('/last-order-date/export', [LastOrderDateController::class, 'exportExcel'])->name('last-order-date.export');
+
+        // Cost Report
+        Route::get('/cost-report', [CostReportController::class, 'index'])->name('cost-report');
+        Route::get('/cost-report/export', [CostReportController::class, 'exportExcel'])->name('cost-report.export');
     });
 
     // POS (Cashier only)

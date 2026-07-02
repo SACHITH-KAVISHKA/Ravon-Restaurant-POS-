@@ -142,10 +142,26 @@
                                     Add Recipe
                                 </button>
                             </div>
+                            <!-- Column Headers -->
+                            <div class="hidden md:grid grid-cols-[2fr_1fr_60px_90px_36px] gap-2 px-2 pb-1 border-b border-amber-200 mb-2">
+                                <span class="text-xs font-bold text-amber-700 uppercase tracking-wide">Raw Material</span>
+                                <span class="text-xs font-bold text-amber-700 uppercase tracking-wide">Qty</span>
+                                <span class="text-xs font-bold text-amber-700 uppercase tracking-wide">Unit</span>
+                                <span class="text-xs font-bold text-amber-700 uppercase tracking-wide text-right">Price (Rs.)</span>
+                                <span></span>
+                            </div>
                             <div id="recipesList" class="space-y-2">
                                 <!-- Recipe rows will be added here -->
                             </div>
-
+                            <!-- Total Recipe Cost -->
+                            <div id="recipeTotalRow" class="hidden mt-3 pt-3 border-t-2 border-amber-400">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm font-bold text-amber-800">Total Recipe Cost</span>
+                                    <span class="text-sm font-bold text-amber-900 bg-amber-100 px-3 py-1 rounded-lg border border-amber-300">
+                                        Rs. <span id="recipeTotalCost">0.00</span>
+                                    </span>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Has Portions Checkbox -->
@@ -309,51 +325,145 @@
             }
         }
 
-        // Recipe Management for Item
+        // ============================================================
+        // RECIPE COST CALCULATION
+        // ============================================================
+
+        // Build a lookup map: id -> { price, normalization }
+        const rawMaterialCostMap = {};
+        rawMaterials.forEach(item => {
+            rawMaterialCostMap[item.id] = {
+                price: parseFloat(item.price) || 0,
+                normalization: parseFloat(item.normalization) || 1
+            };
+        });
+
+        function calcUnitCost(materialId) {
+            const data = rawMaterialCostMap[materialId];
+            if (!data || data.normalization === 0) return 0;
+            return data.price / data.normalization;
+        }
+
+        function calcRowCost(materialId, qty) {
+            return calcUnitCost(materialId) * (parseFloat(qty) || 0);
+        }
+
+        // Update price display for a single main-recipe row
+        function updateRecipeCostDisplay(rowId) {
+            const hiddenInput = document.getElementById(`recipeHidden-${rowId}`);
+            const qtyInput = document.querySelector(`input[name="recipes[${rowId}][quantity]"]`);
+            const priceSpan = document.getElementById(`recipePrice-${rowId}`);
+            if (!hiddenInput || !qtyInput || !priceSpan) return;
+            const cost = calcRowCost(parseInt(hiddenInput.value), qtyInput.value);
+            priceSpan.textContent = cost.toFixed(2);
+            updateRecipeTotalCost();
+        }
+
+        // Recalculate and display total recipe cost for main item
+        function updateRecipeTotalCost() {
+            const container = document.getElementById('recipesList');
+            const totalRow = document.getElementById('recipeTotalRow');
+            const totalSpan = document.getElementById('recipeTotalCost');
+            if (!container || !totalRow || !totalSpan) return;
+
+            let total = 0;
+            container.querySelectorAll('[id^="recipe-"]').forEach(row => {
+                const rowId = row.id.replace('recipe-', '');
+                const hiddenInput = document.getElementById(`recipeHidden-${rowId}`);
+                const qtyInput = row.querySelector('input[type="number"]');
+                if (hiddenInput && hiddenInput.value && qtyInput) {
+                    total += calcRowCost(parseInt(hiddenInput.value), qtyInput.value);
+                }
+            });
+
+            totalSpan.textContent = total.toFixed(2);
+            const hasRows = container.querySelectorAll('[id^="recipe-"]').length > 0;
+            totalRow.classList.toggle('hidden', !hasRows);
+        }
+
+        // Update price display for a portion recipe row
+        function updatePortionRecipeCostDisplay(portionId, recipeId) {
+            const hiddenInput = document.getElementById(`portionRecipeHidden-${portionId}-${recipeId}`);
+            const qtyInput = document.querySelector(`input[name="portions[${portionId}][recipes][${recipeId}][quantity]"]`);
+            const priceSpan = document.getElementById(`portionRecipePrice-${portionId}-${recipeId}`);
+            if (!hiddenInput || !qtyInput || !priceSpan) return;
+            const cost = calcRowCost(parseInt(hiddenInput.value), qtyInput.value);
+            priceSpan.textContent = cost.toFixed(2);
+            updatePortionRecipeTotalCost(portionId);
+        }
+
+        function updatePortionRecipeTotalCost(portionId) {
+            const container = document.getElementById(`portionRecipes-${portionId}`);
+            const totalSpan = document.getElementById(`portionRecipeTotal-${portionId}`);
+            const totalRow = document.getElementById(`portionRecipeTotalRow-${portionId}`);
+            if (!container) return;
+
+            let total = 0;
+            container.querySelectorAll('[id^="portionRecipe-"]').forEach(row => {
+                const match = row.id.match(/portionRecipe-(\d+)-(\d+)/);
+                if (!match) return;
+                const pid = match[1], rid = match[2];
+                const hidden = document.getElementById(`portionRecipeHidden-${pid}-${rid}`);
+                const qty = document.querySelector(`input[name="portions[${pid}][recipes][${rid}][quantity]"]`);
+                if (hidden && hidden.value && qty) {
+                    total += calcRowCost(parseInt(hidden.value), qty.value);
+                }
+            });
+
+            if (totalSpan) totalSpan.textContent = total.toFixed(2);
+            if (totalRow) {
+                const hasRows = container.querySelectorAll('[id^="portionRecipe-"]').length > 0;
+                totalRow.classList.toggle('hidden', !hasRows);
+            }
+        }
+
+        // ============================================================
+        // RECIPE MANAGEMENT FOR ITEM
+        // ============================================================
         function addRecipeRow() {
             recipeCount++;
             const container = document.getElementById('recipesList');
 
             const recipeDiv = document.createElement('div');
             recipeDiv.id = `recipe-${recipeCount}`;
-            recipeDiv.className = 'flex gap-2 items-center bg-white p-2 rounded border border-amber-200 shadow-sm';
+            recipeDiv.className = 'grid grid-cols-[2fr_1fr_60px_90px_36px] gap-2 items-center bg-white px-2 py-2 rounded border border-amber-200 shadow-sm';
 
             recipeDiv.innerHTML = `
-                                    <div class="flex-1 grid grid-cols-3 gap-2">
-                                        <div class="col-span-1 relative">
-                                            <input type="hidden" name="recipes[${recipeCount}][main_stock_item_id]" id="recipeHidden-${recipeCount}" required>
-                                            <input type="text" id="recipeSearch-${recipeCount}" placeholder="Type to search..."
-                                                autocomplete="off"
-                                                class="w-full px-3 py-2 bg-gray-50 text-gray-800 rounded-lg border border-amber-300 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200 text-sm">
-                                            <div id="recipeDropdown-${recipeCount}" class="absolute z-50 w-full mt-1 bg-white border border-amber-300 rounded-lg shadow-lg max-h-40 overflow-y-auto hidden">
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <input type="number" name="recipes[${recipeCount}][quantity]" step="0.001" min="0.001" required
-                                                placeholder="Quantity" 
-                                                onkeydown="handleRecipeTabKey(event, ${recipeCount})"
-                                                class="w-full px-3 py-2 bg-gray-50 text-gray-800 rounded-lg border border-amber-300 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200 text-sm">
-                                        </div>
-                                        <div class="flex items-center">
-                                            <span id="recipeUnit-${recipeCount}" class="text-sm text-gray-600 font-medium px-2">--</span>
-                                        </div>
-                                    </div>
-                                    <button type="button" onclick="removeRecipeRow(${recipeCount})" 
-                                        class="px-2 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition shadow-sm hover:shadow-md">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                                        </svg>
-                                    </button>
-                                `;
+                <div class="relative">
+                    <input type="hidden" name="recipes[${recipeCount}][main_stock_item_id]" id="recipeHidden-${recipeCount}" required>
+                    <input type="text" id="recipeSearch-${recipeCount}" placeholder="Type to search..."
+                        autocomplete="off"
+                        class="w-full px-3 py-2 bg-gray-50 text-gray-800 rounded-lg border border-amber-300 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200 text-sm">
+                    <div id="recipeDropdown-${recipeCount}" class="absolute z-50 w-full mt-1 bg-white border border-amber-300 rounded-lg shadow-lg max-h-40 overflow-y-auto hidden">
+                    </div>
+                </div>
+                <input type="number" name="recipes[${recipeCount}][quantity]" step="0.001" min="0.001" required
+                    placeholder="Quantity"
+                    oninput="updateRecipeCostDisplay(${recipeCount})"
+                    onkeydown="handleRecipeTabKey(event, ${recipeCount})"
+                    class="w-full px-3 py-2 bg-gray-50 text-gray-800 rounded-lg border border-amber-300 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200 text-sm">
+                <span id="recipeUnit-${recipeCount}" class="text-sm text-gray-600 font-medium px-1">--</span>
+                <span class="text-sm font-semibold text-green-700 text-right pr-1">
+                    <span id="recipePrice-${recipeCount}">0.00</span>
+                </span>
+                <button type="button" onclick="removeRecipeRow(${recipeCount})"
+                    class="flex items-center justify-center w-8 h-8 bg-red-500 text-white rounded hover:bg-red-600 transition shadow-sm">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            `;
 
             container.appendChild(recipeDiv);
             initSearchableRecipeDropdown(recipeCount, 'recipe');
+            updateRecipeTotalCost();
         }
 
         function removeRecipeRow(id) {
             const element = document.getElementById(`recipe-${id}`);
             if (element) {
                 element.remove();
+                updateRecipeTotalCost();
             }
         }
 
@@ -394,6 +504,7 @@
                         hiddenInput.value = this.dataset.id;
                         updateRecipeUnit(rowId, this.dataset.unit);
                         dropdown.classList.add('hidden');
+                        updateRecipeCostDisplay(rowId);
                     });
 
                     dropdown.appendChild(optionDiv);
@@ -412,6 +523,7 @@
                 dropdown.classList.remove('hidden');
                 hiddenInput.value = '';
                 updateRecipeUnit(rowId, '--');
+                updateRecipeCostDisplay(rowId);
             });
 
             // Close dropdown when clicking outside
@@ -543,40 +655,46 @@
 
             const recipeDiv = document.createElement('div');
             recipeDiv.id = `portionRecipe-${portionId}-${recipeId}`;
-            recipeDiv.className = 'flex gap-1 items-center';
+            recipeDiv.className = 'grid grid-cols-[3fr_65px_44px_72px_28px] gap-2 items-center';
 
             recipeDiv.innerHTML = `
-                                    <div class="relative flex-1">
-                                        <input type="hidden" name="portions[${portionId}][recipes][${recipeId}][main_stock_item_id]" 
-                                            id="portionRecipeHidden-${portionId}-${recipeId}" required>
-                                        <input type="text" id="portionRecipeSearch-${portionId}-${recipeId}" placeholder="Search..."
-                                            autocomplete="off"
-                                            class="w-full px-2 py-1.5 bg-amber-50 text-gray-800 rounded-lg border border-amber-200 focus:outline-none focus:border-amber-500 text-xs">
-                                        <div id="portionRecipeDropdown-${portionId}-${recipeId}" 
-                                            class="absolute z-50 w-full mt-1 bg-white border border-amber-200 rounded-lg shadow-lg max-h-32 overflow-y-auto hidden">
-                                        </div>
-                                    </div>
-                                    <input type="number" name="portions[${portionId}][recipes][${recipeId}][quantity]" step="0.001" min="0.001" required
-                                        placeholder="Qty"
-                                        onkeydown="handlePortionRecipeTabKey(event, ${portionId}, ${recipeId})"
-                                        class="w-16 px-2 py-1.5 bg-amber-50 text-gray-800 rounded-lg border border-amber-200 focus:outline-none focus:border-amber-500 text-xs">
-                                    <span id="portionRecipeUnit-${portionId}-${recipeId}" class="text-xs text-gray-600 w-8">--</span>
-                                    <button type="button" onclick="removePortionRecipeRow(${portionId}, ${recipeId})" 
-                                        class="px-1.5 py-1.5 bg-red-500 text-white rounded hover:bg-red-600 transition">
-                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                                        </svg>
-                                    </button>
-                                `;
+                <div class="relative">
+                    <input type="hidden" name="portions[${portionId}][recipes][${recipeId}][main_stock_item_id]"
+                        id="portionRecipeHidden-${portionId}-${recipeId}" required>
+                    <input type="text" id="portionRecipeSearch-${portionId}-${recipeId}" placeholder="Search..."
+                        autocomplete="off"
+                        class="w-full px-2 py-1.5 bg-amber-50 text-gray-800 rounded-lg border border-amber-200 focus:outline-none focus:border-amber-500 text-xs">
+                    <div id="portionRecipeDropdown-${portionId}-${recipeId}"
+                        class="absolute z-50 w-full mt-1 bg-white border border-amber-200 rounded-lg shadow-lg max-h-32 overflow-y-auto hidden">
+                    </div>
+                </div>
+                <input type="number" name="portions[${portionId}][recipes][${recipeId}][quantity]" step="0.001" min="0.001" required
+                    placeholder="Qty"
+                    oninput="updatePortionRecipeCostDisplay(${portionId}, ${recipeId})"
+                    onkeydown="handlePortionRecipeTabKey(event, ${portionId}, ${recipeId})"
+                    class="w-full px-1 py-1.5 bg-amber-50 text-gray-800 rounded-lg border border-amber-200 focus:outline-none focus:border-amber-500 text-xs">
+                <span id="portionRecipeUnit-${portionId}-${recipeId}" class="text-xs text-gray-600 text-center">--</span>
+                <span class="text-xs font-semibold text-green-700 text-right">
+                    <span id="portionRecipePrice-${portionId}-${recipeId}">0.00</span>
+                </span>
+                <button type="button" onclick="removePortionRecipeRow(${portionId}, ${recipeId})"
+                    class="flex items-center justify-center w-6 h-6 bg-red-500 text-white rounded hover:bg-red-600 transition">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            `;
 
             container.appendChild(recipeDiv);
             initPortionRecipeDropdown(portionId, recipeId);
+            updatePortionRecipeTotalCost(portionId);
         }
 
         function removePortionRecipeRow(portionId, recipeId) {
             const element = document.getElementById(`portionRecipe-${portionId}-${recipeId}`);
             if (element) {
                 element.remove();
+                updatePortionRecipeTotalCost(portionId);
             }
         }
 
@@ -627,6 +745,7 @@
                         hiddenInput.value = this.dataset.id;
                         updatePortionRecipeUnit(portionId, recipeId, this.dataset.unit);
                         dropdown.classList.add('hidden');
+                        updatePortionRecipeCostDisplay(portionId, recipeId);
                     });
 
                     dropdown.appendChild(optionDiv);
@@ -643,6 +762,7 @@
                 dropdown.classList.remove('hidden');
                 hiddenInput.value = '';
                 updatePortionRecipeUnit(portionId, recipeId, '--');
+                updatePortionRecipeCostDisplay(portionId, recipeId);
             });
 
             document.addEventListener('click', function(e) {
@@ -914,59 +1034,74 @@
             portionDiv.id = `portion-${portionCount}`;
 
             portionDiv.innerHTML = `
-                                <div class="grid grid-cols-2 gap-3 mb-2">
-                                    <div>
-                                        <label class="block text-xs font-semibold text-gray-800-muted mb-1">Portion Name *</label>
-                                        <input type="text" name="portions[${portionCount}][name]" placeholder="e.g., Small, Large" required
-                                            class="w-full px-3 py-2 bg-gray-50 text-gray-800 rounded-lg border border-gray-300 focus:outline-none focus:border-purple-500 text-sm">
-                                    </div>
-                                    <div>
-                                        <label class="block text-xs font-semibold text-gray-800-muted mb-1">Price (Rs.) *</label>
-                                        <div class="flex gap-2">
-                                            <input type="number" name="portions[${portionCount}][price]" step="0.01" min="0" required
-                                                class="flex-1 px-3 py-2 bg-gray-50 text-gray-800 rounded-lg border border-gray-300 focus:outline-none focus:border-purple-500 text-sm">
-                                            <button type="button" onclick="removePortion(${portionCount})" class="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-600/90 transition text-sm">
-                                                ×
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="border-t border-gray-200 pt-2">
-                                    <div class="flex justify-between items-center mb-2">
-                                        <label class="text-xs font-semibold text-gray-800">Special Prices</label>
-                                        <button type="button" onclick="addPortionSpecialPrice(${portionCount})" class="px-2 py-1 bg-gradient-to-r from-[#667eea] to-[#764ba2] hover:shadow-md hover:shadow-purple-500/30 text-white rounded text-xs font-semibold flex items-center gap-1">
-                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                                            </svg>
-                                            Add
-                                        </button>
-                                    </div>
-                                    <div id="portionSpecialPrices-${portionCount}" class="space-y-1">
-                                        <!-- Special prices for this portion -->
-                                    </div>
-                                </div>
-                                <div class="border-t border-amber-200 pt-2 mt-2">
-                                    <div class="flex justify-between items-center mb-2">
-                                        <label class="text-xs font-semibold text-amber-700">Recipe (Raw Materials)</label>
-                                        <button type="button" onclick="addPortionRecipeRow(${portionCount})" class="px-2 py-1 bg-gradient-to-r from-amber-500 to-orange-500 hover:shadow-md hover:shadow-amber-500/30 text-white rounded text-xs font-semibold flex items-center gap-1">
-                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                                            </svg>
-                                            Add
-                                        </button>
-                                    </div>
-                                    <div id="portionRecipes-${portionCount}" class="space-y-1">
-                                        <!-- Recipes for this portion -->
-                                    </div>
-                                </div>
-                                <div class="border-t border-pink-200 pt-2 mt-2">
-                                    <label class="flex items-center cursor-pointer">
-                                        <input type="checkbox" name="portions[${portionCount}][pork_available]" value="1"
-                                            class="w-4 h-4 text-pink-600 bg-gray-50 border-gray-300 rounded focus:ring-pink-500">
-                                        <span class="ml-2 text-xs font-semibold text-gray-700">Pork Available</span>
-                                    </label>
-                                </div>
-                            `;
+                <div class="flex gap-3 mb-2 items-end">
+                    <div class="flex-1 min-w-0">
+                        <label class="block text-xs font-semibold text-gray-800-muted mb-1">Portion Name *</label>
+                        <input type="text" name="portions[${portionCount}][name]" placeholder="e.g., Small, Medium, Large" required
+                            class="w-full px-3 py-2 bg-gray-50 text-gray-800 rounded-lg border border-gray-300 focus:outline-none focus:border-purple-500 text-sm">
+                    </div>
+                    <div class="w-36 flex-shrink-0">
+                        <label class="block text-xs font-semibold text-gray-800-muted mb-1">Price (Rs.) *</label>
+                        <input type="number" name="portions[${portionCount}][price]" step="0.01" min="0" required
+                            class="w-full px-3 py-2 bg-gray-50 text-gray-800 rounded-lg border border-gray-300 focus:outline-none focus:border-purple-500 text-sm">
+                    </div>
+                    <button type="button" onclick="removePortion(${portionCount})" class="flex-shrink-0 px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-600/90 transition text-sm mb-0">
+                        ×
+                    </button>
+                </div>
+                <div class="border-t border-gray-200 pt-2">
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="text-xs font-semibold text-gray-800">Special Prices</label>
+                        <button type="button" onclick="addPortionSpecialPrice(${portionCount})" class="px-2 py-1 bg-gradient-to-r from-[#667eea] to-[#764ba2] hover:shadow-md hover:shadow-purple-500/30 text-white rounded text-xs font-semibold flex items-center gap-1">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                            </svg>
+                            Add
+                        </button>
+                    </div>
+                    <div id="portionSpecialPrices-${portionCount}" class="space-y-1">
+                        <!-- Special prices for this portion -->
+                    </div>
+                </div>
+                <div class="border-t border-amber-200 pt-2 mt-2">
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="text-xs font-semibold text-amber-700">Recipe (Raw Materials)</label>
+                        <button type="button" onclick="addPortionRecipeRow(${portionCount})" class="px-2 py-1 bg-gradient-to-r from-amber-500 to-orange-500 hover:shadow-md hover:shadow-amber-500/30 text-white rounded text-xs font-semibold flex items-center gap-1">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                            </svg>
+                            Add
+                        </button>
+                    </div>
+                    <!-- Portion Recipe Column Headers -->
+                    <div class="grid grid-cols-[3fr_65px_44px_72px_28px] gap-2 px-1 pb-1 border-b border-amber-100 mb-1">
+                        <span class="text-xs font-bold text-amber-600">Material</span>
+                        <span class="text-xs font-bold text-amber-600">Qty</span>
+                        <span class="text-xs font-bold text-amber-600">Unit</span>
+                        <span class="text-xs font-bold text-amber-600 text-right">Rs.</span>
+                        <span></span>
+                    </div>
+                    <div id="portionRecipes-${portionCount}" class="space-y-1">
+                        <!-- Recipes for this portion -->
+                    </div>
+                    <!-- Portion Total Cost -->
+                    <div id="portionRecipeTotalRow-${portionCount}" class="hidden mt-2 pt-2 border-t border-amber-200">
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs font-bold text-amber-700">Total Recipe Cost</span>
+                            <span class="text-xs font-bold text-amber-900 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                                Rs. <span id="portionRecipeTotal-${portionCount}">0.00</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="border-t border-pink-200 pt-2 mt-2">
+                    <label class="flex items-center cursor-pointer">
+                        <input type="checkbox" name="portions[${portionCount}][pork_available]" value="1"
+                            class="w-4 h-4 text-pink-600 bg-gray-50 border-gray-300 rounded focus:ring-pink-500">
+                        <span class="ml-2 text-xs font-semibold text-gray-700">Pork Available</span>
+                    </label>
+                </div>
+            `;
 
             portionsList.appendChild(portionDiv);
 

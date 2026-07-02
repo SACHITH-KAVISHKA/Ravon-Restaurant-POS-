@@ -4,7 +4,7 @@
 
 @section('content')
     <div class="min-h-screen bg-gray-50 py-6">
-        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <!-- Header -->
             <div class="mb-6">
                 <div class="flex items-center gap-4">
@@ -29,9 +29,9 @@
                 </div>
             @endif
 
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
                 <!-- Left Column - Item Details -->
-                <div class="lg:col-span-2">
+                <div class="lg:col-span-3">
                     <div class="bg-white rounded-lg shadow-lg p-6 border border-gray-200">
                         <h2 class="text-xl font-bold text-gray-800 mb-4">Item Details</h2>
 
@@ -203,39 +203,60 @@
                                             Add Recipe
                                         </button>
                                     </div>
+                                    <!-- Column Headers -->
+                                    <div class="hidden md:grid grid-cols-[2fr_1fr_60px_90px_36px] gap-2 px-2 pb-1 border-b border-amber-200 mb-2">
+                                        <span class="text-xs font-bold text-amber-700 uppercase tracking-wide">Raw Material</span>
+                                        <span class="text-xs font-bold text-amber-700 uppercase tracking-wide">Qty</span>
+                                        <span class="text-xs font-bold text-amber-700 uppercase tracking-wide">Unit</span>
+                                        <span class="text-xs font-bold text-amber-700 uppercase tracking-wide text-right">Price (Rs.)</span>
+                                        <span></span>
+                                    </div>
                                     <div id="recipesList" class="space-y-2">
                                         @foreach($item->itemRecipes as $recipe)
                                             <div id="recipe-existing-{{ $recipe->id }}"
-                                                class="flex gap-2 items-center bg-white p-2 rounded border border-amber-200 shadow-sm">
-                                                <div class="flex-1 grid grid-cols-3 gap-2">
-                                                    <div class="col-span-1">
-                                                        <select name="recipes[existing][{{ $recipe->id }}][main_stock_item_id]"
-                                                            required
-                                                            class="w-full px-3 py-2 bg-gray-50 text-gray-800 rounded-lg border border-amber-300 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200 text-sm">
-                                                            @foreach($rawMaterials as $material)
-                                                                <option value="{{ $material->id }}"
-                                                                    data-unit="{{ $material->unit_abbreviation }}" {{ $recipe->main_stock_item_id == $material->id ? 'selected' : '' }}>
-                                                                    {{ $material->item_name }}
-                                                                </option>
-                                                            @endforeach
-                                                        </select>
-                                                        <input type="hidden" name="recipes[existing][{{ $recipe->id }}][id]"
-                                                            value="{{ $recipe->id }}">
-                                                    </div>
-                                                    <div>
-                                                        <input type="number"
-                                                            name="recipes[existing][{{ $recipe->id }}][quantity]"
-                                                            value="{{ $recipe->quantity }}" step="0.001" min="0.001" required
-                                                            placeholder="Quantity"
-                                                            class="w-full px-3 py-2 bg-gray-50 text-gray-800 rounded-lg border border-amber-300 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200 text-sm">
-                                                    </div>
-                                                    <div class="flex items-center">
-                                                        <span
-                                                            class="text-sm text-gray-600 font-medium px-2">{{ $recipe->mainStockItem->unit_abbreviation ?? '--' }}</span>
-                                                    </div>
+                                                class="grid grid-cols-[2fr_1fr_60px_90px_36px] gap-2 items-center bg-white px-2 py-2 rounded border border-amber-200 shadow-sm">
+                                                <div>
+                                                    <select name="recipes[existing][{{ $recipe->id }}][main_stock_item_id]"
+                                                        required
+                                                        data-recipe-id="{{ $recipe->id }}"
+                                                        onchange="updateExistingRecipeCost('{{ $recipe->id }}')"
+                                                        class="w-full px-3 py-2 bg-gray-50 text-gray-800 rounded-lg border border-amber-300 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200 text-sm">
+                                                        @foreach($rawMaterials as $material)
+                                                            <option value="{{ $material->id }}"
+                                                                data-unit="{{ $material->unit_abbreviation }}"
+                                                                data-price="{{ $material->price }}"
+                                                                data-normalization="{{ $material->normalization }}"
+                                                                {{ $recipe->main_stock_item_id == $material->id ? 'selected' : '' }}>
+                                                                {{ $material->item_name }}
+                                                            </option>
+                                                        @endforeach
+                                                    </select>
+                                                    <input type="hidden" name="recipes[existing][{{ $recipe->id }}][id]"
+                                                        value="{{ $recipe->id }}">
                                                 </div>
+                                                <div>
+                                                    <input type="number"
+                                                        id="existingRecipeQty-{{ $recipe->id }}"
+                                                        name="recipes[existing][{{ $recipe->id }}][quantity]"
+                                                        value="{{ $recipe->quantity }}" step="0.001" min="0.001" required
+                                                        placeholder="Quantity"
+                                                        oninput="updateExistingRecipeCost('{{ $recipe->id }}')"
+                                                        class="w-full px-3 py-2 bg-gray-50 text-gray-800 rounded-lg border border-amber-300 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200 text-sm">
+                                                </div>
+                                                <span
+                                                    class="text-sm text-gray-600 font-medium px-1">{{ $recipe->mainStockItem->unit_abbreviation ?? '--' }}</span>
+                                                <span class="text-sm font-semibold text-green-700 text-right pr-1">
+                                                    @php
+                                                        $stockItem = $recipe->mainStockItem;
+                                                        $unitCost = ($stockItem && $stockItem->normalization > 0)
+                                                            ? ($stockItem->price / $stockItem->normalization)
+                                                            : 0;
+                                                        $rowCost = $unitCost * $recipe->quantity;
+                                                    @endphp
+                                                    <span id="existingRecipePrice-{{ $recipe->id }}">{{ number_format($rowCost, 2) }}</span>
+                                                </span>
                                                 <button type="button" onclick="removeExistingRecipe({{ $recipe->id }})"
-                                                    class="px-2 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition shadow-sm hover:shadow-md">
+                                                    class="flex items-center justify-center w-8 h-8 bg-red-500 text-white rounded hover:bg-red-600 transition shadow-sm">
                                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                             d="M6 18L18 6M6 6l12 12" />
@@ -243,6 +264,26 @@
                                                 </button>
                                             </div>
                                         @endforeach
+                                    </div>
+                                    <!-- Total Recipe Cost -->
+                                    <div id="recipeTotalRow" class="{{ $item->itemRecipes->count() > 0 ? '' : 'hidden' }} mt-3 pt-3 border-t-2 border-amber-400">
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-sm font-bold text-amber-800">Total Recipe Cost</span>
+                                            <span class="text-sm font-bold text-amber-900 bg-amber-100 px-3 py-1 rounded-lg border border-amber-300">
+                                                Rs. <span id="recipeTotalCost">
+                                                    @php
+                                                        $totalCost = 0;
+                                                        foreach($item->itemRecipes as $r) {
+                                                            $si = $r->mainStockItem;
+                                                            if ($si && $si->normalization > 0) {
+                                                                $totalCost += ($si->price / $si->normalization) * $r->quantity;
+                                                            }
+                                                        }
+                                                    @endphp
+                                                    {{ number_format($totalCost, 2) }}
+                                                </span>
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -259,7 +300,7 @@
                 </div>
 
                 <!-- Right Column - Portions -->
-                <div class="overflow-visible">
+                <div class="lg:col-span-2 overflow-visible">
                     <div class="bg-white rounded-lg shadow-lg p-6 border border-gray-200 overflow-visible">
                         <h2 class="text-xl font-bold text-gray-800 mb-4">Portions / Sizes</h2>
 
@@ -317,8 +358,25 @@
                                                 Add
                                             </button>
                                         </div>
+                                        <!-- Column Headers -->
+                                        <div class="grid grid-cols-[3fr_65px_44px_72px_28px] gap-2 px-1 pb-1 border-b border-amber-100 mb-1">
+                                            <span class="text-xs font-bold text-amber-600">Material</span>
+                                            <span class="text-xs font-bold text-amber-600">Qty</span>
+                                            <span class="text-xs font-bold text-amber-600">Unit</span>
+                                            <span class="text-xs font-bold text-amber-600 text-right">Rs.</span>
+                                            <span></span>
+                                        </div>
                                         <div id="newPortionRecipes" class="space-y-1 overflow-visible">
                                             <!-- Recipes for new portion -->
+                                        </div>
+                                        <!-- New Portion Total Cost -->
+                                        <div id="newPortionRecipeTotalRow" class="hidden mt-2 pt-2 border-t border-amber-200">
+                                            <div class="flex justify-between items-center">
+                                                <span class="text-xs font-bold text-amber-700">Total Recipe Cost</span>
+                                                <span class="text-xs font-bold text-amber-900 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                                                    Rs. <span id="newPortionRecipeTotalCost">0.00</span>
+                                                </span>
+                                            </div>
                                         </div>
                                     </div>
 
@@ -495,34 +553,58 @@
                                                                 Add
                                                             </button>
                                                         </div>
+                                                        <!-- Column Headers for Modifier Recipes -->
+                                                        <div class="grid grid-cols-[3fr_65px_44px_72px_28px] gap-2 px-1 pb-1 border-b border-amber-100 mb-1">
+                                                            <span class="text-xs font-bold text-amber-600">Material</span>
+                                                            <span class="text-xs font-bold text-amber-600">Qty</span>
+                                                            <span class="text-xs font-bold text-amber-600">Unit</span>
+                                                            <span class="text-xs font-bold text-amber-600 text-right">Rs.</span>
+                                                            <span></span>
+                                                        </div>
                                                         <div id="editPortionRecipes-{{ $modifier->id }}" class="space-y-1 overflow-visible">
                                                             @foreach($modifier->recipes as $recipe)
                                                                 <div id="modifierRecipe-existing-{{ $recipe->id }}"
-                                                                    class="flex flex-wrap gap-1 items-center">
+                                                                    class="grid grid-cols-[3fr_65px_44px_72px_28px] gap-2 items-center">
                                                                     <select
                                                                         name="modifier_recipes[existing][{{ $recipe->id }}][main_stock_item_id]"
                                                                         required
-                                                                        class="min-w-0 flex-1 max-w-[120px] px-2 py-1.5 bg-amber-50 text-gray-800 rounded-lg border border-amber-200 focus:outline-none focus:border-amber-500 text-xs truncate">
+                                                                        data-modifier-recipe-id="{{ $recipe->id }}"
+                                                                        data-modifier-id="{{ $modifier->id }}"
+                                                                        onchange="updateExistingModifierRecipeCost('{{ $recipe->id }}', '{{ $modifier->id }}')"
+                                                                        class="min-w-0 px-2 py-1.5 bg-amber-50 text-gray-800 rounded-lg border border-amber-200 focus:outline-none focus:border-amber-500 text-xs truncate">
                                                                         @foreach($rawMaterials as $material)
                                                                             <option value="{{ $material->id }}"
-                                                                                data-unit="{{ $material->unit_abbreviation }}" {{ $recipe->main_stock_item_id == $material->id ? 'selected' : '' }}>
+                                                                                data-unit="{{ $material->unit_abbreviation }}"
+                                                                                data-price="{{ $material->price }}"
+                                                                                data-normalization="{{ $material->normalization }}"
+                                                                                {{ $recipe->main_stock_item_id == $material->id ? 'selected' : '' }}>
                                                                                 {{ $material->item_name }}
                                                                             </option>
                                                                         @endforeach
                                                                     </select>
                                                                     <input type="number"
+                                                                        id="existingModifierRecipeQty-{{ $recipe->id }}"
                                                                         name="modifier_recipes[existing][{{ $recipe->id }}][quantity]"
                                                                         value="{{ $recipe->quantity }}" step="0.001" min="0.001"
                                                                         required placeholder="Qty"
-                                                                        class="w-14 px-1 py-1.5 bg-amber-50 text-gray-800 rounded-lg border border-amber-200 focus:outline-none focus:border-amber-500 text-xs">
+                                                                        oninput="updateExistingModifierRecipeCost('{{ $recipe->id }}', '{{ $modifier->id }}')"
+                                                                        class="w-full px-1 py-1.5 bg-amber-50 text-gray-800 rounded-lg border border-amber-200 focus:outline-none focus:border-amber-500 text-xs">
                                                                     <span
-                                                                        class="text-xs text-gray-600 w-6 truncate">{{ $recipe->mainStockItem->unit_abbreviation ?? '--' }}</span>
+                                                                        class="text-xs text-gray-600 text-center">{{ $recipe->mainStockItem->unit_abbreviation ?? '--' }}</span>
+                                                                    @php
+                                                                        $mSi = $recipe->mainStockItem;
+                                                                        $mUnitCost = ($mSi && $mSi->normalization > 0) ? ($mSi->price / $mSi->normalization) : 0;
+                                                                        $mRowCost = $mUnitCost * $recipe->quantity;
+                                                                    @endphp
+                                                                    <span class="text-xs font-semibold text-green-700 text-right">
+                                                                        <span id="existingModifierRecipePrice-{{ $recipe->id }}">{{ number_format($mRowCost, 2) }}</span>
+                                                                    </span>
                                                                     <input type="hidden"
                                                                         name="modifier_recipes[existing][{{ $recipe->id }}][id]"
                                                                         value="{{ $recipe->id }}">
                                                                     <button type="button"
                                                                         onclick="removeExistingModifierRecipe({{ $recipe->id }})"
-                                                                        class="px-1 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition flex-shrink-0">
+                                                                        class="flex items-center justify-center w-6 h-6 bg-red-500 text-white rounded hover:bg-red-600 transition flex-shrink-0">
                                                                         <svg class="w-3 h-3" fill="none" stroke="currentColor"
                                                                             viewBox="0 0 24 24">
                                                                             <path stroke-linecap="round" stroke-linejoin="round"
@@ -531,6 +613,26 @@
                                                                     </button>
                                                                 </div>
                                                             @endforeach
+                                                        </div>
+                                                        <!-- Modifier Recipe Total -->
+                                                        <div id="modifierRecipeTotalRow-{{ $modifier->id }}" class="{{ $modifier->recipes->count() > 0 ? '' : 'hidden' }} mt-2 pt-2 border-t border-amber-200">
+                                                            <div class="flex justify-between items-center">
+                                                                <span class="text-xs font-bold text-amber-700">Total Recipe Cost</span>
+                                                                <span class="text-xs font-bold text-amber-900 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                                                                    Rs. <span id="modifierRecipeTotal-{{ $modifier->id }}">
+                                                                        @php
+                                                                            $mTotal = 0;
+                                                                            foreach($modifier->recipes as $mr) {
+                                                                                $mrSi = $mr->mainStockItem;
+                                                                                if ($mrSi && $mrSi->normalization > 0) {
+                                                                                    $mTotal += ($mrSi->price / $mrSi->normalization) * $mr->quantity;
+                                                                                }
+                                                                            }
+                                                                        @endphp
+                                                                        {{ number_format($mTotal, 2) }}
+                                                                    </span>
+                                                                </span>
+                                                            </div>
                                                         </div>
                                                     </div>
 
@@ -580,6 +682,176 @@
 
         // Raw materials data from server
         const rawMaterials = @json($rawMaterials);
+
+        // ============================================================
+        // RECIPE COST CALCULATION
+        // ============================================================
+        const rawMaterialCostMap = {};
+        rawMaterials.forEach(item => {
+            rawMaterialCostMap[item.id] = {
+                price: parseFloat(item.price) || 0,
+                normalization: parseFloat(item.normalization) || 1
+            };
+        });
+
+        function calcUnitCost(materialId) {
+            const data = rawMaterialCostMap[materialId];
+            if (!data || data.normalization === 0) return 0;
+            return data.price / data.normalization;
+        }
+
+        function calcRowCost(materialId, qty) {
+            return calcUnitCost(materialId) * (parseFloat(qty) || 0);
+        }
+
+        // Update cost for an existing (PHP-rendered) main recipe row
+        function updateExistingRecipeCost(recipeId) {
+            const select = document.querySelector(`select[data-recipe-id="${recipeId}"]`);
+            const qtyInput = document.getElementById(`existingRecipeQty-${recipeId}`);
+            const priceSpan = document.getElementById(`existingRecipePrice-${recipeId}`);
+            if (!select || !qtyInput || !priceSpan) return;
+            const selectedOpt = select.options[select.selectedIndex];
+            const price = parseFloat(selectedOpt?.dataset.price) || 0;
+            const norm = parseFloat(selectedOpt?.dataset.normalization) || 1;
+            const cost = (norm > 0) ? (price / norm) * (parseFloat(qtyInput.value) || 0) : 0;
+            priceSpan.textContent = cost.toFixed(2);
+            updateMainRecipeTotalCost();
+        }
+
+        // Update cost for a new (JS-rendered) main recipe row
+        function updateNewRecipeCostDisplay(rowId) {
+            const hiddenInput = document.getElementById(`recipeHidden-new-${rowId}`);
+            const qtyInput = document.querySelector(`input[name="recipes[new][${rowId}][quantity]"]`);
+            const priceSpan = document.getElementById(`recipePrice-new-${rowId}`);
+            if (!hiddenInput || !qtyInput || !priceSpan) return;
+            const cost = calcRowCost(parseInt(hiddenInput.value), qtyInput.value);
+            priceSpan.textContent = cost.toFixed(2);
+            updateMainRecipeTotalCost();
+        }
+
+        // Recalculate and display total recipe cost for main item
+        function updateMainRecipeTotalCost() {
+            const totalSpan = document.getElementById('recipeTotalCost');
+            const totalRow = document.getElementById('recipeTotalRow');
+            if (!totalSpan) return;
+
+            let total = 0;
+            // Existing recipes (select-based)
+            document.querySelectorAll('select[data-recipe-id]').forEach(select => {
+                const recipeId = select.dataset.recipeId;
+                const qtyInput = document.getElementById(`existingRecipeQty-${recipeId}`);
+                if (!qtyInput) return;
+                const selectedOpt = select.options[select.selectedIndex];
+                const price = parseFloat(selectedOpt?.dataset.price) || 0;
+                const norm = parseFloat(selectedOpt?.dataset.normalization) || 1;
+                total += (norm > 0) ? (price / norm) * (parseFloat(qtyInput.value) || 0) : 0;
+            });
+            // New recipes (search-based)
+            document.querySelectorAll('[id^="recipeHidden-new-"]').forEach(hidden => {
+                const id = hidden.id.replace('recipeHidden-new-', '');
+                const qty = document.querySelector(`input[name="recipes[new][${id}][quantity]"]`);
+                if (hidden.value && qty) {
+                    total += calcRowCost(parseInt(hidden.value), qty.value);
+                }
+            });
+
+            totalSpan.textContent = total.toFixed(2);
+            const hasRows = document.querySelectorAll('select[data-recipe-id], [id^="recipeHidden-new-"]').length > 0;
+            if (totalRow) totalRow.classList.toggle('hidden', !hasRows);
+        }
+
+        // Update cost for existing modifier (portion) recipe row
+        function updateExistingModifierRecipeCost(recipeId, modifierId) {
+            const select = document.querySelector(`select[data-modifier-recipe-id="${recipeId}"]`);
+            const qtyInput = document.getElementById(`existingModifierRecipeQty-${recipeId}`);
+            const priceSpan = document.getElementById(`existingModifierRecipePrice-${recipeId}`);
+            if (!select || !qtyInput || !priceSpan) return;
+            const selectedOpt = select.options[select.selectedIndex];
+            const price = parseFloat(selectedOpt?.dataset.price) || 0;
+            const norm = parseFloat(selectedOpt?.dataset.normalization) || 1;
+            const cost = (norm > 0) ? (price / norm) * (parseFloat(qtyInput.value) || 0) : 0;
+            priceSpan.textContent = cost.toFixed(2);
+            updateModifierRecipeTotalCost(modifierId);
+        }
+
+        // Update cost for new (JS-rendered) modifier recipe row
+        function updateNewModifierRecipeCostDisplay(modifierId, recipeId) {
+            const hiddenInput = document.getElementById(`modifierRecipeHidden-${modifierId}-${recipeId}`);
+            const qtyInput = document.querySelector(`input[name="modifier_recipes[new][${modifierId}][${recipeId}][quantity]"]`);
+            const priceSpan = document.getElementById(`modifierRecipePrice-${modifierId}-${recipeId}`);
+            if (!hiddenInput || !qtyInput || !priceSpan) return;
+            const cost = calcRowCost(parseInt(hiddenInput.value), qtyInput.value);
+            priceSpan.textContent = cost.toFixed(2);
+            updateModifierRecipeTotalCost(modifierId);
+        }
+
+        // Update total cost for a modifier (portion)
+        function updateModifierRecipeTotalCost(modifierId) {
+            const totalSpan = document.getElementById(`modifierRecipeTotal-${modifierId}`);
+            const totalRow = document.getElementById(`modifierRecipeTotalRow-${modifierId}`);
+            if (!totalSpan) return;
+
+            let total = 0;
+            // Existing recipes for this modifier
+            document.querySelectorAll(`select[data-modifier-id="${modifierId}"]`).forEach(select => {
+                const recipeId = select.dataset.modifierRecipeId;
+                const qtyInput = document.getElementById(`existingModifierRecipeQty-${recipeId}`);
+                if (!qtyInput) return;
+                const selectedOpt = select.options[select.selectedIndex];
+                const price = parseFloat(selectedOpt?.dataset.price) || 0;
+                const norm = parseFloat(selectedOpt?.dataset.normalization) || 1;
+                total += (norm > 0) ? (price / norm) * (parseFloat(qtyInput.value) || 0) : 0;
+            });
+            // New recipes for this modifier
+            document.querySelectorAll(`[id^="modifierRecipeHidden-${modifierId}-"]`).forEach(hidden => {
+                const parts = hidden.id.replace('modifierRecipeHidden-', '').split('-');
+                const rId = parts[parts.length - 1];
+                const qty = document.querySelector(`input[name="modifier_recipes[new][${modifierId}][${rId}][quantity]"]`);
+                if (hidden.value && qty) {
+                    total += calcRowCost(parseInt(hidden.value), qty.value);
+                }
+            });
+
+            totalSpan.textContent = total.toFixed(2);
+            const hasRows = document.querySelectorAll(
+                `select[data-modifier-id="${modifierId}"], [id^="modifierRecipeHidden-${modifierId}-"]`
+            ).length > 0;
+            if (totalRow) totalRow.classList.toggle('hidden', !hasRows);
+        }
+
+        // Update total for new portion (portal) recipes
+        function updateNewPortionRecipeTotalCost() {
+            const container = document.getElementById('newPortionRecipes');
+            const totalSpan = document.getElementById('newPortionRecipeTotalCost');
+            const totalRow = document.getElementById('newPortionRecipeTotalRow');
+            if (!container) return;
+
+            let total = 0;
+            container.querySelectorAll('[id^="newPortionRecipe-"]').forEach(row => {
+                const recipeId = row.id.replace('newPortionRecipe-', '');
+                const hidden = document.getElementById(`newPortionRecipeHidden-${recipeId}`);
+                const qty = document.querySelector(`input[name="portion_recipes[${recipeId}][quantity]"]`);
+                if (hidden && hidden.value && qty) {
+                    total += calcRowCost(parseInt(hidden.value), qty.value);
+                }
+            });
+
+            if (totalSpan) totalSpan.textContent = total.toFixed(2);
+            if (totalRow) {
+                const hasRows = container.querySelectorAll('[id^="newPortionRecipe-"]').length > 0;
+                totalRow.classList.toggle('hidden', !hasRows);
+            }
+        }
+
+        function updateNewPortionRecipeCostDisplay(recipeId) {
+            const hiddenInput = document.getElementById(`newPortionRecipeHidden-${recipeId}`);
+            const qtyInput = document.querySelector(`input[name="portion_recipes[${recipeId}][quantity]"]`);
+            const priceSpan = document.getElementById(`newPortionRecipePrice-${recipeId}`);
+            if (!hiddenInput || !qtyInput || !priceSpan) return;
+            const cost = calcRowCost(parseInt(hiddenInput.value), qtyInput.value);
+            priceSpan.textContent = cost.toFixed(2);
+            updateNewPortionRecipeTotalCost();
+        }
 
         // Get list of already selected raw material IDs for item recipes
         function getSelectedRecipeIds(containerId, excludeRowId = null) {
@@ -666,44 +938,44 @@
 
             const recipeDiv = document.createElement('div');
             recipeDiv.id = `recipe-new-${recipeCount}`;
-            recipeDiv.className = 'flex gap-2 items-center bg-white p-2 rounded border border-amber-200 shadow-sm';
+            recipeDiv.className = 'grid grid-cols-[2fr_1fr_60px_90px_36px] gap-2 items-center bg-white px-2 py-2 rounded border border-amber-200 shadow-sm';
 
             recipeDiv.innerHTML = `
-                        <div class="flex-1 grid grid-cols-3 gap-2">
-                            <div class="col-span-1 relative">
-                                <input type="hidden" name="recipes[new][${recipeCount}][main_stock_item_id]" id="recipeHidden-new-${recipeCount}" required>
-                                <input type="text" id="recipeSearch-new-${recipeCount}" placeholder="Type to search..."
-                                    autocomplete="off"
-                                    class="w-full px-3 py-2 bg-gray-50 text-gray-800 rounded-lg border border-amber-300 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200 text-sm">
-                                <div id="recipeDropdown-new-${recipeCount}" class="absolute z-50 w-full mt-1 bg-white border border-amber-300 rounded-lg shadow-lg max-h-40 overflow-y-auto hidden">
-                                </div>
-                            </div>
-                            <div>
-                                <input type="number" name="recipes[new][${recipeCount}][quantity]" step="0.001" min="0.001" required
-                                    placeholder="Quantity"
-                                    onkeydown="handleNewRecipeTabKey(event, ${recipeCount})"
-                                    class="w-full px-3 py-2 bg-gray-50 text-gray-800 rounded-lg border border-amber-300 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200 text-sm">
-                            </div>
-                            <div class="flex items-center">
-                                <span id="recipeUnit-new-${recipeCount}" class="text-sm text-gray-600 font-medium px-2">--</span>
-                            </div>
-                        </div>
-                        <button type="button" onclick="removeNewRecipe(${recipeCount})" 
-                            class="px-2 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition shadow-sm hover:shadow-md">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
-                    `;
+                <div class="relative">
+                    <input type="hidden" name="recipes[new][${recipeCount}][main_stock_item_id]" id="recipeHidden-new-${recipeCount}" required>
+                    <input type="text" id="recipeSearch-new-${recipeCount}" placeholder="Type to search..."
+                        autocomplete="off"
+                        class="w-full px-3 py-2 bg-gray-50 text-gray-800 rounded-lg border border-amber-300 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200 text-sm">
+                    <div id="recipeDropdown-new-${recipeCount}" class="absolute z-50 w-full mt-1 bg-white border border-amber-300 rounded-lg shadow-lg max-h-40 overflow-y-auto hidden">
+                    </div>
+                </div>
+                <input type="number" name="recipes[new][${recipeCount}][quantity]" step="0.001" min="0.001" required
+                    placeholder="Quantity"
+                    oninput="updateNewRecipeCostDisplay(${recipeCount})"
+                    onkeydown="handleNewRecipeTabKey(event, ${recipeCount})"
+                    class="w-full px-3 py-2 bg-gray-50 text-gray-800 rounded-lg border border-amber-300 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200 text-sm">
+                <span id="recipeUnit-new-${recipeCount}" class="text-sm text-gray-600 font-medium px-1">--</span>
+                <span class="text-sm font-semibold text-green-700 text-right pr-1">
+                    <span id="recipePrice-new-${recipeCount}">0.00</span>
+                </span>
+                <button type="button" onclick="removeNewRecipe(${recipeCount})"
+                    class="flex items-center justify-center w-8 h-8 bg-red-500 text-white rounded hover:bg-red-600 transition shadow-sm">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            `;
 
             container.appendChild(recipeDiv);
             initSearchableRecipeDropdownEdit(recipeCount);
+            updateMainRecipeTotalCost();
         }
 
         function removeNewRecipe(id) {
             const element = document.getElementById(`recipe-new-${id}`);
             if (element) {
                 element.remove();
+                updateMainRecipeTotalCost();
             }
         }
 
@@ -716,6 +988,7 @@
                 deleteInput.value = id;
                 document.querySelector('form').appendChild(deleteInput);
                 element.remove();
+                updateMainRecipeTotalCost();
             }
         }
 
@@ -771,6 +1044,7 @@
                         hiddenInput.value = this.dataset.id;
                         updateNewRecipeUnit(rowId, this.dataset.unit);
                         dropdown.classList.add('hidden');
+                        updateNewRecipeCostDisplay(rowId);
                     });
 
                     dropdown.appendChild(optionDiv);
@@ -787,6 +1061,7 @@
                 dropdown.classList.remove('hidden');
                 hiddenInput.value = '';
                 updateNewRecipeUnit(rowId, '--');
+                updateNewRecipeCostDisplay(rowId);
             });
 
             document.addEventListener('click', function (e) {
@@ -1044,40 +1319,48 @@
 
             const recipeDiv = document.createElement('div');
                 recipeDiv.id = `newPortionRecipe-${newPortionRecipeCount}`;
-                recipeDiv.className = 'flex flex-wrap gap-1 items-center';
+                recipeDiv.className = 'grid grid-cols-[3fr_65px_44px_72px_28px] gap-2 items-center';
 
                 recipeDiv.innerHTML = `
-                        <div class="relative min-w-0 flex-1 max-w-[120px]">
-                            <input type="hidden" name="portion_recipes[${newPortionRecipeCount}][main_stock_item_id]" 
-                                id="newPortionRecipeHidden-${newPortionRecipeCount}" required>
-                            <input type="text" id="newPortionRecipeSearch-${newPortionRecipeCount}" placeholder="Search..."
-                                autocomplete="off"
-                                class="w-full px-2 py-1.5 bg-amber-50 text-gray-800 rounded-lg border border-amber-200 focus:outline-none focus:border-amber-500 text-xs truncate">
-                            <div id="newPortionRecipeDropdown-${newPortionRecipeCount}" 
-                                class="absolute z-50 w-48 mt-1 bg-white border border-amber-200 rounded-lg shadow-lg max-h-32 overflow-y-auto hidden">
-                            </div>
+                    <div class="relative">
+                        <input type="hidden" name="portion_recipes[${newPortionRecipeCount}][main_stock_item_id]"
+                            id="newPortionRecipeHidden-${newPortionRecipeCount}" required>
+                        <input type="text" id="newPortionRecipeSearch-${newPortionRecipeCount}" placeholder="Search..."
+                            autocomplete="off"
+                            class="w-full px-2 py-1.5 bg-amber-50 text-gray-800 rounded-lg border border-amber-200 focus:outline-none focus:border-amber-500 text-xs">
+                        <div id="newPortionRecipeDropdown-${newPortionRecipeCount}"
+                            class="absolute z-50 w-48 mt-1 bg-white border border-amber-200 rounded-lg shadow-lg max-h-32 overflow-y-auto hidden">
                         </div>
-                        <input type="number" name="portion_recipes[${newPortionRecipeCount}][quantity]" step="0.001" min="0.001" required
-                            placeholder="Qty"
-                            onkeydown="handleNewPortionRecipeTabKey(event, ${newPortionRecipeCount})"
-                            class="w-14 px-1 py-1.5 bg-amber-50 text-gray-800 rounded-lg border border-amber-200 focus:outline-none focus:border-amber-500 text-xs">
-                        <span id="newPortionRecipeUnit-${newPortionRecipeCount}" class="text-xs text-gray-600 w-6 truncate">--</span>
-                        <button type="button" onclick="removeNewPortionRecipe(${newPortionRecipeCount})" 
-                            class="px-1 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition flex-shrink-0">
-                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
-                    `;
+                    </div>
+                    <input type="number" name="portion_recipes[${newPortionRecipeCount}][quantity]" step="0.001" min="0.001" required
+                        placeholder="Qty"
+                        oninput="updateNewPortionRecipeCostDisplay(${newPortionRecipeCount})"
+                        onkeydown="handleNewPortionRecipeTabKey(event, ${newPortionRecipeCount})"
+                        class="w-full px-1 py-1.5 bg-amber-50 text-gray-800 rounded-lg border border-amber-200 focus:outline-none focus:border-amber-500 text-xs">
+                    <span id="newPortionRecipeUnit-${newPortionRecipeCount}" class="text-xs text-gray-600 text-center">--</span>
+                    <span class="text-xs font-semibold text-green-700 text-right">
+                        <span id="newPortionRecipePrice-${newPortionRecipeCount}">0.00</span>
+                    </span>
+                    <button type="button" onclick="removeNewPortionRecipe(${newPortionRecipeCount})"
+                        class="flex items-center justify-center w-6 h-6 bg-red-500 text-white rounded hover:bg-red-600 transition flex-shrink-0">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                `;
 
 
                 container.appendChild(recipeDiv);
                 initNewPortionRecipeDropdown(newPortionRecipeCount);
+                updateNewPortionRecipeTotalCost();
             }
 
             function removeNewPortionRecipe(id) {
                 const element = document.getElementById(`newPortionRecipe-${id}`);
-                if (element) element.remove();
+                if (element) {
+                    element.remove();
+                    updateNewPortionRecipeTotalCost();
+                }
             }
 
             function updateNewPortionRecipeUnit(recipeId, unit) {
@@ -1124,6 +1407,7 @@
                             hiddenInput.value = this.dataset.id;
                             updateNewPortionRecipeUnit(recipeId, this.dataset.unit);
                             dropdown.classList.add('hidden');
+                            updateNewPortionRecipeCostDisplay(recipeId);
                         });
 
                         dropdown.appendChild(optionDiv);
@@ -1140,6 +1424,7 @@
                     dropdown.classList.remove('hidden');
                     hiddenInput.value = '';
                     updateNewPortionRecipeUnit(recipeId, '--');
+                    updateNewPortionRecipeCostDisplay(recipeId);
                 });
 
                 document.addEventListener('click', function(e) {
@@ -1310,40 +1595,48 @@
 
                 const recipeDiv = document.createElement('div');
                 recipeDiv.id = `modifierRecipe-${modifierId}-${recipeId}`;
-                recipeDiv.className = 'flex flex-wrap gap-1 items-center';
+                recipeDiv.className = 'grid grid-cols-[3fr_65px_44px_72px_28px] gap-2 items-center';
 
                 recipeDiv.innerHTML = `
-                        <div class="relative min-w-0 flex-1 max-w-[120px]">
-                            <input type="hidden" name="modifier_recipes[new][${modifierId}][${recipeId}][main_stock_item_id]" 
-                                id="modifierRecipeHidden-${modifierId}-${recipeId}" required>
-                            <input type="text" id="modifierRecipeSearch-${modifierId}-${recipeId}" placeholder="Search..."
-                                autocomplete="off"
-                                class="w-full px-2 py-1.5 bg-amber-50 text-gray-800 rounded-lg border border-amber-200 focus:outline-none focus:border-amber-500 text-xs truncate">
-                            <div id="modifierRecipeDropdown-${modifierId}-${recipeId}" 
-                                class="absolute z-50 w-48 mt-1 bg-white border border-amber-200 rounded-lg shadow-lg max-h-32 overflow-y-auto hidden">
-                            </div>
+                    <div class="relative">
+                        <input type="hidden" name="modifier_recipes[new][${modifierId}][${recipeId}][main_stock_item_id]"
+                            id="modifierRecipeHidden-${modifierId}-${recipeId}" required>
+                        <input type="text" id="modifierRecipeSearch-${modifierId}-${recipeId}" placeholder="Search..."
+                            autocomplete="off"
+                            class="w-full px-2 py-1.5 bg-amber-50 text-gray-800 rounded-lg border border-amber-200 focus:outline-none focus:border-amber-500 text-xs">
+                        <div id="modifierRecipeDropdown-${modifierId}-${recipeId}"
+                            class="absolute z-50 w-48 mt-1 bg-white border border-amber-200 rounded-lg shadow-lg max-h-32 overflow-y-auto hidden">
                         </div>
-                        <input type="number" name="modifier_recipes[new][${modifierId}][${recipeId}][quantity]" step="0.001" min="0.001" required
-                            placeholder="Qty"
-                            onkeydown="handleEditPortionRecipeTabKey(event, ${modifierId}, ${recipeId})"
-                            class="w-14 px-1 py-1.5 bg-amber-50 text-gray-800 rounded-lg border border-amber-200 focus:outline-none focus:border-amber-500 text-xs">
-                        <span id="editPortionRecipeUnit-${modifierId}-${recipeId}" class="text-xs text-gray-600 w-6 truncate">--</span>
-                        <button type="button" onclick="removeEditPortionRecipe(${modifierId}, ${recipeId})" 
-                            class="px-1 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition flex-shrink-0">
-                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
-                    `;
+                    </div>
+                    <input type="number" name="modifier_recipes[new][${modifierId}][${recipeId}][quantity]" step="0.001" min="0.001" required
+                        placeholder="Qty"
+                        oninput="updateNewModifierRecipeCostDisplay(${modifierId}, ${recipeId})"
+                        onkeydown="handleEditPortionRecipeTabKey(event, ${modifierId}, ${recipeId})"
+                        class="w-full px-1 py-1.5 bg-amber-50 text-gray-800 rounded-lg border border-amber-200 focus:outline-none focus:border-amber-500 text-xs">
+                    <span id="editPortionRecipeUnit-${modifierId}-${recipeId}" class="text-xs text-gray-600 text-center">--</span>
+                    <span class="text-xs font-semibold text-green-700 text-right">
+                        <span id="modifierRecipePrice-${modifierId}-${recipeId}">0.00</span>
+                    </span>
+                    <button type="button" onclick="removeEditPortionRecipe(${modifierId}, ${recipeId})"
+                        class="flex items-center justify-center w-6 h-6 bg-red-500 text-white rounded hover:bg-red-600 transition flex-shrink-0">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                `;
 
 
                 container.appendChild(recipeDiv);
                 initEditPortionRecipeDropdown(modifierId, recipeId);
+                updateModifierRecipeTotalCost(modifierId);
             }
 
             function removeEditPortionRecipe(modifierId, recipeId) {
                 const element = document.getElementById(`modifierRecipe-${modifierId}-${recipeId}`);
-                if (element) element.remove();
+                if (element) {
+                    element.remove();
+                    updateModifierRecipeTotalCost(modifierId);
+                }
             }
 
             function removeExistingModifierRecipe(id) {
@@ -1355,7 +1648,9 @@
                     deleteInput.name = 'modifier_recipes[delete][]';
                     deleteInput.value = id;
                     if (form) form.appendChild(deleteInput);
+                    const modifierId = element.querySelector('select[data-modifier-id]')?.dataset.modifierId;
                     element.remove();
+                    if (modifierId) updateModifierRecipeTotalCost(modifierId);
                 }
             }
 
@@ -1413,6 +1708,7 @@
                             hiddenInput.value = this.dataset.id;
                             updateEditPortionRecipeUnit(modifierId, recipeId, this.dataset.unit);
                             dropdown.classList.add('hidden');
+                            updateNewModifierRecipeCostDisplay(modifierId, recipeId);
                         });
                         
                         dropdown.appendChild(optionDiv);
@@ -1429,6 +1725,7 @@
                     dropdown.classList.remove('hidden');
                     hiddenInput.value = '';
                     updateEditPortionRecipeUnit(modifierId, recipeId, '--');
+                    updateNewModifierRecipeCostDisplay(modifierId, recipeId);
                 });
 
                 document.addEventListener('click', function(e) {
