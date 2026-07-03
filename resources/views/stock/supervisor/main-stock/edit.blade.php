@@ -133,7 +133,7 @@
                         <input type="number" name="price" id="price" 
                             value="{{ old('price', $item->price) }}"
                             class="form-input w-full px-4 py-2.5 border border-gray-200 rounded-lg" 
-                            step="0.01" min="0" placeholder="0.00">
+                            step="0.00001" min="0" placeholder="0.00000">
                         <p class="mt-1 text-xs text-gray-500" id="price-hint">Price per unit</p>
                         @error('price')
                         <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
@@ -269,7 +269,7 @@
             if (priceInput) {
                 priceInput.readOnly = false;
                 priceInput.style.backgroundColor = '';
-                priceInput.placeholder = '0.00';
+                priceInput.placeholder = '0.00000';
             }
             if (priceHint) {
                 priceHint.textContent = 'Price per unit';
@@ -285,7 +285,7 @@
             if (priceInput) {
                 priceInput.readOnly = false;
                 priceInput.style.backgroundColor = '';
-                priceInput.placeholder = '0.00';
+                priceInput.placeholder = '0.00000';
             }
             if (priceHint) {
                 priceHint.textContent = 'Price per unit';
@@ -308,7 +308,7 @@
                 itemNameInput.value = itemName;
             }
             if (price && priceInput) {
-                priceInput.value = parseFloat(price).toFixed(2);
+                priceInput.value = parseFloat(parseFloat(price).toFixed(5));
             }
         }
     }
@@ -324,5 +324,4 @@
             onLinkedItemChange();
         }
     });
-</script>
-@endsection
+</scr

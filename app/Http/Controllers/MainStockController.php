@@ -129,7 +129,7 @@ class MainStockController extends Controller
             'items.*.linked_item_id' => 'nullable|exists:items,id',
             'items.*.linked_item_modifier_id' => 'nullable|exists:item_modifiers,id',
             'items.*.quantity' => 'nullable|numeric|min:0',
-            'items.*.price' => 'nullable|numeric|min:0',
+            'items.*.price' => 'nullable|numeric|decimal:0,5|min:0',
             'items.*.normalization' => 'nullable|numeric|min:0',
         ]);
 
@@ -336,7 +336,7 @@ class MainStockController extends Controller
             'unit_type' => ['required', Rule::in(array_keys(MainStockItem::UNIT_TYPES))],
             'item_type' => ['required', Rule::in(array_keys(MainStockItem::ITEM_TYPES))],
             'linked_item_id' => 'nullable|string',
-            'price' => 'nullable|numeric|min:0',
+            'price' => 'nullable|numeric|decimal:0,5|min:0',
             'normalization' => 'nullable|numeric|min:0',
             'is_active' => 'boolean',
         ], [

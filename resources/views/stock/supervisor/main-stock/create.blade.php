@@ -515,7 +515,7 @@
                                                                         </select>
                                                                     </td>
                                                                     <td class="price-cell" id="price-cell-${rowCounter}">
-                                                                        <input type="number" name="items[${rowCounter}][price]" class="price-input" step="0.01" min="0" placeholder="0.00" title="Price per unit">
+                                                                        <input type="number" name="items[${rowCounter}][price]" class="price-input" step="0.00001" min="0" placeholder="0.00000" title="Price per unit">
                                                                     </td>
                                                                     <td class="normalization-cell" id="normalization-cell-${rowCounter}">
                                                                         <input type="number" name="items[${rowCounter}][normalization]" class="normalization-input" step="0.0001" min="0" placeholder="Optional" title="Normalization factor for raw materials">
@@ -642,7 +642,7 @@
                 // Enable price input for raw materials
                 if (priceInput) {
                     priceInput.readOnly = false;
-                    priceInput.placeholder = '0.00';
+                    priceInput.placeholder = '0.00000';
                     priceInput.style.backgroundColor = '';
                 }
                 // Show normalization only for raw materials
@@ -682,7 +682,7 @@
                     itemNameInput.value = itemName;
                 }
                 if (price !== null && price !== undefined && price !== 'null' && priceInput) {
-                    priceInput.value = parseFloat(price).toFixed(2);
+                    priceInput.value = parseFloat(parseFloat(price).toFixed(5));
                 }
             } else {
                 itemNameInput.value = '';

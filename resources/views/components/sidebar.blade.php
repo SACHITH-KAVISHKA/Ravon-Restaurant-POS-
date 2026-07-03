@@ -338,7 +338,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                     </svg>
-                    <span>Main Stock Management</span>
+                    <span>RM Stock Management</span>
                 </a>
 
                 <a href="{{ route('main-stock.stock-update') }}"
@@ -363,9 +363,9 @@
         @endhasanyrole
 
         @hasanyrole('cashier|supervisor|manager|superadmin')
-        <div x-data="{ open: {{ request()->routeIs('stock-transfer.cashier.sub-stock') ? 'true' : 'false' }} }">
+        <div x-data="{ open: {{ request()->routeIs('stock-transfer.cashier.sub-stock') || request()->routeIs('stock-transfer.cashier.index') || request()->routeIs('wastage.*') ? 'true' : 'false' }} }">
             <button @click="open = !open"
-                class="w-full flex items-center justify-between gap-3 px-4 py-3 {{ request()->routeIs('stock-transfer.cashier.sub-stock') ? 'bg-white/25 text-white border-l-4 border-white font-semibold' : 'text-white/80 hover:bg-white/15 hover:text-white' }} rounded-lg transition">
+                class="w-full flex items-center justify-between gap-3 px-4 py-3 {{ request()->routeIs('stock-transfer.cashier.sub-stock') || request()->routeIs('stock-transfer.cashier.index') || request()->routeIs('wastage.*') ? 'bg-white/25 text-white border-l-4 border-white font-semibold' : 'text-white/80 hover:bg-white/15 hover:text-white' }} rounded-lg transition">
                 <div class="flex items-center gap-3">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -397,6 +397,26 @@
                     </svg>
                     <span>FG Stock</span>
                 </a>
+
+                @hasanyrole('cashier|supervisor|superadmin')
+                <a href="{{ route('stock-transfer.cashier.index') }}"
+                    class="flex items-center gap-3 px-4 py-2 {{ request()->routeIs('stock-transfer.cashier.index') ? 'bg-white/20 text-white font-medium' : 'text-white/70 hover:bg-white/10 hover:text-white' }} rounded-lg transition text-sm">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                    </svg>
+                    <span>Incoming Transfers</span>
+                </a>
+
+                <a href="{{ route('wastage.index') }}"
+                    class="flex items-center gap-3 px-4 py-2 {{ request()->routeIs('wastage.*') ? 'bg-white/20 text-white font-medium' : 'text-white/70 hover:bg-white/10 hover:text-white' }} rounded-lg transition text-sm">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    <span>Wastage</span>
+                </a>
+                @endhasanyrole
             </div>
         </div>
         @endhasanyrole
@@ -429,26 +449,6 @@
                 </a>
             </div>
         </div>
-        @endhasanyrole
-
-        @hasanyrole('cashier|supervisor|superadmin')
-        <a href="{{ route('stock-transfer.cashier.index') }}"
-            class="flex items-center gap-3 px-4 py-3 {{ request()->routeIs('stock-transfer.cashier.index') ? 'bg-white/25 text-white border-l-4 border-white font-semibold' : 'text-white/80 hover:bg-white/15 hover:text-white' }} rounded-lg transition">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-            </svg>
-            <span class="font-medium">Incoming Transfers</span>
-        </a>
-
-        <a href="{{ route('wastage.index') }}"
-            class="flex items-center gap-3 px-4 py-3 {{ request()->routeIs('wastage.*') ? 'bg-white/25 text-white border-l-4 border-white font-semibold' : 'text-white/80 hover:bg-white/15 hover:text-white' }} rounded-lg transition">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-            </svg>
-            <span class="font-medium">Wastage</span>
-        </a>
         @endhasanyrole
 
         @hasanyrole('superadmin')

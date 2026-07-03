@@ -28,7 +28,7 @@ class MainStockItem extends Model
 
     protected $casts = [
         'quantity' => 'decimal:3',
-        'price' => 'decimal:2',
+        'price' => 'decimal:5',
         'normalization' => 'decimal:4',
         'is_active' => 'boolean',
     ];

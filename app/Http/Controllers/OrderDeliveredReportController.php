@@ -101,15 +101,15 @@ class OrderDeliveredReportController extends Controller
                 'max_prep_time' => (int) ($stats->max_prep_time ?? 0),
             ],
             'preparation_records' => $preparationRecords->map(function ($record) {
-                // DB datetimes may be stored in UTC; parse as UTC then convert to app timezone
-                $tz = config('app.timezone') ?: date_default_timezone_get();
+                // prepared_at/delivered_at are already Eloquent datetime casts in the
+                // app timezone (config('app.timezone')), so they can be formatted directly.
                 $formatWithSeconds = 'Y-m-d H:i:s';
 
                 return [
                     'order_number' => $record->order_number,
                     'item_name' => $record->item_display_name,
-                    'prepared_at' => $record->prepared_at ? Carbon::parse($record->prepared_at, 'UTC')->setTimezone($tz)->format($formatWithSeconds) : '-',
-                    'delivered_at' => $record->delivered_at ? Carbon::parse($record->delivered_at, 'UTC')->setTimezone($tz)->format($formatWithSeconds) : '-',
+                    'prepared_at' => $record->prepared_at ? $record->prepared_at->format($formatWithSeconds) : '-',
+                    'delivered_at' => $record->delivered_at ? $record->delivered_at->format($formatWithSeconds) : '-',
                     'kitchen_time' => (int) ($record->preparation_minutes ?? 0),
                 ];
             })->values(),

@@ -148,6 +148,7 @@ class LastOrderDateController extends Controller
          */
         $itemsWithoutModifiers = DB::table('items')
             ->join('categories', 'items.category_id', '=', 'categories.id')
+            ->where('items.status', 1)
             ->whereNotExists(function ($sub) {
                 $sub->select(DB::raw(1))
                     ->from('item_modifiers')
@@ -166,6 +167,8 @@ class LastOrderDateController extends Controller
         $itemsWithModifiers = DB::table('items')
             ->join('categories', 'items.category_id', '=', 'categories.id')
             ->join('item_modifiers', 'item_modifiers.item_id', '=', 'items.id')
+            ->where('items.status', 1)
+            ->where('item_modifiers.status', 1)
             ->select([
                 'items.id as item_id',
                 'item_modifiers.id as modifier_id',
