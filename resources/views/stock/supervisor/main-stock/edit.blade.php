@@ -324,4 +324,5 @@
             onLinkedItemChange();
         }
     });
-</scr
+</script>
+@endsection

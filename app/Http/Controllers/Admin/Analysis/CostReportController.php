@@ -281,7 +281,8 @@ class CostReportController extends Controller
         $totalCost = 0;
 
         foreach ($recipes as $recipe) {
-            if ($recipe->mainStockItem) {
+            // Soft-deleted stock items contribute no cost
+            if ($recipe->mainStockItem && !$recipe->mainStockItem->isDeleted()) {
                 $price         = (float) ($recipe->mainStockItem->price ?? 0);
                 $normalization = (float) ($recipe->mainStockItem->normalization ?? 0);
                 $unitCost      = $normalization > 0 ? ($price / $normalization) : 0;

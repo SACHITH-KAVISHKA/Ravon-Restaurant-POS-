@@ -442,6 +442,7 @@ class SalesReportController extends Controller
                         // Get the sub stock BEFORE restoring to record the before quantity
                         $mainStockItem = \App\Models\MainStockItem::where('item_type', 'finished_good')
                             ->where('is_active', true)
+                            ->notDeleted()
                             ->where('linked_item_id', $orderItem->item_id)
                             ->where('linked_item_modifier_id', $modifierId)
                             ->first();

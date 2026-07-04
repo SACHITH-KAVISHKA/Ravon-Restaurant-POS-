@@ -16,7 +16,7 @@ class RmReportController extends Controller
      */
     public function index(Request $request)
     {
-        $rawMaterials = MainStockItem::ofType('raw_material')->orderBy('item_name')->get();
+        $rawMaterials = MainStockItem::ofType('raw_material')->notDeleted()->orderBy('item_name')->get();
         $selectedRmId = $request->input('raw_material_id');
         $recipes = collect();
 
@@ -43,7 +43,7 @@ class RmReportController extends Controller
             ->orderBy('item_modifier_id');
 
         if ($selectedRmId) {
-            $rawMaterial = MainStockItem::ofType('raw_material')->findOrFail($selectedRmId);
+            $rawMaterial = MainStockItem::ofType('raw_material')->notDeleted()->findOrFail($selectedRmId);
             $query->where('main_stock_item_id', $selectedRmId);
         }
 

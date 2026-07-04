@@ -16,7 +16,7 @@ class RmSalesReportController extends Controller
      */
     public function index(Request $request)
     {
-        $rawMaterials = MainStockItem::orderBy('item_name')->get();
+        $rawMaterials = MainStockItem::notDeleted()->orderBy('item_name')->get();
         return view('reports.rm-sales', compact('rawMaterials'));
     }
 
@@ -35,7 +35,7 @@ class RmSalesReportController extends Controller
         $fromDate = $request->start_date;
         $toDate = $request->end_date;
 
-        $rawMaterial = MainStockItem::findOrFail($rawMaterialId);
+        $rawMaterial = MainStockItem::notDeleted()->findOrFail($rawMaterialId);
 
         // Find all recipes where this RM is used
         $recipes = ItemRecipe::with(['item', 'modifier'])

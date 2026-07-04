@@ -21,6 +21,7 @@ class StockAdjustmentController extends Controller
     {
         // Get all active main stock items (both RM and Finished Goods)
         $items = MainStockItem::where('is_active', true)
+            ->notDeleted()
             ->orderBy('item_name')
             ->get()
             ->map(function ($item) {
@@ -269,6 +270,7 @@ class StockAdjustmentController extends Controller
     public function history()
     {
         $items = MainStockItem::where('is_active', true)
+            ->notDeleted()
             ->orderBy('item_name')
             ->get()
             ->map(function ($item) {

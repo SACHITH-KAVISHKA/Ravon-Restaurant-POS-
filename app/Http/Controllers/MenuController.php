@@ -21,6 +21,15 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 class MenuController extends Controller
 {
     /**
+     * Check whether a main stock item can be used in recipes.
+     * Soft-deleted stock items (status = 0) cannot be selected.
+     */
+    private function isStockItemSelectable($stockItemId): bool
+    {
+        return MainStockItem::where('id', $stockItemId)->notDeleted()->exists();
+    }
+
+    /**
      * Display menu management page.
      */
     public function index()
@@ -231,7 +240,7 @@ class MenuController extends Controller
         // Store recipes for the item (only when no portions)
         if ($request->has('recipes') && is_array($request->recipes)) {
             foreach ($request->recipes as $recipeData) {
-                if (!empty($recipeData['main_stock_item_id']) && isset($recipeData['quantity']) && $recipeData['quantity'] > 0) {
+                if (!empty($recipeData['main_stock_item_id']) && isset($recipeData['quantity']) && $recipeData['quantity'] > 0 && $this->isStockItemSelectable($recipeData['main_stock_item_id'])) {
                     $item->recipes()->create([
                         'main_stock_item_id' => $recipeData['main_stock_item_id'],
                         'quantity' => $recipeData['quantity'],
@@ -267,7 +276,7 @@ class MenuController extends Controller
                     // Store recipes for this portion if provided
                     if (isset($portion['recipes']) && is_array($portion['recipes'])) {
                         foreach ($portion['recipes'] as $recipeData) {
-                            if (!empty($recipeData['main_stock_item_id']) && isset($recipeData['quantity']) && $recipeData['quantity'] > 0) {
+                            if (!empty($recipeData['main_stock_item_id']) && isset($recipeData['quantity']) && $recipeData['quantity'] > 0 && $this->isStockItemSelectable($recipeData['main_stock_item_id'])) {
                                 $item->recipes()->create([
                                     'main_stock_item_id' => $recipeData['main_stock_item_id'],
                                     'quantity' => $recipeData['quantity'],
@@ -365,6 +374,10 @@ class MenuController extends Controller
                 if (isset($recipeData['id'])) {
                     $recipe = ItemRecipe::find($recipeData['id']);
                     if ($recipe && $recipe->item_id === $item->id) {
+                        // Skip updates that reference a soft-deleted stock item
+                        if (empty($recipeData['main_stock_item_id']) || !$this->isStockItemSelectable($recipeData['main_stock_item_id'])) {
+                            continue;
+                        }
                         $recipe->update([
                             'main_stock_item_id' => $recipeData['main_stock_item_id'],
                             'quantity' => $recipeData['quantity'],
@@ -377,7 +390,7 @@ class MenuController extends Controller
         // Handle new recipes
         if ($request->has('recipes.new')) {
             foreach ($request->input('recipes.new') as $recipeData) {
-                if (!empty($recipeData['main_stock_item_id']) && isset($recipeData['quantity']) && $recipeData['quantity'] > 0) {
+                if (!empty($recipeData['main_stock_item_id']) && isset($recipeData['quantity']) && $recipeData['quantity'] > 0 && $this->isStockItemSelectable($recipeData['main_stock_item_id'])) {
                     $item->recipes()->create([
                         'main_stock_item_id' => $recipeData['main_stock_item_id'],
                         'quantity' => $recipeData['quantity'],
@@ -434,7 +447,7 @@ class MenuController extends Controller
         // Store recipes for this portion
         if ($request->has('portion_recipes')) {
             foreach ($request->input('portion_recipes') as $recipeData) {
-                if (!empty($recipeData['main_stock_item_id']) && isset($recipeData['quantity']) && $recipeData['quantity'] > 0) {
+                if (!empty($recipeData['main_stock_item_id']) && isset($recipeData['quantity']) && $recipeData['quantity'] > 0 && $this->isStockItemSelectable($recipeData['main_stock_item_id'])) {
                     $item->recipes()->create([
                         'main_stock_item_id' => $recipeData['main_stock_item_id'],
                         'quantity' => $recipeData['quantity'],
@@ -510,6 +523,10 @@ class MenuController extends Controller
                 if (isset($recipeData['id'])) {
                     $recipe = ItemRecipe::find($recipeData['id']);
                     if ($recipe && $recipe->item_modifier_id === $modifier->id) {
+                        // Skip updates that reference a soft-deleted stock item
+                        if (empty($recipeData['main_stock_item_id']) || !$this->isStockItemSelectable($recipeData['main_stock_item_id'])) {
+                            continue;
+                        }
                         $recipe->update([
                             'main_stock_item_id' => $recipeData['main_stock_item_id'],
                             'quantity' => $recipeData['quantity'],
@@ -524,7 +541,7 @@ class MenuController extends Controller
             foreach ($request->input('modifier_recipes.new') as $modId => $recipes) {
                 if ($modId == $modifier->id) {
                     foreach ($recipes as $recipeData) {
-                        if (!empty($recipeData['main_stock_item_id']) && isset($recipeData['quantity']) && $recipeData['quantity'] > 0) {
+                        if (!empty($recipeData['main_stock_item_id']) && isset($recipeData['quantity']) && $recipeData['quantity'] > 0 && $this->isStockItemSelectable($recipeData['main_stock_item_id'])) {
                             $modifier->item->recipes()->create([
                                 'main_stock_item_id' => $recipeData['main_stock_item_id'],
                                 'quantity' => $recipeData['quantity'],

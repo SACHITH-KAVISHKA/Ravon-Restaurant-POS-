@@ -17,6 +17,7 @@ class WastageReportController extends Controller
     public function index()
     {
         $items = MainStockItem::where('is_active', true)
+            ->notDeleted()
             ->orderBy('item_name')
             ->get()
             ->map(function ($item) {

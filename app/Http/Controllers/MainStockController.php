@@ -18,6 +18,7 @@ class MainStockController extends Controller
     public function index(Request $request)
     {
         $query = MainStockItem::with(['creator', 'updater'])
+            ->notDeleted()
             ->orderBy('item_name');
 
         // Filter by type
@@ -30,7 +31,7 @@ class MainStockController extends Controller
             if ($request->status === 'active') {
                 $query->active();
             } elseif ($request->status === 'inactive') {
-                $query->where('is_active', false);
+                $query->where('is_active', false)->notDeleted();
             } elseif ($request->status === 'low_stock') {
                 $query->active()->lowStock();
             }
@@ -49,7 +50,7 @@ class MainStockController extends Controller
 
         // Stats
         $stats = [
-            'total' => MainStockItem::count(),
+            'total' => MainStockItem::notDeleted()->count(),
             'active' => MainStockItem::active()->count(),
             'low_stock' => MainStockItem::active()->lowStock()->count(),
             'raw_materials' => MainStockItem::active()->ofType('raw_material')->count(),
@@ -273,6 +274,13 @@ class MainStockController extends Controller
      */
     public function edit(MainStockItem $mainStock)
     {
+        // Soft-deleted items can only be managed from the Deleted Items page
+        if ($mainStock->isDeleted()) {
+            return redirect()
+                ->route('main-stock.index')
+                ->with('error', 'This item has been deleted. Reactivate it from the Deleted Items page first.');
+        }
+
         // Get existing stock item names to exclude from dropdown (except current item)
         $existingStockItemNames = MainStockItem::where('item_type', 'finished_good')
             ->where('id', '!=', $mainStock->id)
@@ -330,6 +338,13 @@ class MainStockController extends Controller
      */
     public function update(Request $request, MainStockItem $mainStock)
     {
+        // Soft-deleted items cannot be updated until reactivated
+        if ($mainStock->isDeleted()) {
+            return redirect()
+                ->route('main-stock.index')
+                ->with('error', 'This item has been deleted. Reactivate it from the Deleted Items page first.');
+        }
+
         $validated = $request->validate([
             'item_code' => ['required', 'string', 'max:50', Rule::unique('main_stock_items', 'item_code')->ignore($mainStock->id)],
             'item_name' => ['required', 'string', 'max:255', Rule::unique('main_stock_items', 'item_name')->ignore($mainStock->id)],
@@ -398,14 +413,75 @@ class MainStockController extends Controller
     }
 
     /**
-     * Delete the specified stock item.
+     * Soft delete the specified stock item (Super Admin only).
+     * The record is never removed from the database; status is set to 0.
      */
     public function destroy(MainStockItem $mainStock)
     {
-        $mainStock->delete();
+        abort_unless(Auth::user() && Auth::user()->hasRole('superadmin'), 403, 'Only Super Admin can delete stock items.');
+
+        $mainStock->update([
+            'status' => MainStockItem::STATUS_DELETED,
+            'updated_by' => Auth::id(),
+        ]);
+
         return redirect()
             ->route('main-stock.index')
             ->with('success', 'Stock item deleted successfully!');
+    }
+
+    /**
+     * Display soft-deleted stock items (Super Admin only).
+     */
+    public function deletedItems(Request $request)
+    {
+        abort_unless(Auth::user() && Auth::user()->hasRole('superadmin'), 403, 'Only Super Admin can view deleted items.');
+
+        $query = MainStockItem::with(['creator', 'updater'])
+            ->deleted()
+            ->orderBy('item_name');
+
+        // Filter by type
+        if ($request->filled('type') && $request->type !== 'all') {
+            $query->ofType($request->type);
+        }
+
+        // Search
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('item_code', 'like', "%{$search}%")
+                    ->orWhere('item_name', 'like', "%{$search}%");
+            });
+        }
+
+        $items = $query->paginate(100)->withQueryString();
+
+        return view('stock.supervisor.main-stock.deleted', compact('items'));
+    }
+
+    /**
+     * Reactivate a soft-deleted stock item (Super Admin only).
+     * Sets status back to 1 so the item becomes active everywhere again.
+     */
+    public function reactivate(MainStockItem $mainStock)
+    {
+        abort_unless(Auth::user() && Auth::user()->hasRole('superadmin'), 403, 'Only Super Admin can reactivate stock items.');
+
+        if (!$mainStock->isDeleted()) {
+            return redirect()
+                ->route('main-stock.deleted')
+                ->with('error', 'This item is not deleted.');
+        }
+
+        $mainStock->update([
+            'status' => MainStockItem::STATUS_ACTIVE,
+            'updated_by' => Auth::id(),
+        ]);
+
+        return redirect()
+            ->route('main-stock.deleted')
+            ->with('success', "Stock item '{$mainStock->item_name}' reactivated successfully!");
     }
 
     /**
@@ -517,6 +593,8 @@ class MainStockController extends Controller
      */
     public function getItem(MainStockItem $mainStock)
     {
+        abort_if($mainStock->isDeleted(), 404);
+
         return response()->json([
             'id' => $mainStock->id,
             'item_code' => $mainStock->item_code,

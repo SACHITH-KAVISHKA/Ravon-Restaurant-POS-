@@ -215,40 +215,63 @@
                                         @foreach($item->itemRecipes as $recipe)
                                             <div id="recipe-existing-{{ $recipe->id }}"
                                                 class="grid grid-cols-[2fr_1fr_60px_90px_36px] gap-2 items-center bg-white px-2 py-2 rounded border border-amber-200 shadow-sm">
+                                                @php
+                                                    $recipeStockDeleted = $recipe->mainStockItem && $recipe->mainStockItem->isDeleted();
+                                                @endphp
                                                 <div>
-                                                    <select name="recipes[existing][{{ $recipe->id }}][main_stock_item_id]"
-                                                        required
-                                                        data-recipe-id="{{ $recipe->id }}"
-                                                        onchange="updateExistingRecipeCost('{{ $recipe->id }}')"
-                                                        class="w-full px-3 py-2 bg-gray-50 text-gray-800 rounded-lg border border-amber-300 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200 text-sm">
-                                                        @foreach($rawMaterials as $material)
-                                                            <option value="{{ $material->id }}"
-                                                                data-unit="{{ $material->unit_abbreviation }}"
-                                                                data-price="{{ $material->price }}"
-                                                                data-normalization="{{ $material->normalization }}"
-                                                                {{ $recipe->main_stock_item_id == $material->id ? 'selected' : '' }}>
-                                                                {{ $material->item_name }}
-                                                            </option>
-                                                        @endforeach
-                                                    </select>
+                                                    @if($recipeStockDeleted)
+                                                        <select disabled
+                                                            title="This stock item has been deleted and cannot be selected until it is reactivated."
+                                                            class="w-full px-3 py-2 bg-gray-200 text-gray-500 rounded-lg border border-gray-300 cursor-not-allowed text-sm">
+                                                            <option selected>{{ $recipe->mainStockItem->item_name }} (Deleted)</option>
+                                                        </select>
+                                                        <input type="hidden" name="recipes[existing][{{ $recipe->id }}][main_stock_item_id]"
+                                                            value="{{ $recipe->main_stock_item_id }}">
+                                                    @else
+                                                        <select name="recipes[existing][{{ $recipe->id }}][main_stock_item_id]"
+                                                            required
+                                                            data-recipe-id="{{ $recipe->id }}"
+                                                            onchange="updateExistingRecipeCost('{{ $recipe->id }}')"
+                                                            class="w-full px-3 py-2 bg-gray-50 text-gray-800 rounded-lg border border-amber-300 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200 text-sm">
+                                                            @foreach($rawMaterials as $material)
+                                                                <option value="{{ $material->id }}"
+                                                                    data-unit="{{ $material->unit_abbreviation }}"
+                                                                    data-price="{{ $material->price }}"
+                                                                    data-normalization="{{ $material->normalization }}"
+                                                                    {{ $recipe->main_stock_item_id == $material->id ? 'selected' : '' }}>
+                                                                    {{ $material->item_name }}
+                                                                </option>
+                                                            @endforeach
+                                                        </select>
+                                                    @endif
                                                     <input type="hidden" name="recipes[existing][{{ $recipe->id }}][id]"
                                                         value="{{ $recipe->id }}">
                                                 </div>
                                                 <div>
-                                                    <input type="number"
-                                                        id="existingRecipeQty-{{ $recipe->id }}"
-                                                        name="recipes[existing][{{ $recipe->id }}][quantity]"
-                                                        value="{{ $recipe->quantity }}" step="0.001" min="0.001" required
-                                                        placeholder="Quantity"
-                                                        oninput="updateExistingRecipeCost('{{ $recipe->id }}')"
-                                                        class="w-full px-3 py-2 bg-gray-50 text-gray-800 rounded-lg border border-amber-300 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200 text-sm">
+                                                    @if($recipeStockDeleted)
+                                                        <input type="number"
+                                                            id="existingRecipeQty-{{ $recipe->id }}"
+                                                            value="{{ $recipe->quantity }}" readonly disabled
+                                                            class="w-full px-3 py-2 bg-gray-200 text-gray-500 rounded-lg border border-gray-300 cursor-not-allowed text-sm">
+                                                        <input type="hidden" name="recipes[existing][{{ $recipe->id }}][quantity]"
+                                                            value="{{ $recipe->quantity }}">
+                                                    @else
+                                                        <input type="number"
+                                                            id="existingRecipeQty-{{ $recipe->id }}"
+                                                            name="recipes[existing][{{ $recipe->id }}][quantity]"
+                                                            value="{{ $recipe->quantity }}" step="0.001" min="0.001" required
+                                                            placeholder="Quantity"
+                                                            oninput="updateExistingRecipeCost('{{ $recipe->id }}')"
+                                                            class="w-full px-3 py-2 bg-gray-50 text-gray-800 rounded-lg border border-amber-300 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200 text-sm">
+                                                    @endif
                                                 </div>
                                                 <span
                                                     class="text-sm text-gray-600 font-medium px-1">{{ $recipe->mainStockItem->unit_abbreviation ?? '--' }}</span>
                                                 <span class="text-sm font-semibold text-green-700 text-right pr-1">
                                                     @php
                                                         $stockItem = $recipe->mainStockItem;
-                                                        $unitCost = ($stockItem && $stockItem->normalization > 0)
+                                                        // Deleted stock items contribute no cost to the recipe
+                                                        $unitCost = ($stockItem && !$stockItem->isDeleted() && $stockItem->normalization > 0)
                                                             ? ($stockItem->price / $stockItem->normalization)
                                                             : 0;
                                                         $rowCost = $unitCost * $recipe->quantity;
@@ -275,7 +298,8 @@
                                                         $totalCost = 0;
                                                         foreach($item->itemRecipes as $r) {
                                                             $si = $r->mainStockItem;
-                                                            if ($si && $si->normalization > 0) {
+                                                            // Deleted stock items are excluded from the total cost
+                                                            if ($si && !$si->isDeleted() && $si->normalization > 0) {
                                                                 $totalCost += ($si->price / $si->normalization) * $r->quantity;
                                                             }
                                                         }
@@ -565,35 +589,61 @@
                                                             @foreach($modifier->recipes as $recipe)
                                                                 <div id="modifierRecipe-existing-{{ $recipe->id }}"
                                                                     class="grid grid-cols-[3fr_65px_44px_72px_28px] gap-2 items-center">
-                                                                    <select
-                                                                        name="modifier_recipes[existing][{{ $recipe->id }}][main_stock_item_id]"
-                                                                        required
-                                                                        data-modifier-recipe-id="{{ $recipe->id }}"
-                                                                        data-modifier-id="{{ $modifier->id }}"
-                                                                        onchange="updateExistingModifierRecipeCost('{{ $recipe->id }}', '{{ $modifier->id }}')"
-                                                                        class="min-w-0 px-2 py-1.5 bg-amber-50 text-gray-800 rounded-lg border border-amber-200 focus:outline-none focus:border-amber-500 text-xs truncate">
-                                                                        @foreach($rawMaterials as $material)
-                                                                            <option value="{{ $material->id }}"
-                                                                                data-unit="{{ $material->unit_abbreviation }}"
-                                                                                data-price="{{ $material->price }}"
-                                                                                data-normalization="{{ $material->normalization }}"
-                                                                                {{ $recipe->main_stock_item_id == $material->id ? 'selected' : '' }}>
-                                                                                {{ $material->item_name }}
-                                                                            </option>
-                                                                        @endforeach
-                                                                    </select>
-                                                                    <input type="number"
-                                                                        id="existingModifierRecipeQty-{{ $recipe->id }}"
-                                                                        name="modifier_recipes[existing][{{ $recipe->id }}][quantity]"
-                                                                        value="{{ $recipe->quantity }}" step="0.001" min="0.001"
-                                                                        required placeholder="Qty"
-                                                                        oninput="updateExistingModifierRecipeCost('{{ $recipe->id }}', '{{ $modifier->id }}')"
-                                                                        class="w-full px-1 py-1.5 bg-amber-50 text-gray-800 rounded-lg border border-amber-200 focus:outline-none focus:border-amber-500 text-xs">
+                                                                    @php
+                                                                        $modRecipeStockDeleted = $recipe->mainStockItem && $recipe->mainStockItem->isDeleted();
+                                                                    @endphp
+                                                                    @if($modRecipeStockDeleted)
+                                                                        <div class="min-w-0">
+                                                                            <select disabled
+                                                                                title="This stock item has been deleted and cannot be selected until it is reactivated."
+                                                                                class="w-full min-w-0 px-2 py-1.5 bg-gray-200 text-gray-500 rounded-lg border border-gray-300 cursor-not-allowed text-xs truncate">
+                                                                                <option selected>{{ $recipe->mainStockItem->item_name }} (Deleted)</option>
+                                                                            </select>
+                                                                            <input type="hidden"
+                                                                                name="modifier_recipes[existing][{{ $recipe->id }}][main_stock_item_id]"
+                                                                                value="{{ $recipe->main_stock_item_id }}">
+                                                                        </div>
+                                                                        <div>
+                                                                            <input type="number"
+                                                                                id="existingModifierRecipeQty-{{ $recipe->id }}"
+                                                                                value="{{ $recipe->quantity }}" readonly disabled
+                                                                                class="w-full px-1 py-1.5 bg-gray-200 text-gray-500 rounded-lg border border-gray-300 cursor-not-allowed text-xs">
+                                                                            <input type="hidden"
+                                                                                name="modifier_recipes[existing][{{ $recipe->id }}][quantity]"
+                                                                                value="{{ $recipe->quantity }}">
+                                                                        </div>
+                                                                    @else
+                                                                        <select
+                                                                            name="modifier_recipes[existing][{{ $recipe->id }}][main_stock_item_id]"
+                                                                            required
+                                                                            data-modifier-recipe-id="{{ $recipe->id }}"
+                                                                            data-modifier-id="{{ $modifier->id }}"
+                                                                            onchange="updateExistingModifierRecipeCost('{{ $recipe->id }}', '{{ $modifier->id }}')"
+                                                                            class="min-w-0 px-2 py-1.5 bg-amber-50 text-gray-800 rounded-lg border border-amber-200 focus:outline-none focus:border-amber-500 text-xs truncate">
+                                                                            @foreach($rawMaterials as $material)
+                                                                                <option value="{{ $material->id }}"
+                                                                                    data-unit="{{ $material->unit_abbreviation }}"
+                                                                                    data-price="{{ $material->price }}"
+                                                                                    data-normalization="{{ $material->normalization }}"
+                                                                                    {{ $recipe->main_stock_item_id == $material->id ? 'selected' : '' }}>
+                                                                                    {{ $material->item_name }}
+                                                                                </option>
+                                                                            @endforeach
+                                                                        </select>
+                                                                        <input type="number"
+                                                                            id="existingModifierRecipeQty-{{ $recipe->id }}"
+                                                                            name="modifier_recipes[existing][{{ $recipe->id }}][quantity]"
+                                                                            value="{{ $recipe->quantity }}" step="0.001" min="0.001"
+                                                                            required placeholder="Qty"
+                                                                            oninput="updateExistingModifierRecipeCost('{{ $recipe->id }}', '{{ $modifier->id }}')"
+                                                                            class="w-full px-1 py-1.5 bg-amber-50 text-gray-800 rounded-lg border border-amber-200 focus:outline-none focus:border-amber-500 text-xs">
+                                                                    @endif
                                                                     <span
                                                                         class="text-xs text-gray-600 text-center">{{ $recipe->mainStockItem->unit_abbreviation ?? '--' }}</span>
                                                                     @php
                                                                         $mSi = $recipe->mainStockItem;
-                                                                        $mUnitCost = ($mSi && $mSi->normalization > 0) ? ($mSi->price / $mSi->normalization) : 0;
+                                                                        // Deleted stock items contribute no cost to the recipe
+                                                                        $mUnitCost = ($mSi && !$mSi->isDeleted() && $mSi->normalization > 0) ? ($mSi->price / $mSi->normalization) : 0;
                                                                         $mRowCost = $mUnitCost * $recipe->quantity;
                                                                     @endphp
                                                                     <span class="text-xs font-semibold text-green-700 text-right">
@@ -624,7 +674,8 @@
                                                                             $mTotal = 0;
                                                                             foreach($modifier->recipes as $mr) {
                                                                                 $mrSi = $mr->mainStockItem;
-                                                                                if ($mrSi && $mrSi->normalization > 0) {
+                                                                                // Deleted stock items are excluded from the total cost
+                                                                                if ($mrSi && !$mrSi->isDeleted() && $mrSi->normalization > 0) {
                                                                                     $mTotal += ($mrSi->price / $mrSi->normalization) * $mr->quantity;
                                                                                 }
                                                                             }

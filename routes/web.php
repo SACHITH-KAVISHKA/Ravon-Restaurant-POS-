@@ -251,7 +251,13 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/', [App\Http\Controllers\MainStockController::class, 'store'])->name('store');
         Route::get('/{mainStock}/edit', [App\Http\Controllers\MainStockController::class, 'edit'])->name('edit');
         Route::put('/{mainStock}', [App\Http\Controllers\MainStockController::class, 'update'])->name('update');
-        Route::delete('/{mainStock}', [App\Http\Controllers\MainStockController::class, 'destroy'])->name('destroy');
+
+        // Soft delete / Deleted Items / Reactivate (Super Admin only)
+        Route::middleware(['role:superadmin'])->group(function () {
+            Route::delete('/{mainStock}', [App\Http\Controllers\MainStockController::class, 'destroy'])->name('destroy');
+            Route::get('/deleted-items', [App\Http\Controllers\MainStockController::class, 'deletedItems'])->name('deleted');
+            Route::patch('/{mainStock}/reactivate', [App\Http\Controllers\MainStockController::class, 'reactivate'])->name('reactivate');
+        });
 
         // Stock Operations
         Route::get('/stock-update', [App\Http\Controllers\MainStockController::class, 'showStockUpdate'])->name('stock-update');

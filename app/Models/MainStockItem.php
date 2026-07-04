@@ -22,6 +22,7 @@ class MainStockItem extends Model
         'price',
         'normalization',
         'is_active',
+        'status',
         'created_by',
         'updated_by',
     ];
@@ -31,7 +32,14 @@ class MainStockItem extends Model
         'price' => 'decimal:5',
         'normalization' => 'decimal:4',
         'is_active' => 'boolean',
+        'status' => 'integer',
     ];
+
+    /**
+     * Soft-delete status values.
+     */
+    public const STATUS_DELETED = 0;
+    public const STATUS_ACTIVE = 1;
 
     /**
      * Attributes to append to the model's JSON form.
@@ -252,11 +260,35 @@ class MainStockItem extends Model
     }
 
     /**
-     * Scope for active items.
+     * Scope for active items (enabled and not soft-deleted).
      */
     public function scopeActive($query)
     {
-        return $query->where('is_active', true);
+        return $query->where('is_active', true)->where('status', self::STATUS_ACTIVE);
+    }
+
+    /**
+     * Scope for items that are not soft-deleted.
+     */
+    public function scopeNotDeleted($query)
+    {
+        return $query->where('status', self::STATUS_ACTIVE);
+    }
+
+    /**
+     * Scope for soft-deleted items.
+     */
+    public function scopeDeleted($query)
+    {
+        return $query->where('status', self::STATUS_DELETED);
+    }
+
+    /**
+     * Check if the item is soft-deleted.
+     */
+    public function isDeleted(): bool
+    {
+        return (int) $this->status === self::STATUS_DELETED;
     }
 
     /**
