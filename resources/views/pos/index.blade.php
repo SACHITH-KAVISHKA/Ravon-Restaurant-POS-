@@ -5354,13 +5354,8 @@
                             const itemName = item.item_display_name || item.name || item.item?.name || item.item_name || 'Unknown Item';
                             const quantity = item.quantity || 0;
                             const inclSubtotal_r = parseFloat(item.subtotal || (parseFloat(item.unit_price || item.price || 0) * quantity));
-                            const taxFlags_r = resolveReceiptTaxFlags(item);
-                            const appliesVat_r = taxFlags_r.vatApplicable ? vatRate_r : 0;
-                            const appliesSscl_r = taxFlags_r.ssclApplicable ? ssclRate_r : 0;
-                            const taxFactor_item_r = (1 + appliesSscl_r / 100) * (1 + appliesVat_r / 100) || 1;
-                            const baseSubtotal_r_item = inclSubtotal_r / taxFactor_item_r;
-                            const unitPrice = (quantity > 0 ? baseSubtotal_r_item / quantity : 0).toFixed(2);
-                            const subtotal = baseSubtotal_r_item.toFixed(2);
+                            const unitPrice = (quantity > 0 ? inclSubtotal_r / quantity : 0).toFixed(2);
+                            const subtotal = inclSubtotal_r.toFixed(2);
                             const modifiers = item.modifiers || [];
 
                             // Item number and name with portion (first line)
@@ -5402,55 +5397,8 @@
                             yPosition += 1; // Space before next item
                         });
 
-                        // Separator
-                        yPosition += 2;
-                        pdf.setLineDashPattern([1, 1], 0);
-                        pdf.line(leftMargin, yPosition, pageWidth - rightMargin, yPosition);
-                        pdf.setLineDashPattern([], 0);
-                        yPosition += 4;
-
-                        // Subtotal
-                        let baseTotal_r = 0;
-                        let ssclAmount_r = 0;
-                        let vatAmount_r = 0;
-
-                        const items_r = order.order_items || order.orderItems || [];
-                        items_r.forEach(item => {
-                            const taxFlags_r = resolveReceiptTaxFlags(item);
-                            const appliesVat = taxFlags_r.vatApplicable ? vatRate_r : 0;
-                            const appliesSscl = taxFlags_r.ssclApplicable ? ssclRate_r : 0;
-                            const itemTotal = parseFloat(item.subtotal || (item.price * item.quantity));
-
-                            const itemBase = itemTotal / ((1 + (appliesSscl / 100)) * (1 + (appliesVat / 100)));
-                            const itemSscl = itemBase * (appliesSscl / 100);
-                            const itemVat = (itemBase + itemSscl) * (appliesVat / 100);
-
-                            baseTotal_r += itemBase;
-                            ssclAmount_r += itemSscl;
-                            vatAmount_r += itemVat;
-                        });
-
-                        pdf.setFont('courier', 'normal');
-                        pdf.setFontSize(10);
-                        pdf.text('Sub Total (Base)', leftMargin, yPosition);
-                        pdf.text(baseTotal_r.toFixed(2), pageWidth - rightMargin, yPosition, {
-                            align: 'right'
-                        });
-                        yPosition += 5;
-
-                        pdf.text(`SSCL (${ssclRate_r}%)`, leftMargin, yPosition);
-                        pdf.text(ssclAmount_r.toFixed(2), pageWidth - rightMargin, yPosition, {
-                            align: 'right'
-                        });
-                        yPosition += 4;
-
-                        pdf.text(`VAT (${vatRate_r}%)`, leftMargin, yPosition);
-                        pdf.text(vatAmount_r.toFixed(2), pageWidth - rightMargin, yPosition, {
-                            align: 'right'
-                        });
-                        yPosition += 5;
-
                         // Total Separator (thick line)
+                        yPosition += 2;
                         pdf.setLineWidth(0.5);
                         pdf.line(leftMargin, yPosition, pageWidth - rightMargin, yPosition);
                         pdf.setLineWidth(0.2);
@@ -5463,7 +5411,14 @@
                         pdf.text(parseFloat(order.total_amount || 0).toFixed(2), pageWidth - rightMargin, yPosition, {
                             align: 'right'
                         });
-                        yPosition += 7;
+                        yPosition += 6;
+
+                        pdf.setFont('courier', 'normal');
+                        pdf.setFontSize(7);
+                        pdf.text(`Prices are inclusive of VAT (${vatRate_r}%) & SSCL (${ssclRate_r}%)`, pageWidth / 2, yPosition, {
+                            align: 'center'
+                        });
+                        yPosition += 5;
 
                         // Payment Information
                         pdf.setFont('courier', 'normal');
@@ -5742,13 +5697,8 @@
                             const itemName = item.item_display_name || item.name || item.item?.name || item.item_name || 'Unknown Item';
                             const quantity = item.quantity || 0;
                             const inclSubtotal_i = parseFloat(item.subtotal || (parseFloat(item.unit_price || item.price || 0) * quantity));
-                            const taxFlags_i = resolveReceiptTaxFlags(item);
-                            const appliesVat_i = taxFlags_i.vatApplicable ? vatRate_i : 0;
-                            const appliesSscl_i = taxFlags_i.ssclApplicable ? ssclRate_i : 0;
-                            const taxFactor_item_i = (1 + appliesSscl_i / 100) * (1 + appliesVat_i / 100) || 1;
-                            const baseSubtotal_i_item = inclSubtotal_i / taxFactor_item_i;
-                            const unitPrice = (quantity > 0 ? baseSubtotal_i_item / quantity : 0).toFixed(2);
-                            const subtotal = baseSubtotal_i_item.toFixed(2);
+                            const unitPrice = (quantity > 0 ? inclSubtotal_i / quantity : 0).toFixed(2);
+                            const subtotal = inclSubtotal_i.toFixed(2);
                             const modifiers = item.modifiers || [];
 
                             // Item number and name with portion (first line)
@@ -5786,55 +5736,8 @@
                             yPosition += 1;
                         });
 
-                        // Separator
-                        yPosition += 2;
-                        pdf.setLineDashPattern([1, 1], 0);
-                        pdf.line(leftMargin, yPosition, pageWidth - rightMargin, yPosition);
-                        pdf.setLineDashPattern([], 0);
-                        yPosition += 4;
-
-                        // Subtotal
-                        let baseTotal_i = 0;
-                        let ssclAmount_i = 0;
-                        let vatAmount_i = 0;
-
-                        const items_i = order.order_items || order.orderItems || [];
-                        items_i.forEach(item => {
-                            const taxFlags_i = resolveReceiptTaxFlags(item);
-                            const appliesVat = taxFlags_i.vatApplicable ? vatRate_i : 0;
-                            const appliesSscl = taxFlags_i.ssclApplicable ? ssclRate_i : 0;
-                            const itemTotal = parseFloat(item.subtotal || (item.price * item.quantity));
-
-                            const itemBase = itemTotal / ((1 + (appliesSscl / 100)) * (1 + (appliesVat / 100)));
-                            const itemSscl = itemBase * (appliesSscl / 100);
-                            const itemVat = (itemBase + itemSscl) * (appliesVat / 100);
-
-                            baseTotal_i += itemBase;
-                            ssclAmount_i += itemSscl;
-                            vatAmount_i += itemVat;
-                        });
-
-                        pdf.setFont('courier', 'normal');
-                        pdf.setFontSize(10);
-                        pdf.text('Sub Total (Base)', leftMargin, yPosition);
-                        pdf.text(baseTotal_i.toFixed(2), pageWidth - rightMargin, yPosition, {
-                            align: 'right'
-                        });
-                        yPosition += 5;
-
-                        pdf.text(`SSCL (${ssclRate_i}%)`, leftMargin, yPosition);
-                        pdf.text(ssclAmount_i.toFixed(2), pageWidth - rightMargin, yPosition, {
-                            align: 'right'
-                        });
-                        yPosition += 4;
-
-                        pdf.text(`VAT (${vatRate_i}%)`, leftMargin, yPosition);
-                        pdf.text(vatAmount_i.toFixed(2), pageWidth - rightMargin, yPosition, {
-                            align: 'right'
-                        });
-                        yPosition += 5;
-
                         // Total Separator
+                        yPosition += 2;
                         pdf.setLineWidth(0.5);
                         pdf.line(leftMargin, yPosition, pageWidth - rightMargin, yPosition);
                         pdf.setLineWidth(0.2);
@@ -5847,7 +5750,14 @@
                         pdf.text(parseFloat(order.total_amount || 0).toFixed(2), pageWidth - rightMargin, yPosition, {
                             align: 'right'
                         });
-                        yPosition += 7;
+                        yPosition += 6;
+
+                        pdf.setFont('courier', 'normal');
+                        pdf.setFontSize(7);
+                        pdf.text(`Prices are inclusive of VAT (${vatRate_i}%) & SSCL (${ssclRate_i}%)`, pageWidth / 2, yPosition, {
+                            align: 'center'
+                        });
+                        yPosition += 6;
 
                         // NO PAYMENT DETAILS - That's the key difference from receipt
 
@@ -5866,7 +5776,7 @@
 
                         pdf.setFont('courier', 'normal');
                         pdf.setFontSize(8);
-                        pdf.text('Software By SKM Labs', pageWidth / 2, yPosition, {
+                        pdf.text('Software By Jayawardena Group', pageWidth / 2, yPosition, {
                             align: 'center'
                         });
 
@@ -5928,21 +5838,14 @@
                         console.warn('No items found in order');
                         itemsHTML = '<div class="item-row">No items</div>';
                     } else {
-                        const vatRate_html = parseFloat('{{ $vatRate ?? 0 }}') || 0;
-                        const ssclRate_html = parseFloat('{{ $ssclRate ?? 0 }}') || 0;
                         items.forEach(item => {
                             itemCount++;
                             const itemName = item.item?.name || item.item_name || 'Unknown Item';
                             const itemCode = item.item?.item_code || item.item_code || '';
                             const quantity = item.quantity || 0;
                             const inclSubtotal_html = parseFloat(item.subtotal || (parseFloat(item.unit_price || 0) * quantity));
-                            const taxFlags_html = resolveReceiptTaxFlags(item);
-                            const appliesVat_html = taxFlags_html.vatApplicable ? vatRate_html : 0;
-                            const appliesSscl_html = taxFlags_html.ssclApplicable ? ssclRate_html : 0;
-                            const taxFactor_html = (1 + appliesSscl_html / 100) * (1 + appliesVat_html / 100) || 1;
-                            const baseSubtotal_html = inclSubtotal_html / taxFactor_html;
-                            const unitPrice = (quantity > 0 ? baseSubtotal_html / quantity : 0).toFixed(2);
-                            const subtotal = baseSubtotal_html.toFixed(2);
+                            const unitPrice = (quantity > 0 ? inclSubtotal_html / quantity : 0).toFixed(2);
+                            const subtotal = inclSubtotal_html.toFixed(2);
 
                             itemsHTML += `
                                                                                                                                                                                                                                                     <div class="item-row">
@@ -6191,7 +6094,7 @@
                                                                                                                                                                                                                             <div class="divider"></div>
 
                                                                                                                                                                                                                             <div class="items-header">
-                                                                                                                                                                                                                                <span>Base Price</span>
+                                                                                                                                                                                                                                <span>Item</span>
                                                                                                                                                                                                                                 <span>Qty Amount</span>
                                                                                                                                                                                                                             </div>
 
@@ -6201,52 +6104,15 @@
 
                                                                                                                                                                                                                             <div class="divider"></div>
 
-                                                                                                                                                                                                                            <div class="totals">
-            ${(() => {
-                            const vr = parseFloat('{{ $vatRate ?? 0 }}') || 0;
-                            const sr = parseFloat('{{ $ssclRate ?? 0 }}') || 0;
-
-                            let bt = 0;
-                            let sa = 0;
-                            let va = 0;
-
-                            const items_t = order.order_items || order.orderItems || [];
-                            items_t.forEach(item => {
-                                const taxFlags_t = resolveReceiptTaxFlags(item);
-                                const appliesVat = taxFlags_t.vatApplicable ? vr : 0;
-                                const appliesSscl = taxFlags_t.ssclApplicable ? sr : 0;
-                                const itemTotal = parseFloat(item.subtotal || (item.price * item.quantity));
-
-                                const itemBase = itemTotal / ((1 + (appliesSscl / 100)) * (1 + (appliesVat / 100)));
-                                const itemSscl = itemBase * (appliesSscl / 100);
-                                const itemVat = (itemBase + itemSscl) * (appliesVat / 100);
-
-                                bt += itemBase;
-                                sa += itemSscl;
-                                va += itemVat;
-                            });
-                            return `
-                                                                                                                                                                                                                                <div class="total-row">
-                                                                                                                                                                                                                                    <span>Sub Total (Base)</span>
-                                                                                                                                                                                                                                    <span>${bt.toFixed(2)}</span>
-                                                                                                                                                                                                                                </div>
-                                                                                                                                                                                                                                <div class="total-row">
-                                                                                                                                                                                                                                    <span>SSCL (${sr}%)</span>
-                                                                                                                                                                                                                                    <span>${sa.toFixed(2)}</span>
-                                                                                                                                                                                                                                </div>
-                                                                                                                                                                                                                                <div class="total-row">
-                                                                                                                                                                                                                                    <span>VAT (${vr}%)</span>
-                                                                                                                                                                                                                                    <span>${va.toFixed(2)}</span>
-                                                                                                                                                                                                                                </div>
-                `;
-                        })()}
-                                                                                                                                                                                                                            </div>
-
                                                                                                                                                                                                                             <div class="divider-thick"></div>
 
                                                                                                                                                                                                                             <div class="total-row grand">
                                                                                                                                                                                                                                 <span>Total</span>
                                                                                                                                                                                                                                 <span>${parseFloat(order.total_amount).toFixed(2)}</span>
+                                                                                                                                                                                                                            </div>
+
+                                                                                                                                                                                                                            <div style="text-align:center; font-size:9px; margin-top:4px;">
+                                                                                                                                                                                                                                Prices are inclusive of VAT (${parseFloat('{{ $vatRate ?? 0 }}') || 0}%) &amp; SSCL (${parseFloat('{{ $ssclRate ?? 0 }}') || 0}%)
                                                                                                                                                                                                                             </div>
 
                                                                                                                                                                                                                             <div class="payment-info">
@@ -6283,7 +6149,7 @@
                                                                                                                                                                                                                             <div class="footer">
                                                                                                                                                                                                                                 <div style="font-weight: bold; margin-bottom: 5px;">THANK YOU, COME AGAIN.</div>
                                                                                                                                                                                                                                 <div class="footer-note">
-                                                                                                                                                                                                                                    Software By SKM Labs
+                                                                                                                                                                                                                                    Software By Jayawardena Group
                                                                                                                                                                                                                                 </div>
                                                                                                                                                                                                                             </div>
                                                                                                                                                                                                                         </body>

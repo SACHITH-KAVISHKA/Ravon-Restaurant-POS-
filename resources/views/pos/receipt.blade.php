@@ -240,25 +240,15 @@
         {{-- IMPORTANT: Loop through ALL items without any limit - this ensures complete receipts --}}
         @foreach($activeItems as $item)
             @php
-                $vatApplicable  = $item->item?->vat_available  ?? true;
-                $ssclApplicable = $item->item?->sscl_available ?? true;
-                $itemTax        = $taxService->calculateItemTax(
-                    (float) $item->unit_price,
-                    (int)   $item->quantity,
-                    $vatApplicable,
-                    $ssclApplicable
-                );
-                $baseUnitPrice  = $item->quantity > 0
-                    ? $itemTax['base_amount'] / $item->quantity
-                    : 0;
+                $itemInclusiveTotal = (float) $item->unit_price * (int) $item->quantity;
             @endphp
             <div class="item">
                 <div class="item-header">
                     <span>{{ $item->quantity }} x {{ $item->item->name }}</span>
-                    <span>{{ number_format($itemTax['base_amount'], 2) }}</span>
+                    <span>{{ number_format($itemInclusiveTotal, 2) }}</span>
                 </div>
                 <div class="item-details">
-                    @ Rs. {{ number_format($baseUnitPrice, 2) }} each
+                    @ Rs. {{ number_format($item->unit_price, 2) }} each
                 </div>
                 @if($item->modifiers->count() > 0)
                     @php
@@ -281,33 +271,12 @@
     </div>
 
     <div class="totals">
-        <div class="total-row">
-            <span>Sub Total (Base):</span>
-            <span>Rs. {{ number_format($orderTax['subtotal'], 2) }}</span>
-        </div>
-        <div class="total-row">
-            <span>SSCL ({{ $ssclRate }}%)</span>
-            <span>{{ number_format($orderTax['sscl_amount'], 2) }}</span>
-        </div>
-        <div class="total-row">
-            <span>VAT ({{ $vatRate }}%)</span>
-            <span>{{ number_format($orderTax['vat_amount'], 2) }}</span>
-        </div>
-        @if($orderTax['sscl_amount'] > 0)
-            <div class="total-row">
-                <span>SSCL ({{ $taxService->getSsclRate() }}%):</span>
-                <span>Rs. {{ number_format($orderTax['sscl_amount'], 2) }}</span>
-            </div>
-        @endif
-        @if($orderTax['vat_amount'] > 0)
-            <div class="total-row">
-                <span>VAT ({{ $taxService->getVatRate() }}%):</span>
-                <span>Rs. {{ number_format($orderTax['vat_amount'], 2) }}</span>
-            </div>
-        @endif
         <div class="total-row grand">
             <span>TOTAL:</span>
             <span>Rs. {{ number_format($order->total_amount, 2) }}</span>
+        </div>
+        <div style="text-align: center; font-size: 9px; margin-top: 4px;">
+            Prices are inclusive of VAT ({{ $vatRate }}%) &amp; SSCL ({{ $ssclRate }}%)
         </div>
     </div>
 

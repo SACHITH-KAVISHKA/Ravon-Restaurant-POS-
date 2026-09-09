@@ -229,23 +229,13 @@
 
     @foreach($activeItems as $index => $item)
         @php
-            $vatApplicable = $item->item?->vat_available ?? true;
-            $ssclApplicable = $item->item?->sscl_available ?? true;
-            $itemTax = $taxService->calculateItemTax(
-                (float) $item->unit_price,
-                (int) $item->quantity,
-                $vatApplicable,
-                $ssclApplicable
-            );
-            $baseUnitPrice = $item->quantity > 0
-                ? $itemTax['base_amount'] / $item->quantity
-                : 0;
+            $itemInclusiveTotal = (float) $item->unit_price * (int) $item->quantity;
         @endphp
 
         <div class="item-name">{{ $index + 1 }}. {{ $item->item_display_name ?: ($item->item->name ?? 'Item') }}</div>
         <div class="item-subline">
-            <span>{{ $item->quantity }}x @ Rs. {{ number_format($baseUnitPrice, 2) }}</span>
-            <span>{{ number_format($itemTax['base_amount'], 2) }}</span>
+            <span>{{ $item->quantity }}x @ Rs. {{ number_format($item->unit_price, 2) }}</span>
+            <span>{{ number_format($itemInclusiveTotal, 2) }}</span>
         </div>
 
         @if($item->modifiers->count() > 0)
@@ -263,22 +253,12 @@
 
     <div class="separator"></div>
 
-    <div class="total-row">
-        <span>Sub Total (Base)</span>
-        <span>{{ number_format($orderTax['subtotal'], 2) }}</span>
-    </div>
-    <div class="total-row">
-        <span>SSCL ({{ $ssclRate }}%)</span>
-        <span>{{ number_format($orderTax['sscl_amount'], 2) }}</span>
-    </div>
-    <div class="total-row">
-        <span>VAT ({{ $vatRate }}%)</span>
-        <span>{{ number_format($orderTax['vat_amount'], 2) }}</span>
-    </div>
-
     <div class="total-row grand-total">
         <span>Total</span>
         <span>{{ number_format($order->total_amount, 2) }}</span>
+    </div>
+    <div class="text-center" style="font-size: 9px; margin-top: 4px;">
+        Prices are inclusive of VAT ({{ $vatRate }}%) &amp; SSCL ({{ $ssclRate }}%)
     </div>
 
     @if($order->payment)
